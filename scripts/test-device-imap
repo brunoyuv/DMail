@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+# Run prepared, separately signed ARM diagnostics; never launch an emulator.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+MODE="${1:-protocol}"
+case "$MODE" in
+  protocol) RUNNER=IMAPTestRunner; FILTER=(-s notClass 'ProductionIMAPAccount#production_account_ui_and_saved_credentials'); EXPECTED=25; PREFIX=pura-x-imap-regression ;;
+  gestures) RUNNER=MailboxGesturesRunner; FILTER=(); EXPECTED=1; PREFIX=pura-x-mailbox-gestures ;;
+  *) echo 'Usage: HDC_TARGET=serial scripts/test-device-imap [protocol|gestures]' >&2; exit 2 ;;
+esac
+PREFIX="${THUNDERBIRD_DEVICE_PREFIX:-$PREFIX}"
+export THUNDERBIRD_DEVICE_TEST_MODE="$MODE"
+: "${HDC_TARGET:?Set HDC_TARGET to the authorized physical device serial}"
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app-aarch64"
+NODE="$ROOT/.tools/runtime/node_modules/node/bin/node"
+[[ "$($HDC -t "$HDC_TARGET" shell uname -m | tr -d '\r\n')" == aarch64 ]]
+for variant in default ohosTest; do
+  [[ -f "$APP/entry/build/default/outputs/$variant/entry-$variant-signed.hap" ]]
+done
+# Test exactly the core in the production signed HAP.
+python3 - <<'PYCORE'
+from pathlib import Path
+import zipfile
+root=Path.cwd()
+with zipfile.ZipFile(root/'.tools/device-app/entry/build/default/outputs/default/entry-default-signed.hap') as app, \
+     zipfile.ZipFile(root/'.tools/imap-test-app-aarch64/entry/build/default/outputs/default/entry-default-signed.hap') as test:
+    name='libs/arm64-v8a/libThunderbirdCore.so'
+    assert app.read(name)==test.read(name), 'Rebuild diagnostics against the current shipping core.'
+PYCORE
+if "$HDC" fport ls | grep -Eq 'tcp:976[0-5] '; then echo 'Fixture ports are in use.' >&2; exit 1; fi
+FIXTURE_PID=''; FORWARDS=(); INSTALLED=false
+cleanup() {
+  local result=$?
+  trap - EXIT
+  "$HDC" -t "$HDC_TARGET" shell hilog -x -T Thunderbird > ".tools/$PREFIX-hilog.log" 2>&1 || true
+  if [[ "$MODE" == gestures && "$result" == 0 ]] && "$INSTALLED"; then
+    "$HDC" -t "$HDC_TARGET" file recv /data/local/tmp/thunderbird-mailbox-gestures.png "$ROOT/.tools/mailbox-gestures.png" >/dev/null 2>&1 || true
+  fi
+  if "$INSTALLED"; then "$HDC" -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true; fi
+  for port in "${FORWARDS[@]}"; do "$HDC" -t "$HDC_TARGET" fport rm "tcp:$port" "tcp:$port" >/dev/null 2>&1 || true; done
+  if [[ -n "$FIXTURE_PID" ]]; then kill "$FIXTURE_PID" 2>/dev/null || true; wait "$FIXTURE_PID" 2>/dev/null || true; fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+"$NODE" port/swift-imap/fixture.cjs .tools/imap-test-certs > .tools/arm-imap-fixture.log 2>&1 &
+FIXTURE_PID=$!
+READY=false
+for ((i=0;i<30;i++)); do
+  kill -0 "$FIXTURE_PID"
+  if curl --fail --silent http://127.0.0.1:9760/health >/dev/null; then READY=true; break; fi
+  sleep 0.1
+done
+"$READY"
+for port in 9761 9762 9763 9764 9765; do
+  "$HDC" -t "$HDC_TARGET" rport "tcp:$port" "tcp:$port" | grep -q 'Forwardport result:OK'
+  FORWARDS+=("$port")
+done
+"$HDC" -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-signed.hap"
+INSTALLED=true
+"$HDC" -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-signed.hap"
+if [[ "$MODE" == gestures ]]; then
+  "$HDC" -t "$HDC_TARGET" shell rm -f /data/local/tmp/thunderbird-mailbox-gestures.png
+fi
+# Every server and all credentials belong to the fixture.
+timeout --foreground --kill-after=10s 150s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/"$RUNNER" \
+  "${FILTER[@]}" -s timeout 60000 \
+  | tee ".tools/$PREFIX-tests.log"
+curl --fail --silent http://127.0.0.1:9760/stats > ".tools/$PREFIX-stats.json"
+grep -q "Tests run: $EXPECTED, Failure: 0, Error: 0, Pass: $EXPECTED, Ignore: 0" ".tools/$PREFIX-tests.log"
+"$NODE" - <<'JS'
+const assert = require('node:assert/strict');
+const gestures = process.env.THUNDERBIRD_DEVICE_TEST_MODE === 'gestures';
+const prefix = process.env.THUNDERBIRD_DEVICE_PREFIX || (gestures ? 'pura-x-mailbox-gestures' : 'pura-x-imap-regression');
+const stats = JSON.parse(require('node:fs').readFileSync(`.tools/${prefix}-stats.json`));
+assert.deepEqual(stats.violations, []); assert.equal(stats.active, 0);
+if (gestures) {
+  assert.ok(stats.sessions.some(s => s.mode === 'gesture' && s.gesturePage >= 2));
+  assert.ok(stats.sessions.every(s => s.closed && !s.stores && !s.commands.includes('EXPUNGE')));
+  console.log('PASS: native UI pull refreshed server messages; search reveal/hide passed; no mail mutations.');
+  process.exit(0);
+}
+const missing = stats.sessions.filter(s => s.mode === 'no-next');
+assert.ok(missing.some(s => s.accountFetches?.some(f => f.full)));
+assert.ok(missing.some(s => s.statusArguments?.some(a => a.includes('UIDNEXT') && a.includes('UIDVALIDITY'))));
+for (const s of stats.sessions.filter(s => ['next-changed','next-count','next-missing'].includes(s.mode))) {
+  assert.equal(s.accountFetches, undefined); assert.equal(s.stores, undefined);
+}
+assert.ok(stats.sessions.every(s => s.closed && !s.commands.includes('EXPUNGE') && !s.commands.includes('CLOSE')));
+console.log('PASS: 25 ARM IMAP tests; missing UIDNEXT recovered, inconsistent epochs rejected before FETCH, all fixture connections closed.');
+JS

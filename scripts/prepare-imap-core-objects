@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+"""Compile the port and select IMAP/NIO objects for the single shipping Swift core."""
+from pathlib import Path
+import hashlib, json, subprocess, os
+root = Path(__file__).resolve().parent.parent
+subprocess.run([str(root/'scripts/prepare-imap-native')], check=True)
+subprocess.run([str(root/'scripts/probe-native-imap-dependencies'), 'ImapAccountCore'], check=True)
+cpu = os.environ.get('THUNDERBIRD_SWIFT_ARCH', 'x86_64')
+assert cpu in ['x86_64', 'aarch64'], cpu
+suffix = '' if cpu == 'x86_64' else '-aarch64'
+out = root/('.tools/swift-probe/native-imap'+suffix)
+build = out/f'build/{cpu}-unknown-linux-ohos/debug'
+# These modules already belong to the shipping core. Keep exactly one definition
+# of their Swift metadata; never ship the diagnostic or its C entry point.
+excluded = {'EmailAddress', 'MIME', 'HarmonyLogging', 'CHarmonyLogging', 'IMAPProbe'}
+objects = []
+targets = set()
+for p in sorted(build.rglob('*.o')):
+    target = next((part[:-6] for part in p.relative_to(build).parts if part.endswith('.build')), None)
+    if target is not None and target not in excluded:
+        assert not target.endswith('Tests'), target
+        targets.add(target); objects.append(p)
+assert 'SMTP' in targets and 'IMAP' in targets and 'NIOIMAP' in targets and 'NIOSSL' in targets
+for module in ['EmailAddress', 'MIME']:
+    actual = root/'.tools/swift-probe/native-imap/package/Sources'/module
+    expected = root/'upstream/thunderbird-ios/Core/Sources'/module if module == 'EmailAddress' else root/'.tools/swift-probe/native-mime-source/Sources/MIME'
+    assert {p.name for p in actual.glob('*.swift')} == {p.name for p in expected.glob('*.swift')}
+    for p in actual.glob('*.swift'):
+        assert p.read_bytes() == (expected/p.name).read_bytes(), p
+(out/'core-objects.rsp').write_text('\n'.join(json.dumps(str(p)) for p in objects)+'\n')
+record = {'targets': sorted(targets), 'excludedTargets': sorted(excluded),
+          'objects': {str(p.relative_to(build)): hashlib.sha256(p.read_bytes()).hexdigest() for p in objects}}
+(out/'core-objects.json').write_text(json.dumps(record, indent=2)+'\n')
+print('Selected', len(objects), 'IMAP/NIO objects for the shipping core; shared modules and diagnostic excluded.')

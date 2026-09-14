@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Experimental native HarmonyOS bootstrap. This is not a complete Swift SDK.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+source "$ROOT/scripts/swift-target-env"
+SOURCE="$ROOT/.tools/swift-runtime-source"
+ARCHIVE="$ROOT/.tools/swift-downloads/swift-source-6.2.3.tar.gz"
+NATIVE="$ROOT/.tools/command-line-tools/sdk/default/openharmony/native"
+CMAKE="$ROOT/.tools/swift-build-tools/bin/cmake"
+[[ -x .tools/swift/usr/bin/swiftc && -d "$NATIVE/sysroot" ]] || {
+  echo 'Install the Huawei SDK and run scripts/setup-swift first.' >&2; exit 1;
+}
+mkdir -p .tools/swift-downloads .tools/swift-probe
+if [[ ! -f "$ARCHIVE" ]]; then
+  curl --fail --location --retry 2 --output "$ARCHIVE.part" \
+    https://github.com/swiftlang/swift/archive/refs/tags/swift-6.2.3-RELEASE.tar.gz
+  mv "$ARCHIVE.part" "$ARCHIVE"
+fi
+# Locally recorded checksum of the official tagged source archive.
+printf '%s  %s\n' f26fceb130d135ab2295a29e27a26e71695b523d1dd0210d70ff4bf3150f29ce "$ARCHIVE" | sha256sum --check --status
+if [[ ! -x "$CMAKE" ]]; then
+  python3 -m venv .tools/swift-build-tools
+  .tools/swift-build-tools/bin/pip install cmake==3.31.10
+fi
+./scripts/build-swift-dispatch
+if [[ ! -f "$SOURCE/Runtimes/Core/CMakeLists.txt" ]]; then
+  mkdir -p "$SOURCE"
+  tar -xzf "$ARCHIVE" --strip-components=1 -C "$SOURCE"
+fi
+# Resync only before the initial patch. Subsequent builds preserve generated
+# source timestamps and refuse an unexpected source/patch combination.
+if ! patch --dry-run --reverse --force -p1 -d "$SOURCE" < port/swift-runtime/harmonyos.patch >/dev/null 2>&1; then
+  "$CMAKE" -P "$SOURCE/Runtimes/Resync.cmake"
+  patch --dry-run --forward --force -p1 -d "$SOURCE" < port/swift-runtime/harmonyos.patch
+  patch --forward --force -p1 -d "$SOURCE" < port/swift-runtime/harmonyos.patch
+fi
+"$CMAKE" -S "$SOURCE/Runtimes/Core" -B .tools/swift-ohos-runtime${SWIFT_BUILD_SUFFIX} -G Ninja \
+  -DCMAKE_MAKE_PROGRAM="$NATIVE/build-tools/cmake/bin/ninja" \
+  -DCMAKE_TOOLCHAIN_FILE="$NATIVE/build/cmake/ohos.toolchain.cmake" \
+  -DOHOS_ARCH="$HARMONY_CPU" \
+  -DCMAKE_Swift_COMPILER="$ROOT/.tools/swift/usr/bin/swiftc" \
+  -DCMAKE_Swift_COMPILER_TARGET="$SWIFT_TARGET" \
+  -DCMAKE_Swift_COMPILER_WORKS=TRUE \
+  -DCMAKE_Swift_FLAGS="-sdk $NATIVE/sysroot -module-cache-path $ROOT/.tools/swift-probe/runtime-module-cache${SWIFT_BUILD_SUFFIX}" \
+  -DSwiftCore_THREADING_PACKAGE=LINUX -DSwiftCore_OBJECT_FORMAT=elf \
+  -DSwiftCore_ENABLE_LIBRARY_EVOLUTION=ON -DSwiftCore_ENABLE_REFLECTION=ON \
+  -DSwiftCore_ENABLE_UNICODE_DATA=ON -DSwiftCore_ENABLE_ENVIRONMENT=ON \
+  -DSwiftCore_ENABLE_COMMANDLINE_SUPPORT=ON \
+  -DSwiftCore_ENABLE_ONONESUPPORT=ON -DSwiftCore_ENABLE_CONCURRENCY=ON \
+  -DSwiftCore_CONCURRENCY_GLOBAL_EXECUTOR=dispatch \
+  -Ddispatch_DIR="$ROOT/.tools/swift-ohos-dispatch${SWIFT_BUILD_SUFFIX}/cmake/modules" \
+  -DBUILD_SHARED_LIBS=ON -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX="$SWIFT_TARGET_SDK"
+# The compiler smoke check above must be skipped when bootstrapping its own
+# standard library. This real build must succeed before anything is installed.
+"$CMAKE" --build .tools/swift-ohos-runtime${SWIFT_BUILD_SUFFIX} -j "${SWIFT_RUNTIME_JOBS:-4}"
+"$CMAKE" --install .tools/swift-ohos-runtime${SWIFT_BUILD_SUFFIX}

@@ -1,0 +1,56 @@
+{
+  "date": "2026-09-13",
+  "hostTestsPassed": 62,
+  "mimeAndAccountBodyTestsPassed": 61,
+  "swiftReplyAndComposeTestsPassed": 6,
+  "emulator": {
+    "testsPassed": 1,
+    "durationMs": 49800,
+    "stopped": true,
+    "uiHapSha256": "fcaafb293eeb9c18fc82a896fabfdf243475681624657b1c0c46f5e37629e18e",
+    "testHapSha256": "90efc4c7c1be15db21ce0df80ffd316a8797484a7266c5d34628a083bab0641c"
+  },
+  "arm": {
+    "hapSha256": "4217a3de7d9689d24a61d750960496ad960a9318fbb803860b1c337e02a7c9bf",
+    "sourceAndLibraryParityVerified": true,
+    "installedOn": "Pura X VDE-AL00 over authorized Wi-Fi HDC",
+    "inboxAlignmentVisuallyChecked": true,
+    "reportedBlankNewsletterRechecked": false,
+    "liveSmtpSendTested": false
+  },
+  "coverage": [
+    "Unread blue edge bar replaces dot gutter; rows and dividers align at 20 vp",
+    "Two spaced inbox buttons; pull-only refresh",
+    "HTML defaults on, folded MIME headers and UTF-8 payload decode, inline CID image present",
+    "Remote image requests start only after Load pictures; other requests blocked",
+    "Email subject and body scroll together",
+    "Three synthetic SMTP submissions: new message, Reply All with threading, HTML Forward without threading",
+    "Existing draft preserved and composers cleared after success"
+  ],
+  "limitations": [
+    "The specific reported blank newsletter and live-provider pictures still need rechecking on Pura X. Phone was in use during inspection; no further navigation attempted.",
+    "Forward omits attachments; Sent-folder upload and Answered flag remain pending.",
+    "Server discovery is separately compiled but not yet connected to shipping app; provider OAuth remains deferred."
+  ],
+  "evidence": {
+    ".tools/unread-bar-emulator-session.log": "2644fd1f4a5e1e8df1e6015ac2761c6e7bb644614d58f38b7731f89493f2f356",
+    ".tools/html-forward-fixture-stats.json": "e5492d45e937e263392ac24821ae6b649594e8638c9cf62ae52e55c6b9df4675",
+    ".tools/forward-host-tests.log": "b18d33cee16fce5814f83a671c225ab6b78965ddb993119c7ee703e7a8ae13c8",
+    ".tools/mime-port-host-tests.log": "4bfc6cdf8ab22a5b79b3485bbeb93fd9c1a6d83b8a8554cd978e1929ca573825",
+    ".tools/html-forward-swift-tests.log": "2ffa953f85a989c579710a5a827a50bd1f662b470374ad1637b9be2cc2c98561",
+    ".tools/html-forward-pura-install.log": "a7c7f01aad5659daa03375cd6248b146f21db716dcdd99f52b45cbe785f4a370",
+    ".tools/unread-bar-arm-verification.log": "f4a964bce36ef864a37e605ab5354774723a77c7af5aece71324a4ac8552f117",
+    "docs/screenshots/inbox-unread-bar.png": "e5228b5b53987a835863948c091ee1a01ff4e75cbb92d9101e904a6e1d390f36",
+    "docs/screenshots/forward-html.png": "b541bc6c574f8f37d6e67800f3208d679f63943e14f8b97b97b323567dd7ad1d",
+    "docs/screenshots/reader-unified-scroll.png": "647ba5bc844081731f9f27e47a2bcf3781b806dabfd4fba3dc682d6531f62e2e"
+  },
+  "sourceHashes": {
+    "harmony/entry/src/main/ets/pages/ConnectedMail.ets": "bc5e7cdab14fecafb6f002dc7d3745b09769bbdd56dbccc45cd9ff71c18a3d7b",
+    "harmony/entry/src/main/ets/pages/ComposeMail.ets": "a38cbc1627a25425fef7d658d5dacd7883d6169f90112b6224303f7ef8e79ae9",
+    "harmony/entry/src/main/ets/mail/smtp/Reply.ts": "4d68c02cc15fd061294a72b59fe0614d38991480f90a2ca4e97b8b656efb0e24",
+    "port/swift-mime/harmonyos.patch": "5a5eef6620a66197de15f6da57271afcd019e31d571f38af4244f62d314aed46",
+    "port/swift-mime/PartParsing.swift": "ae26f1bcb4e89321cebf0aac984b73897d3cc72e907bd3dfc0ccaba3c1d06449",
+    "port/swift-accountbody/body-adapter.patch": "6d48b42fa6cee0c7465eb79cca44679745222561cb9e5c2eb9e466763f039062",
+    "port/swift-smtp/ComposeBody.swift": "a7737d0611f579c610af884906d329ac0db2a6751a57b15b41088ffad821abc5"
+  }
+}

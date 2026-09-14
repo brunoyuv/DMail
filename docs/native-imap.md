@@ -1,0 +1,83 @@
+# Original IMAP client on HarmonyOS
+
+The current priority is SMTP sending and HTML reading, on a MatePad 12.2-inch running HarmonyOS 6.1.0 as reported by the user. The following Pura X results are historical: The signed ARM HAP installs and launches on that phone and passes four native EmailAddress/MIME tests. Twenty-five native IMAP/account/body checks now pass on ARM; the full UI fixture suite was verified on the x86-64 HarmonyOS 6.0.2/API 22 emulator. See [physical-device evidence](device-testing.md).
+
+The port uses all 43 files from Thunderbird's original `Core/Sources/IMAP` at revision `61c78d9ebe39ac5b61f31fce371bdfe8c001f7bf`, together with the unchanged EmailAddress and MIME modules. `port/swift-imap/upstream-files.json` pins the 43 IMAP source files and ten upstream test files. Thirty-one IMAP files remain byte-for-byte unchanged. The explicit patches adapt OSLog imports, connection/command lifecycle, TLS peer verification LIST capability negotiation and flag selection/update hooks; they do not replace the protocol engine. HarmonyOS uses the existing HiLog adapter, extended with debug/error levels; interpolated data stays redacted. A separate no-output logger is used only for host baseline tests.
+
+`dependencies.json` pins exact upstream SwiftNIO, SwiftNIO IMAP and NIOSSL revisions. `Package.resolved` pins Atomics, Collections and System. The native copies are separate from their pristine host checkouts. The native compatibility patches:
+
+- Prevent Huawei's generated kernel socket header from redeclaring `sockaddr_storage`, using the SDK's musl socket types with its unchanged vsock definitions.
+- Return `ENOTSUP` for optional thread-affinity calls absent from Huawei's libc exports.
+- Match the opaque `FILE *` imported from Huawei's headers in NIOSSL.
+
+The native build uses Huawei clang and sysroot, the previously built native Swift runtime/Foundation, and either `x86_64-unknown-linux-ohos` or `aarch64-unknown-linux-ohos`. BoringSSL uses Huawei's target libc++ headers and position-independent code. Host C/C++ include environment overrides are cleared for native builds.
+
+## Reproduce the baseline
+
+```sh
+./scripts/prepare-imap-dependencies
+./scripts/test-imap-upstream
+./scripts/prepare-imap-native
+./scripts/probe-native-imap-dependencies IMAP
+./scripts/link-native-imap
+```
+
+Keep the emulator stopped for all these commands. The host runner explicitly selects the installed GCC C++ headers/libraries; Swift's default selection found an incomplete GCC installation on this machine.
+
+The upstream test runner reports 17 functions in 12 suites: 16 execute successfully and `allCommands` is skipped because its live-provider fixture has no credentials. One test expectation adapts Foundation's Linux error wording; the source behavior is unchanged. This does not establish a working server connection. The shared logging extension also passes the existing JMAP host regressions.
+
+All 43 IMAP files and their dependencies compile for the native target. The isolated diagnostic library links 1,059 objects, including its probe, with no unresolved symbols. Its ELF dependencies reference Huawei libc and the native Swift libraries. [The verification record](../port/swift-imap/native-result.json) includes source, library, HAP and log hashes.
+
+The shipping `libThunderbirdCore.so` now combines IMAP/NIO with JMAP, MIME and EmailAddress. `prepare-imap-core-objects` excludes the IMAP build's copies of EmailAddress, MIME and HarmonyLogging, and excludes the diagnostic target. The earlier standalone `libThunderbirdIMAP.so` remains a compile probe only and must not be loaded alongside the shared core.
+
+`libIMAPProbe.so` contains only the diagnostic driver and links against that shared core. Package verification checks that the mail app, IMAP tests and networking/JMAP tests contain byte-identical copies of `libThunderbirdCore.so`, with no leftover standalone mail libraries. The shipping app contains neither diagnostic driver. Hvigor's obsolete native intermediates are cleared when migrating the IMAP test app from the standalone library.
+
+## Native TLS and reading verification
+
+```sh
+./scripts/test-native-imap build   # Keep emulator off while preparing both HAPs.
+./scripts/test-native-imap device  # Starts, tests, uninstalls diagnostic, stops, verifies stopped.
+```
+
+The isolated `org.thunderbird.harmony.imaptest` app passes 24 tests on HarmonyOS 6.0.2/API 22, now using the exact shipping Swift core. The wrapper stops the emulator after the batch; its log confirms `ThunderbirdPhone stopped`. Tests exercise the original Swift client, SwiftNIO IMAP parser, NIOSSL/BoringSSL, and Thunderbird MIME module:
+
+- Three complete TLS login → LIST/STATUS → SELECT → UID FETCH → LOGOUT sessions, including mailbox UIDVALIDITY/UIDNEXT, an unread message and a fragmented MIME literal containing Unicode text.
+- Authentication failure, untrusted issuer and wrong hostname rejection.
+- A stalled fetch deadline, a dropped connection and cancellation during a pending fetch.
+- Oversized literal and mismatched command-tag rejection before the normal command deadline.
+
+The nine direct-client tests are supplemented by fourteen production account/UI tests and one test exercising all 13 original Account body fixtures. Fixture-side observations independently confirm bounded paging, UIDVALIDITY rejection, plain LIST fallback, certificate pinning before IMAP commands, no IMAP session on either invalid TLS endpoint, no writes, `BODY.PEEK[]` on every fetch, and zero remaining open connections. The reader compares the original MIME module's parsed base64 part and decoded Unicode text. The fixture contains only synthetic messages and credentials; no provider has been contacted. Its private CA is supplied only to these test clients, never installed in system trust.
+
+`session-lifecycle.patch` adds an explicit TLS configuration, connection/command deadlines, cancellation that closes pending commands, shutdown of event-loop threads, disconnect failures, command-tag matching and bounded literals. Void commands now await their own tagged completion instead of completing on an unsolicited untagged response. Non-implicit-TLS configurations are rejected explicitly; STARTTLS has not been implemented.
+
+The first shell-executable attempt failed with a socket permission error before TLS. The successful evidence comes from the Internet-permitted HAP, using the same native library. The shell run is retained as diagnostic evidence, not a passing test.
+
+The combined-core regression passes **61 original-core/platform checks**: 24 IMAP/account/body/UI, 32 networking/JMAP/account/reader/change/draft checks, and five mail-app EmailAddress/MIME checks including composer validation. A further 15 historical prototype and storage/UI regressions pass in the same bounded session (76 total). See [combined-core evidence](../port/swift-imap/combined-core-result.json). Reproduce the full batch with `scripts/test-mail-core build`, followed by `scripts/test-mail-core device`; all builds occur before the emulator starts. The device command verifies the exact shared library in all three prepared HAPs before launching.
+
+## Account and reader integration
+
+The shipping account screen defaults to IMAP and accepts a host, implicit-TLS port, email address, login name and password/app password. The email identity is independent from the authentication login and persisted in the encrypted account database (schema 3); migration preserves older credentials without guessing an email address from them. `NativeImapClient` translates the existing presentation DTOs into calls to `thunderbird_imap_account_request`; protocol encoding, TLS, response parsing and MIME decoding remain in Swift. Passwords use the existing HarmonyOS Asset Store lifecycle. Account metadata and cached messages use encrypted RDB storage. The production UI test saves a synthetic account, recreates the screen, restores credentials from Asset Store, opens INBOX and reads Unicode text.
+
+`ImapAccountCore` adds the platform/account boundary while calling the original `IMAPClient`. It retrieves HarmonyOS app trust roots and certificate pins through NetStack. NIOSSL verifies chains and hostnames before an additional leaf SPKI pin check. Huawei may return trust-anchor directories; the adapter loads their PEM contents explicitly because NIOSSL's additional-root API accepts files only. The synthetic app-scoped trust configuration accepts the fixture root; untrusted issuers, wrong names and a same-CA certificate with the wrong public key fail before credentials are sent. Production input cannot supply roots or disable TLS verification.
+
+The reader uses three selected original Account files: `EmailBody.swift`, `EmailAttachment.swift` and `String.swift` (two unchanged). An explicit body patch removes the unused, unimplemented JMAP initializer, exposes the MIME initializer, bounds recursion, preserves attached text and forwarded messages, and avoids logging message contents. All 13 upstream body fixtures pass in the HAP. With IMAP, JMAP, MIME and EmailAddress, the shipping core now compiles **86 original source files, 62 unchanged**. This is selected Account model reuse, not the whole upstream Account module.
+
+Pages contain at most 50 newest messages, fetched by sequence range under an examined mailbox epoch. The adapter rechecks message count, next UID and UIDVALIDITY after each fetch and rejects changed state instead of silently mixing pages. Message identities include mailbox, UIDVALIDITY and UID; a changed epoch cannot open a different message under a reused UID. Paging uses `EXAMINE`; reading uses `SELECT` to discover flag permissions and `BODY.PEEK[]` to avoid marking mail as read. No path issues CLOSE or EXPUNGE. The fixture verifies two pages (50 plus one), stale epochs, changes during fetching, missing UIDs and mismatched responses.
+
+## Read/unread and stars
+
+`message-flags.patch` exposes the existing upstream UIDStoreCommand through `IMAPClient.setFlag`, and retains READ-ONLY and PERMANENTFLAGS in the existing SELECT response handler. The account adapter selects the mailbox, checks UIDVALIDITY, checks the specific flag permission, and fetches the target UID before attempting STORE. It sends exactly one `+FLAGS.SILENT` or `-FLAGS.SILENT` operation for `\Seen` or `\Flagged`; unrelated flags are retained. It waits for the tagged acknowledgement and fetches the flag again before reporting success. Once STORE is attempted, failures are reported as unconfirmed and are never automatically replayed. A refresh can recover a write applied by the server when its acknowledgement was lost.
+
+A missing PERMANENTFLAGS response permits changes; an explicit empty list denies them. The `\*` wildcard permits new keywords and does not grant either of the two system flags. These distinctions follow [RFC 9051 SELECT and response-code rules](https://www.rfc-editor.org/rfc/rfc9051.html#section-6.3.2). The UI checks permissions returned with the message, and the native operation checks again on its fresh connection. Cached content remains non-writable until refreshed.
+
+The 24 IMAP tests include add/remove Seen and Flagged, updated unread counts, preservation of Answered and a custom label, read-only and limited permissions, stale/missing/wrong UIDs, rejected and ignored writes, and a lost acknowledgement. Fixture-side observations confirm 11 explicitly requested STORE commands, including two visible UI star/unstar actions and exactly one write in the lost-reply scenario. All connections close after testing.
+
+## Remaining work
+
+This is an IMAP reading and flag-update milestone verified against synthetic local servers. The user has deferred OAuth. Real-provider interoperability, STARTTLS, automatic configuration, SMTP sending, archive/folder moves, background synchronization and attachment/HTML presentation remain unfinished. The parser currently caps a message literal at 4 MB; larger messages are rejected. IMAP mailbox hierarchy and special-folder roles beyond INBOX still need richer mapping. The entire Account module also depends on SMTP, Autoconfiguration and Apple authentication adapters.
+
+ARM compilation, Huawei signing, installation, launch and native EmailAddress/MIME execution now pass on the Pura X. The live account’s folders, message list and a plain-text body were observed on its screen after the UIDNEXT fix. Twenty-five native IMAP/account/body checks pass on the exact shipping ARM core. Real-provider flag changes and the UI fixture scenario remain unverified on hardware. The unfinished draft journal is preserved in ignored `.tools/draft-journal-wip`; it is not active in production storage or the build.
+
+## Servers omitting UIDNEXT
+
+The Pura X exposed a live-provider compatibility gap: successful EXAMINE omitted UIDNEXT, causing the adapter to reject the mailbox before FETCH. `selection-status.patch` lets the original status method accept explicit attributes. `selectedEpoch` requests MESSAGES, UIDVALIDITY and UIDNEXT only when selection omits UIDNEXT, and rejects missing values or a changed validity/count. No UID is guessed. This follows the compatibility guidance in [RFC 3501 §6.3.1](https://www.rfc-editor.org/rfc/rfc3501.html#section-6.3.1). The two new fixture tests cover two pages, MIME reading, incomplete status and changed identity/count; fixture observations confirm rejected cases never FETCH. The full fixture suite now contains 26 cases (25 without its UI case on the Pura X). Earlier 24-test emulator evidence is retained as historical evidence.

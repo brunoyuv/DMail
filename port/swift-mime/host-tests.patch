@@ -1,0 +1,87 @@
+--- a/Tests/MIMETests/BodyTests.swift
++++ b/Tests/MIMETests/BodyTests.swift
+@@ -83,7 +83,14 @@
+ 
+     // MARK: RawRepresentable
+     @Test(arguments: mocks) func rawValue(_ mock: Mock) throws {
+-        #expect(try Body(try .mock(mock.uuid)).rawValue.count == mock.bytes)
++        let source = try Data.mock(mock.uuid)
++        let body = try Body(source)
++        // The port preserves transport bytes, including CRLF and body whitespace.
++        let separator = source.range(of: Data([13, 10, 13, 10])) ?? source.range(of: Data([10, 10]))
++        #expect(body.part.data == Data(source[try #require(separator).upperBound...]))
++        let encoded = try Body(body.rawValue)
++        #expect(encoded.contentType == body.contentType)
++        #expect(encoded.part.data == body.part.data + Data([13, 10]))
+     }
+ }
+ 
+--- a/Tests/MIMETests/PartTests.swift
++++ b/Tests/MIMETests/PartTests.swift
+@@ -52,10 +52,10 @@
+         #expect(parts.count == 2)
+         #expect(parts.first?.contentType == .text(.plain, .ascii))
+         #expect(parts.first?.contentTransferEncoding == .ascii)
+-        #expect(parts.first?.data.count == 73)
++        #expect(parts.first?.data == (try Part(plainText)).data)
+         #expect(parts.last?.contentType == .text(.html, .utf8))
+         #expect(parts.last?.contentTransferEncoding == .quotedPrintable)
+-        #expect(parts.last?.data.count == 384)
++        #expect(parts.last?.data == (try Part(quotedPrintableHTML)).data)
+     }
+ 
+     @Test func descriptionInit() throws {
+@@ -63,27 +63,27 @@
+         #expect(html.contentDisposition == .inline)
+         #expect(html.contentTransferEncoding == .quotedPrintable)
+         #expect(html.contentType == .text("html", .utf8))
+-        #expect(html.data + "\n".data(using: .ascii)! == .html)
++        #expect(html.data == Data(quotedPrintableHTML[quotedPrintableHTML.range(of: "\r\n\r\n")!.upperBound...].utf8))
+         let jpeg: Part = try Part(base64EncodedJPEGImage)
+         #expect(jpeg.contentDisposition == .inline(.jpeg))
+         #expect(jpeg.contentTransferEncoding == .base64)
+         #expect(jpeg.contentType == .image("jpeg"))
+-        #expect(jpeg.data == .jpeg.base64EncodedData())
++        #expect(Data(base64Encoded: jpeg.data, options: .ignoreUnknownCharacters) == .jpeg)
+         let png: Part = try Part(base64EncodedPNGImage)
+         #expect(png.contentDisposition == .attachment(.png))
+         #expect(png.contentTransferEncoding == .base64)
+         #expect(png.contentType == .image("png"))
+-        #expect(png.data == .png.base64EncodedData())
++        #expect(Data(base64Encoded: png.data, options: .ignoreUnknownCharacters) == .png)
+         let text: Part = try Part(plainText)
+         #expect(text.contentDisposition == .inline)
+         #expect(text.contentTransferEncoding == .ascii)
+         #expect(text.contentType == .text("plain", .ascii))
+-        #expect(text.data + "\n".data(using: .ascii)! == .text)
++        #expect(text.data == Data(plainText[plainText.range(of: "\r\n\r\n")!.upperBound...].utf8))
+         let zip: Part = try Part(base64EncodedArchive)
+         #expect(zip.contentDisposition == .attachment(.zip))
+         #expect(zip.contentTransferEncoding == .base64)
+         #expect(zip.contentType == .application("zip"))
+-        #expect(zip.data == .zip.base64EncodedData())
++        #expect(Data(base64Encoded: zip.data, options: .ignoreUnknownCharacters) == .zip)
+     }
+ }
+ 
+--- a/Tests/MIMETests/StringTests.swift
++++ b/Tests/MIMETests/StringTests.swift
+@@ -77,14 +77,14 @@
+ 
+     @Test func headerDecoded() throws {
+         let subject: String = "=?UTF-8?Q?=F0=9F=91=8D=F0=9F=A4=96_S=C3=A4mpl=C3=A9_=C3=A6m?= =?UTF-8?Q?@il_$\\ubject=F0=9F=93=A6?="
+-        #expect(try subject.headerDecoded() == "👍🤖_Sämplé_æm@il_$\\ubject📦")
++        #expect(try subject.headerDecoded() == "👍🤖 Sämplé æm@il $\\ubject📦")
+         #expect(try "=?utf-8?B?4p2k77iP4p2k77iP4p2k77iPw6nDhvCfpJYiXOKdpO+4j+KdpO+4jw==?=".headerDecoded() == "❤️❤️❤️éÆ🤖\"\\❤️❤️")
+         #expect(try "=?utf-8?Q?=E2=9D=A4=EF=B8=8F=E2=9D=A4=EF=B8=8F=E2=9D=A4=EF=B8=8F=C3=A9=C3=86=F0=9F=A4=96\"\\=E2=9D=A4=EF=B8=8F=E2=9D=A4=EF=B8=8F?=".headerDecoded() == "❤️❤️❤️éÆ🤖\"\\❤️❤️")
+         #expect(try "Your app password was used to sign in to a third-party app".headerDecoded() == "Your app password was used to sign in to a third-party app")
+         #expect(try encodedQuotedPrintable.headerDecoded() == "❤️❤️❤️éÆ🤖\"\\❤️❤️")
+-        #expect(throws: MIMEError.self) {
+-            try "=?utf-8?B?4p2k77iP4p2k77iP4p2k77iPw6nDhvCfpJYi+4j+KdpO+4jw==?=".headerDecoded()
+-        }
++        // A malformed word remains readable instead of discarding the entire header.
++        let malformed = "=?utf-8?B?4p2k77iP4p2k77iP4p2k77iPw6nDhvCfpJYi+4j+KdpO+4jw==?="
++        #expect(try malformed.headerDecoded() == malformed)
+     }
+ 
+     @Test func headerEncoded() throws {

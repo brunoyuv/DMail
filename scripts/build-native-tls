@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT/scripts/swift-target-env"
+"$ROOT/scripts/prepare-native-network"
+NATIVE="$ROOT/.tools/command-line-tools/sdk/default/openharmony/native"
+SDK="$SWIFT_TARGET_SDK"
+mkdir -p "$ROOT/.tools/swift-ohos-openssl${SWIFT_BUILD_SUFFIX}"
+cd "$ROOT/.tools/swift-ohos-openssl${SWIFT_BUILD_SUFFIX}"
+export CC="$NATIVE/llvm/bin/clang --target=${SWIFT_CLANG_TARGET} --sysroot=$NATIVE/sysroot"
+export AR="$NATIVE/llvm/bin/llvm-ar"
+export RANLIB="$NATIVE/llvm/bin/llvm-ranlib"
+# The Linux configuration supplies the selected CPU’s assembly ABI; all headers and
+# linking use OHOS. No host libraries are selected. TLS remains to be tested.
+perl "$ROOT/.tools/openssl-source/Configure" "linux-$SWIFT_CPU" shared no-tests no-module no-engine no-async \
+  --prefix="$SDK" --libdir=lib --openssldir=/etc/ssl
+make -j "${SWIFT_RUNTIME_JOBS:-4}" build_sw
+make install_dev

@@ -1,0 +1,5 @@
+# Preserve upstream patch context and imported license/vendor bytes, including
+# intentional whitespace, across checkouts. Do not reformat provenance inputs.
+*.patch -text -whitespace
+licenses/** -text -whitespace
+port/swift-smtp/vendor/LineBasedFrameDecoder.swift -text -whitespace

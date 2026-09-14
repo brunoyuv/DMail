@@ -1,0 +1,36 @@
+{
+  "color": [
+    {
+      "name": "start_window_background",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "mail_background",
+      "value": "#FFFFFF"
+    },
+    {
+      "name": "mail_text_primary",
+      "value": "#18191C"
+    },
+    {
+      "name": "mail_text_secondary",
+      "value": "#71747B"
+    },
+    {
+      "name": "mail_surface",
+      "value": "#F1F3F5"
+    },
+    {
+      "name": "mail_divider",
+      "value": "#E4E6E9"
+    },
+    {
+      "name": "mail_accent",
+      "value": "#0A59F7"
+    },
+    {
+      "name": "mail_primary_button",
+      "value": "#0A59F7"
+    }
+  ]
+}

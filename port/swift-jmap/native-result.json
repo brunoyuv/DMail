@@ -1,0 +1,1110 @@
+{
+  "verified": "2026-09-13",
+  "repository": "https://github.com/thunderbird/thunderbird-ios",
+  "revision": "61c78d9ebe39ac5b61f31fce371bdfe8c001f7bf",
+  "target": "x86_64-unknown-linux-ohos",
+  "swiftLanguageVersion": 6,
+  "sourceFiles": 23,
+  "unchangedSourceFiles": 12,
+  "sourceChanges": "Platform imports; injected transport, URL and account; session state; response correlation; pagination and body decoding; shared original SET encoder; Swift flag/archive/undo workflows; strict SET responses, error mapping and request limits; lossless draft input, original SET-based creation and explicit uncertain-save outcomes",
+  "compiled": true,
+  "linkedWithNoUndefinedSymbols": true,
+  "runtimeVerified": true,
+  "mailAppIntegration": true,
+  "upstreamTestsExecuted": true,
+  "librarySha256": "ec6e87e41e3a350209f1bdb84e7e97ad14d571664b7cfa674339cc54ce3fcb6a",
+  "platformAdapters": [
+    "port/swift-platform/HarmonyLogging.swift",
+    "port/swift-platform/CHarmonyLogging/logging.c",
+    "port/swift-bridge/JmapAccountBridge.swift",
+    "port/swift-bridge/JmapTransport.swift",
+    "harmony/entry/src/main/ets/mail/jmap/NativeJmapAccountCore.ets",
+    "port/swift-bridge/JmapReaderBridge.swift",
+    "port/swift-bridge/JmapWriteBridge.swift"
+  ],
+  "files": [
+    {
+      "upstreamPath": "Core/Sources/JMAP/Account.swift",
+      "sha256": "89d75c56cdd278ede4c80554453bbbf4057db2dd1e4f0596bf7c894c584dc9b3",
+      "compiledSha256": "89d75c56cdd278ede4c80554453bbbf4057db2dd1e4f0596bf7c894c584dc9b3",
+      "changed": false
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Authorization.swift",
+      "sha256": "76c9d99c923d79a943cd13cfa8860191266ae92525ac8abf6af6da0a5314669a",
+      "compiledSha256": "76c9d99c923d79a943cd13cfa8860191266ae92525ac8abf6af6da0a5314669a",
+      "changed": false
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Capability.swift",
+      "sha256": "e53abd1b4abe3235b4af11ffa0aa0b32a67df82a9168f9109e63f965f5ff3c27",
+      "compiledSha256": "e53abd1b4abe3235b4af11ffa0aa0b32a67df82a9168f9109e63f965f5ff3c27",
+      "changed": false
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Email.swift",
+      "sha256": "b6e9c3f309a3c32280c34cdf1f908187eded6d410b4cc1a3f8ae3f6ad79214c1",
+      "compiledSha256": "bc6c8467ee857f87dea39668ab842a55312bb5878a4e309d4fbda34e873c2d43",
+      "changed": true
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/EmailAddress.swift",
+      "sha256": "39845c16e36d89ddfee65d50484f7cc38345f23393df4cfb998c414ae860e914",
+      "compiledSha256": "39845c16e36d89ddfee65d50484f7cc38345f23393df4cfb998c414ae860e914",
+      "changed": false
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Filter.swift",
+      "sha256": "de6f53956ffdfd9547bce215f90c0ca6aeacba7cf2497684db59dd7d63db679a",
+      "compiledSha256": "de6f53956ffdfd9547bce215f90c0ca6aeacba7cf2497684db59dd7d63db679a",
+      "changed": false
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/JMAPClient.swift",
+      "sha256": "fefb3d1c856c1bc2fca8f465804baa73f949369de08379f4dd48bb8f8044539b",
+      "compiledSha256": "cd944248961b6f5d7c18c8621ca1caeb02a814d2c860ab71f947ae1bdef5dd86",
+      "changed": true
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/JMAPError.swift",
+      "sha256": "8669c8493d3e5c3186cfe583ec678751f8f2bf9e3e687412673154f18eba0324",
+      "compiledSha256": "8669c8493d3e5c3186cfe583ec678751f8f2bf9e3e687412673154f18eba0324",
+      "changed": false
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/JSONDecoder.swift",
+      "sha256": "49c569215536fb79d3d6f47113dc1a2cdc7fc9b228c78118ac5dcbf747e34ebd",
+      "compiledSha256": "faa21fac9b678ca5a33db3cd281537c6d7838b92e29dea1a2ab8ad83b530edb2",
+      "changed": true
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Locale.swift",
+      "sha256": "c40b88df239091fe334ec486b14e4faf470c8b741eb0d8ae44b217467250176d",
+      "compiledSha256": "c40b88df239091fe334ec486b14e4faf470c8b741eb0d8ae44b217467250176d",
+      "changed": false
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Mailbox.swift",
+      "sha256": "28a8f76227ef583d6adc45fd5cdee941e3e38c81c89466a9c6c950055898e451",
+      "compiledSha256": "e78b9480affe4d79f3f632632b33a2dae98cc35045d016a0eccc7793927ec668",
+      "changed": true
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Method.swift",
+      "sha256": "428073eb062431edd106283bb4f83404735da1c2dcab87b8f7675a789d1d3a39",
+      "compiledSha256": "d25870dccf8ee043b32685cbd7cbef80d155ab4fb8bf3a5f70629ed21c390b39",
+      "changed": true
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/MethodAction.swift",
+      "sha256": "494a86d38bf5a9ed7660fa62dc1192f831d1f91dfd09275e0e053609fb505d56",
+      "compiledSha256": "494a86d38bf5a9ed7660fa62dc1192f831d1f91dfd09275e0e053609fb505d56",
+      "changed": false
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/MethodError.swift",
+      "sha256": "7af81da559c2f1c12c4573932e7940b8a9267fcd528572dc7bd8ae4d383540e6",
+      "compiledSha256": "4975d8f1c58e30f852c4bcb025ff2d87ab5b3419c7a66db1efb6ad5748a1038e",
+      "changed": true
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/MethodResponse.swift",
+      "sha256": "dfc5b250c59db99f8c6c8b2f01ccdbdf8febfeb0b8e13821f48bf39918491c91",
+      "compiledSha256": "a3fd123f6592bd2ff337003e94e0357808d2c49b077d6a5e08a89ff183d35697",
+      "changed": true
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/RequestError.swift",
+      "sha256": "0f3f731d80c50e401ebb4a40bc7a46d3881703b35497012b47d1829452ba229e",
+      "compiledSha256": "0f3f731d80c50e401ebb4a40bc7a46d3881703b35497012b47d1829452ba229e",
+      "changed": false
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Server.swift",
+      "sha256": "1b86b929304e5de7850e68e503a0ec9a4933a6e4186139897d3c60583ddc3523",
+      "compiledSha256": "1b86b929304e5de7850e68e503a0ec9a4933a6e4186139897d3c60583ddc3523",
+      "changed": false
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Session.swift",
+      "sha256": "84cb6e3e7544efb28e98bb57a222aa89a1758937c7555f597d05e4fcd7036318",
+      "compiledSha256": "609fb28660a83dd6ad7af5dfb487cdce5a9ec6380572940bcf4a480a71016b13",
+      "changed": true
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/SetError.swift",
+      "sha256": "1e0fa0042fa08ca7e0ffc42a26b653e1b108067fdd940b8f05133917d1c5e4b8",
+      "compiledSha256": "17912855db558299a583c42160da0c39abdb840b141fa666c96e3a8d930f884e",
+      "changed": true
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Thread.swift",
+      "sha256": "7079f76526562b42c1c6e85a0105a0cf2e9bbc29668dcdf04aedecb5e3f55d39",
+      "compiledSha256": "7079f76526562b42c1c6e85a0105a0cf2e9bbc29668dcdf04aedecb5e3f55d39",
+      "changed": false
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/URL.swift",
+      "sha256": "8bea9562e9b90092e2c844dd684d2ea2882dabaf24ddac0bf8003661cb9149ae",
+      "compiledSha256": "8bea9562e9b90092e2c844dd684d2ea2882dabaf24ddac0bf8003661cb9149ae",
+      "changed": false
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/URLRequest.swift",
+      "sha256": "8bdfb416cda9cc523a46e150bceeb5f9ab106b1c9c6025054e22cc82db899a10",
+      "compiledSha256": "1bafa7d9cf0de3d437fd8ecf88ae5f292a602c9a66ae933b8f527964d67c161b",
+      "changed": true
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/URLSession.swift",
+      "sha256": "97bca6b815b875057b00bd44b6878bd1f4bec9f8c7cc3f5dd6e29eb10299ca6f",
+      "compiledSha256": "bbfc5cf70948830c852cd726433ed8be5ce3725088c4a8fba578c2dcbe770234",
+      "changed": true
+    }
+  ],
+  "commands": [
+    "./scripts/build-native-jmap",
+    "./scripts/test-native-network build",
+    "./scripts/test-native-network device",
+    "./scripts/test-jmap-upstream"
+  ],
+  "diagnosticHapIntegration": true,
+  "hapTests": {
+    "passed": 4,
+    "combinedSuitePassed": 32,
+    "cases": [
+      "Read session, mailboxes, messages and thread from upstream test vectors",
+      "Reject HTTP 401",
+      "Reject malformed method response",
+      "Create, update and delete synthetic fixture mailbox"
+    ],
+    "loggingPrivacyVerified": true,
+    "fixtureObservations": {
+      "sessions": 3,
+      "unauthorized": 1,
+      "malformed": 1,
+      "calls": [
+        "Mailbox/get",
+        "Email/query",
+        "Email/get",
+        "Thread/get",
+        "Email/get",
+        "Mailbox/get",
+        "Mailbox/set",
+        "Mailbox/set",
+        "Mailbox/set"
+      ],
+      "violations": [],
+      "created": [
+        "created-folder"
+      ],
+      "updated": [
+        "created-folder"
+      ],
+      "destroyed": [
+        "created-folder"
+      ]
+    }
+  },
+  "hostTests": {
+    "passedFunctions": 34,
+    "skippedProviderFunctions": 3,
+    "reportedFunctions": 37,
+    "suites": 18,
+    "testPatch": "port/swift-jmap/host-tests.patch",
+    "testPatchSha256": "1d1b4bf1c6734607f2ce9ba609db39b03e0b520c9b3006069cdf224d520a9f6c",
+    "note": "Two networking imports, one localized error-text expectation and five expected body-part IDs adapted. The latter correct expectations that depended on dropped wire IDs. No live provider configured upstream.",
+    "readerTestPatch": "port/swift-jmap/reader-tests.patch",
+    "readerTestPatchSha256": "5b0e15b27800d4a4410c7c9b37f9ff9ba44505d716388532f886907a777dd39c"
+  },
+  "emulatorStoppedAfterTests": true,
+  "evidence": {
+    ".tools/network-test-app/entry/build/default/outputs/default/entry-default-unsigned.hap": "ebdc815747fde885f879a5bed5306dfa9b6a8a3ad6fc173636ada38076261460",
+    ".tools/network-test-device.log": "704155add444ecca71bd6ad88c32ebfc12371190705158c8f55482c0a903f17b",
+    ".tools/network-fixture-stats.json": "da79ff8dcbae16ebdb03a507b61c10c5eb0fe787f0dc33db58c0e66a5b991137",
+    "port/swift-jmap/JmapProbe.swift": "56481fd19463085c832570afccb93d22c749aa8faf602b3dd511d956c249d477",
+    "port/swift-jmap/fixture.cjs": "76226a98524619d1f8a78ad90d38ebb5eb32976eda6e052b87f14eb1daadd524",
+    "port/swift-jmap/AccountCore.test.ets": "68b7973c361ce0f75d0e740020ee47e8d74730898c7eb9718f959b833b7d8161",
+    "port/swift-jmap/account-fixture.cjs": "908df001429329802116589e9102e8e769115de76c699984125c0f791f6283f2",
+    "harmony/entry/build/default/outputs/default/entry-default-unsigned.hap": "88fb627457c1e6e0c8073ee3847bfda6d2a057e589f89a9a0c149e795ebe2b2c",
+    "port/swift-platform/HarmonyLogging.swift": "146e176cdb29ba79403d686867b31b6270011d6d3ff92aa26df92f6df1ffcd76",
+    "port/swift-platform/CHarmonyLogging/logging.c": "59b0774a8fc3c3a2d4a11ef8d2a4aeb1d36a01836288549380c0d5f742ab100e",
+    "port/swift-bridge/JmapAccountBridge.swift": "324fd0bf3c0d7335bb00340b994f87b47565bb2ab77c512d55d81d223f2f2125",
+    "port/swift-bridge/JmapTransport.swift": "ecd1b6dd5c9a2afdd1cfc680606532f560a44323d99c3bbbd37dd2b0d512f63b",
+    "harmony/entry/src/main/ets/mail/jmap/NativeJmapAccountCore.ets": "75891c23e0a7c3527dd62a225633eb09db258c39f0fa13890318c88563602749",
+    "port/swift-jmap/ReaderCore.test.ets": "bf9f801503ed573e473f23dc8d95cd6d792b2c577c8d2ba4a824aba2f265c194",
+    "port/swift-jmap/reader-fixture.cjs": "f3b3c3bd6bb71cc20795ff0d7b4dc0b1c02f1fe972bb0879b027653ea8dbfd86",
+    "port/swift-bridge/JmapReaderBridge.swift": "13fc73c2b2b1c136dea1593acf95c17f7ec054fdeb9bbbe0513a5f804ccf992f",
+    "harmony/entry/src/main/ets/mail/jmap/JmapClient.ts": "8faf4feaa64849bde5ad818d0126a84fca25b2792edb7b87ca52385f6fc44fac",
+    ".tools/draft-upstream-regressions.log": "fa806ad87dfad30ccbada0625ced43e37d26a865ad26083336ff551877d006b3",
+    ".tools/draft-prototype-regressions.log": "5434a3d72b4086a89c3ecff7a472093674caf0e93a255b70ca8574dbabbb347c",
+    ".tools/native-draft-device-session.log": "ac9571079f429ca860f36d0dc3357c0eb51d6c39bb1a151fe2abdfcf11d1f383",
+    "port/swift-jmap/WriteCore.test.ets": "9300a76d5949a7a9f38efbf4044c7499622e31e4b291607c8e613febf092331f",
+    "port/swift-jmap/write-fixture.cjs": "9b0fa3b15363b21620669b02c53a183f5c0c3b01066dd814399242197774d0c2",
+    "port/swift-bridge/JmapWriteBridge.swift": "19033f82efb53624e9b1298e7dedef661ed110f8d46b75d73172d4e057d6669e",
+    "port/swift-jmap/DraftCore.test.ets": "d67a3a576b2bd4d442c3f5c657f167b07931548997e1660b65fd7d45f11a57c7",
+    "port/swift-jmap/draft-fixture.cjs": "1b66963f6ab389bb4a16327454203ccf3a010db1b347f12541deb1ea34e6e5c7",
+    "port/swift-jmap/draft-creation.patch": "9debd647f95048fad6c13f9a378589fffb6f53d6f7cf29c0695455223dc1bb9c",
+    "harmony/entry/src/main/cpp/napi_init.cpp": "cd09283214c01e9e3e47cedadcc4def2b40880ad41dd4d2e664494d024a46cf2",
+    "port/swift-runtime/corelibs-harmonyos.patch": "abc08f2b7e1400fb6590f25927fa71342fb8959319affc2800b00c3bbdcd453a",
+    ".tools/native-facade-device-session.log": "42be0577db101299872546ac3e6d18a5dba3977d0d3d4f45a6ebda2339559816",
+    ".tools/native-facade-ui-session.log": "bbc1d77b6e085bb427c6ac7c3155634cbb35d369fc3ef0fae3adbba83296977b",
+    ".tools/facade-host-tests.log": "d584e026ad83525dac51f8ab9ecdb3e7af7a6f9036490ad4a889cfe24d6373d1"
+  },
+  "sourcePatches": {
+    "port/swift-jmap/harmonyos-imports.patch": "f39e3d9bff84e6a4343966ceb463f11577ddd9e4315d643bd7443cedfd6442dc",
+    "port/swift-jmap/account-context.patch": "cbe9cd6d8fe5551bfda681a55a516d656ef3df50e841f6d85111660d86ffe6da",
+    "port/swift-jmap/response-correlation.patch": "442663de92f1146dfe5732c8c09bbbde4f51b23915bc34ddcb290bc931243cd3",
+    "port/swift-jmap/message-reader.patch": "2d173d99357328d7c28a13f2f38451ff91a44078acdbe664a2eee18aa0232508",
+    "port/swift-jmap/message-writes.patch": "4fb665f983ea53e8de0c824484917b733ef8ad03a8d1d7b6f40275fc38b6f2a1",
+    "port/swift-jmap/draft-creation.patch": "9debd647f95048fad6c13f9a378589fffb6f53d6f7cf29c0695455223dc1bb9c"
+  },
+  "libraryNote": "Standalone link artifact; the HAP uses the same module objects combined into libThunderbirdCore.so.",
+  "productionCoreSha256": "13cfdd35540f2bceed7c082d9fcc281fa158e12b728f65f07a21ffd7432ef53b",
+  "mailAppIntegrationScope": [
+    "account discovery",
+    "selected-account mailbox loading",
+    "paged message lists",
+    "plain-text reading",
+    "read/unread and stars",
+    "archive/undo",
+    "draft creation backend"
+  ],
+  "remainingPrototypePaths": [],
+  "accountBridgeTests": {
+    "passed": 5,
+    "failed": 0,
+    "productionAdaptersUsed": true,
+    "sameCoreAsMainHap": true,
+    "fixtureObservations": {
+      "sessions": 6,
+      "unauthorized": 1,
+      "selectedAccounts": [
+        "z_selected",
+        "z_selected",
+        "z_selected"
+      ],
+      "forbidden": 0,
+      "oversizedBytes": 4325376,
+      "oversizedCancelled": true,
+      "postRedirects": 1,
+      "mismatchedReplies": 1,
+      "violations": []
+    },
+    "cases": [
+      "Custom session URL and second-account mailbox selection",
+      "Invalid endpoint, authentication and missing account",
+      "Cross-origin redirect and API rejection",
+      "Streaming response limit and JSON content type",
+      "Response call ID correlation and POST redirect rejection"
+    ]
+  },
+  "readerBridgeTests": {
+    "passed": 6,
+    "failed": 0,
+    "productionFacadeAndAdaptersUsed": true,
+    "sameCoreAsMainHap": true,
+    "liveProviderUIVerified": false,
+    "fixtureObservations": {
+      "sessions": 27,
+      "queries": [
+        [
+          "paged",
+          0
+        ],
+        [
+          "paged",
+          2
+        ],
+        [
+          "ordered",
+          0
+        ],
+        [
+          "unknown",
+          0
+        ],
+        [
+          "unknown",
+          1
+        ],
+        [
+          "changed",
+          0
+        ],
+        [
+          "wrongPosition",
+          0
+        ]
+      ],
+      "gets": [
+        {
+          "ids": [
+            "first",
+            "deleted"
+          ],
+          "includeBody": false
+        },
+        {
+          "ids": [
+            "last"
+          ],
+          "includeBody": false
+        },
+        {
+          "ids": [
+            "first",
+            "last"
+          ],
+          "includeBody": false
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": false
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "html"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "missing"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "badbody"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "duplicate"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "badDate"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "tooLarge"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "long"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        }
+      ],
+      "violations": []
+    },
+    "cases": [
+      "Pagination over deleted IDs and reordered GET responses",
+      "Unknown totals and changed query state/position",
+      "Original Email body values, metadata and fractional timestamp",
+      "HTML-only and deleted messages remain explicit",
+      "Incomplete/conflicting data and invalid dates rejected, per-part UTF-8 limit enforced, valid 120000-byte Unicode part retained after rejection",
+      "Twelve sequential reader requests followed by session cancellation complete exactly once"
+    ]
+  },
+  "messageChangeTests": {
+    "passed": 6,
+    "failed": 0,
+    "productionFacadeAndAdaptersUsed": true,
+    "sameCoreAsMainHap": true,
+    "liveProviderUIVerified": false,
+    "fixtureObservations": {
+      "scenarios": {
+        "flags": {
+          "sessions": 5,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Email/get"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "keywords/$seen": true
+              },
+              "ifInState": "v0"
+            },
+            {
+              "patch": {
+                "keywords/$seen": null
+              },
+              "ifInState": "v1"
+            },
+            {
+              "patch": {
+                "keywords/$flagged": true
+              },
+              "ifInState": "v2"
+            },
+            {
+              "patch": {
+                "keywords/$flagged": null
+              },
+              "ifInState": "v3"
+            }
+          ],
+          "applied": 4,
+          "version": 4,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "archive": {
+          "sessions": 3,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Email/get"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "mailboxIds/archive": true,
+                "mailboxIds/inbox": null
+              },
+              "ifInState": "v0"
+            },
+            {
+              "patch": {
+                "mailboxIds/archive": null,
+                "mailboxIds/inbox": true
+              },
+              "ifInState": "v2"
+            }
+          ],
+          "applied": 2,
+          "version": 3,
+          "keywords": {
+            "$custom": true,
+            "$other": true
+          },
+          "mailboxIds": {
+            "label": true,
+            "inbox": true
+          },
+          "external": true
+        },
+        "already": {
+          "sessions": 3,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Email/get"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "mailboxIds/inbox": null
+              },
+              "ifInState": "v0"
+            },
+            {
+              "patch": {
+                "mailboxIds/inbox": true
+              },
+              "ifInState": "v1"
+            }
+          ],
+          "applied": 2,
+          "version": 2,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "label": true,
+            "archive": true,
+            "inbox": true
+          },
+          "external": false
+        },
+        "stale": {
+          "sessions": 2,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Mailbox/get",
+            "Email/get"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "mailboxIds/archive": true,
+                "mailboxIds/inbox": null
+              },
+              "ifInState": "v0"
+            }
+          ],
+          "applied": 1,
+          "version": 2,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "label": true,
+            "archive": true,
+            "extra": true
+          },
+          "external": true
+        },
+        "race": {
+          "sessions": 1,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "keywords/$flagged": true
+              },
+              "ifInState": "v0"
+            }
+          ],
+          "applied": 0,
+          "version": 1,
+          "keywords": {
+            "$custom": true,
+            "$race": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "readonly": {
+          "sessions": 1,
+          "methods": [],
+          "sets": [],
+          "applied": 0,
+          "version": 0,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "denied": {
+          "sessions": 1,
+          "methods": [
+            "Mailbox/get",
+            "Email/get"
+          ],
+          "sets": [],
+          "applied": 0,
+          "version": 0,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "limit": {
+          "sessions": 1,
+          "methods": [],
+          "sets": [],
+          "applied": 0,
+          "version": 0,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "archiveDenied": {
+          "sessions": 1,
+          "methods": [
+            "Mailbox/get",
+            "Email/get"
+          ],
+          "sets": [],
+          "applied": 0,
+          "version": 0,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "forbidden": {
+          "sessions": 1,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "keywords/$flagged": true
+              },
+              "ifInState": "v0"
+            }
+          ],
+          "applied": 0,
+          "version": 0,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "notFound": {
+          "sessions": 1,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "keywords/$flagged": true
+              },
+              "ifInState": "v0"
+            }
+          ],
+          "applied": 0,
+          "version": 0,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "unknown": {
+          "sessions": 1,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "keywords/$flagged": true
+              },
+              "ifInState": "v0"
+            }
+          ],
+          "applied": 0,
+          "version": 0,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "methodReadonly": {
+          "sessions": 1,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "keywords/$flagged": true
+              },
+              "ifInState": "v0"
+            }
+          ],
+          "applied": 0,
+          "version": 0,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "conflicting": {
+          "sessions": 1,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "keywords/$flagged": true
+              },
+              "ifInState": "v0"
+            }
+          ],
+          "applied": 1,
+          "version": 1,
+          "keywords": {
+            "$custom": true,
+            "$flagged": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "badValue": {
+          "sessions": 1,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "keywords/$flagged": true
+              },
+              "ifInState": "v0"
+            }
+          ],
+          "applied": 1,
+          "version": 1,
+          "keywords": {
+            "$custom": true,
+            "$flagged": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "lost": {
+          "sessions": 2,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Email/get"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "keywords/$flagged": true
+              },
+              "ifInState": "v0"
+            }
+          ],
+          "applied": 1,
+          "version": 1,
+          "keywords": {
+            "$custom": true,
+            "$flagged": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        }
+      },
+      "violations": []
+    },
+    "cases": [
+      "Explicit keyword patches preserve unrelated keywords and memberships",
+      "Archive/undo with existing archive membership and unrelated keyword changes",
+      "Stale undo membership and racing SET rejected",
+      "Read-only accounts, denied mailbox rights and server request limit enforced",
+      "Method/per-message errors and malformed or conflicting acknowledgements handled",
+      "One applied write when acknowledgement is lost; no automatic replay"
+    ]
+  },
+  "integrationLimitations": [
+    "Historical ArkTS protocol and RCP transport exist only in the test source set; shipping JMAP facade requires the original Swift core",
+    "Connected composer and durable draft recovery remain unfinished",
+    "Live provider account flows have not been verified"
+  ],
+  "draftCreationTests": {
+    "passed": 5,
+    "failed": 0,
+    "productionFacadeAndAdaptersUsed": true,
+    "sameCoreAsMainHap": true,
+    "liveProviderUIVerified": false,
+    "fixtureObservations": {
+      "scenarios": {
+        "snapshot": {
+          "sessions": 2,
+          "creates": 1,
+          "applied": 1,
+          "reads": 1,
+          "bodyBytes": 150000
+        },
+        "empty": {
+          "sessions": 2,
+          "creates": 1,
+          "applied": 1,
+          "reads": 1,
+          "bodyBytes": 0
+        },
+        "unknown": {
+          "sessions": 1,
+          "creates": 0,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 0
+        },
+        "readonly": {
+          "sessions": 1,
+          "creates": 0,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 0
+        },
+        "missing": {
+          "sessions": 1,
+          "creates": 0,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 0
+        },
+        "ambiguous": {
+          "sessions": 1,
+          "creates": 0,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 0
+        },
+        "denied": {
+          "sessions": 1,
+          "creates": 0,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 0
+        },
+        "limit": {
+          "sessions": 1,
+          "creates": 0,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 0
+        },
+        "reject": {
+          "sessions": 1,
+          "creates": 1,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 13
+        },
+        "quota": {
+          "sessions": 1,
+          "creates": 1,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 13
+        },
+        "large": {
+          "sessions": 1,
+          "creates": 1,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 13
+        },
+        "invalid": {
+          "sessions": 1,
+          "creates": 1,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 13
+        },
+        "future": {
+          "sessions": 1,
+          "creates": 1,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 13
+        },
+        "lost": {
+          "sessions": 2,
+          "creates": 1,
+          "applied": 1,
+          "reads": 1,
+          "bodyBytes": 13
+        },
+        "malformed": {
+          "sessions": 1,
+          "creates": 1,
+          "applied": 1,
+          "reads": 0,
+          "bodyBytes": 13
+        },
+        "conflicting": {
+          "sessions": 1,
+          "creates": 1,
+          "applied": 1,
+          "reads": 0,
+          "bodyBytes": 13
+        },
+        "method": {
+          "sessions": 1,
+          "creates": 1,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 13
+        },
+        "http": {
+          "sessions": 1,
+          "creates": 1,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 13
+        }
+      },
+      "violations": [],
+      "submissions": 0
+    },
+    "cases": [
+      "Snapshot unfinished recipients and 150000-byte Unicode draft through original SET encoding and Email decoding",
+      "Empty draft round trip without sender or recipients",
+      "Reject invalid headers, references, oversized data, account or mailbox rights and request limits before creation",
+      "Map per-object creation rejection without treating it as uncertain",
+      "Lost, malformed, conflicting, method and HTTP responses report uncertain outcomes without retrying"
+    ]
+  },
+  "nativeFacadeProvenance": "port/swift-jmap/native-facade-result.json"
+}

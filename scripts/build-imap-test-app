@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT/scripts/swift-target-env"
+"$ROOT/scripts/link-imap-app-probe"
+"$ROOT/scripts/prepare-imap-test-app"
+source "$ROOT/scripts/harmony-build-env"
+cd "$ROOT/.tools/imap-test-app${SWIFT_BUILD_SUFFIX}"
+"$THUNDERBIRD_BUILD_TOOLS/ohpm/bin/ohpm" install --all
+"$THUNDERBIRD_BUILD_TOOLS/bin/hvigorw" assembleHap --mode module -p product=default -p module=entry@default --no-daemon
+"$THUNDERBIRD_BUILD_TOOLS/bin/hvigorw" assembleHap --mode module -p product=default -p module=entry@ohosTest --no-daemon

@@ -1,0 +1,55 @@
+#!/usr/bin/env python3
+"""Stage pinned original IMAP sources for baseline host tests, not device evidence."""
+from pathlib import Path
+import hashlib,json,shutil,subprocess
+root=Path(__file__).resolve().parent.parent
+subprocess.run([str(root/'scripts/prepare-imap-dependencies')],check=True)
+up=root/'upstream/thunderbird-ios';manifest=json.loads((root/'port/swift-imap/upstream-files.json').read_text())
+assert subprocess.check_output(['git','-C',str(up),'rev-parse','HEAD'],text=True).strip()==manifest['revision']
+package=root/'.tools/swift-probe/host-imap/package';package.mkdir(parents=True,exist_ok=True)
+for relative,expected in manifest['files'].items():
+    src=up/relative
+    assert hashlib.sha256(src.read_bytes()).hexdigest()==expected,relative
+    dst=package/relative.removeprefix('Core/');dst.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(src,dst)
+for name in ['EmailAddress','MIME']:
+    shutil.copytree(up/'Core/Sources'/name,package/'Sources'/name,dirs_exist_ok=True)
+subprocess.run([str(root/'scripts/prepare-mime'),str(package)],check=True)
+shutil.copy2(root/'port/swift-imap/Package.swift',package/'Package.swift')
+shutil.copy2(root/'port/swift-imap/Package.resolved',package/'Package.resolved')
+logging=package/'Sources/HarmonyLogging';logging.mkdir(exist_ok=True)
+shutil.copy2(root/'port/swift-imap/host-logging.swift',logging/'Logger.swift')
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/platform-imports.patch').read_text(), text=True, check=True)
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/host-tests.patch').read_text(), text=True, check=True)
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/session-lifecycle.patch').read_text(), text=True, check=True)
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/account-hooks.patch').read_text(), text=True, check=True)
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/message-flags.patch').read_text(), text=True, check=True)
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/selection-status.patch').read_text(), text=True, check=True)
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/reply-headers.patch').read_text(), text=True, check=True)
+shutil.copy2(root/'port/swift-imap/ReplyHeaders.swift',package/'Sources/IMAP/ReplyHeaders.swift')
+subprocess.run([str(root/'scripts/prepare-smtp'),str(package)],check=True)
+smtpTests=package/'Tests/SMTPTests';smtpTests.mkdir(exist_ok=True)
+shutil.copy2(root/'port/swift-smtp/ReplyHeaderTests.swift',smtpTests/'ReplyHeaderTests.swift')
+shutil.copy2(root/'port/swift-smtp/ComposeBodyTests.swift',smtpTests/'ComposeBodyTests.swift')
+shutil.copy2(root/'port/swift-smtp/XOAuth2Tests.swift',smtpTests/'XOAuth2Tests.swift')
+shutil.copy2(root/'port/swift-imap/ReplyReferencesTests.swift',package/'Tests/IMAPTests/ReplyReferencesTests.swift')
+print(package)
+
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/readable-body.patch').read_text(), text=True, check=True)
+shutil.copy2(root/'port/swift-imap/ReadableBody.swift',package/'Sources/IMAP/ReadableBody.swift')
+shutil.copy2(root/'port/swift-imap/ReadableBodyTests.swift',package/'Tests/IMAPTests/ReadableBodyTests.swift')
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/oauth.patch').read_text(), text=True, check=True)
+shutil.copy2(root/'port/swift-imap/XOAuth2Command.swift',package/'Sources/IMAP/XOAuth2Command.swift')
+shutil.copy2(root/'port/swift-imap/XOAuth2Tests.swift',package/'Tests/IMAPTests/XOAuth2Tests.swift')
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/sent-copy.patch').read_text(), text=True, check=True)
+shutil.copy2(root/'port/swift-imap/AppendSent.swift',package/'Sources/IMAP/AppendSent.swift')
+shutil.copy2(root/'port/swift-imap/AppendSentTests.swift',package/'Tests/IMAPTests/AppendSentTests.swift')
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/flag-mutation.patch').read_text(), text=True, check=True)
+shutil.copy2(root/'port/swift-imap/FlagMutation.swift',package/'Sources/IMAP/FlagMutation.swift')
+shutil.copy2(root/'port/swift-imap/FlagMutationTests.swift',package/'Tests/IMAPTests/FlagMutationTests.swift')
+shutil.copy2(root/'port/swift-imap/InboxCheck.swift',package/'Sources/IMAP/InboxCheck.swift')
+shutil.copy2(root/'port/swift-imap/InboxCheckTests.swift',package/'Tests/IMAPTests/InboxCheckTests.swift')
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/idle-lifecycle.patch').read_text(), text=True, check=True)
+shutil.copy2(root/'port/swift-imap/InboxWatch.swift',package/'Sources/IMAP/InboxWatch.swift')
+shutil.copy2(root/'port/swift-imap/InboxWatchTests.swift',package/'Tests/IMAPTests/InboxWatchTests.swift')
+shutil.copy2(root/'port/swift-smtp/MessageDataTests.swift',smtpTests/'MessageDataTests.swift')
+shutil.copy2(root/'port/swift-smtp/SenderIdentityTests.swift',smtpTests/'SenderIdentityTests.swift')

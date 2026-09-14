@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/apple/swift-nio-extras",
+  "tag": "1.24.0",
+  "path": "Sources/NIOExtras/LineBasedFrameDecoder.swift",
+  "upstreamSha256": "47e54a90b1f3ff4ec5de9751dba3141fdabbed48eacb832f488ab48692b6404d",
+  "adaptation": "Replace LeftOverBytesError construction with SMTPError.responseNotDecoded; enforce 4096-byte buffering in the calling MessageHandler.",
+  "license": "Apache-2.0",
+  "compiledSha256": "cac9e4fb702a01b53f868d29b7d27147b6bdd87d3b1eaab2f8c57e2669eab571"
+}

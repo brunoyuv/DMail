@@ -1,0 +1,50 @@
+#!/usr/bin/env bash
+# One compact reader recovery gate, restricted to the isolated emulator app.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+[[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 && "${HDC_TARGET:-}" == 127.0.0.1:5555 ]]
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app"
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == x86_64 ]]
+for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+  [[ -f "$APP/entry/build/default/outputs/$hap" ]] || { echo 'Build both isolated reader recovery test HAPs first.' >&2; exit 1; }
+done
+OUT="$ROOT/.tools/emulator-reader-recovery"
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  find "$OUT" -maxdepth 1 -type f -exec mv -t "$PREVIOUS" {} +
+fi
+INSTALLED=false
+cleanup() {
+  local result=$?
+  trap - EXIT
+  if "$INSTALLED" && [[ "$result" != 0 ]]; then
+    run_hdc -t "$HDC_TARGET" file recv /data/local/tmp/reader-recovery-failure.png "$OUT/failure.png" >/dev/null 2>&1 || true
+  fi
+  # Only the isolated synthetic bundle is removed, including protected test keys.
+  if "$INSTALLED"; then run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true; fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+run_hdc -t "$HDC_TARGET" shell rm -f /data/local/tmp/reader-recovery-failure.png
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+INSTALLED=true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+timeout --foreground --kill-after=5s 50s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/ReaderRecoveryRunner \
+  -s timeout 45000 | tee "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"
+grep -q 'READER_RECOVERY_RESULT: explicit Retry recovered old body, offline cache and other downloaded body preserved, packaged Gmail policy verified; exactly two synthetic body requests, no other mail calls or browser' "$OUT/test.log"
+run_hdc -t "$HDC_TARGET" file recv /data/local/tmp/d-mail-account-setup.png "$OUT/account-setup.png" >/dev/null
+python3 - "$OUT" <<'PY'
+from pathlib import Path
+import json,sys
+out=Path(sys.argv[1])
+(out/'result.json').write_text(json.dumps({'tests':1,'passed':1,
+    'scope':'Old synthetic header without body: network failure retains header and offers Retry; explicit retry caches a complete body; offline reopen preserves body and timestamp with no refetch; another downloaded body remains unchanged; packaged Gmail sign-in/reconnect policy and app-password guidance verified without browser interaction; Microsoft sign-in and password field remain available; exactly two in-memory body requests and no other mail calls'},indent=2)+'\n')
+print('PASS: reader Retry, offline cached body and packaged Gmail policy.')
+PY

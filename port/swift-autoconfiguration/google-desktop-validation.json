@@ -1,0 +1,25 @@
+{
+  "date": "2026-09-14",
+  "fix": "Google Desktop client authentication on code exchange and refresh, matched by token endpoint and client ID",
+  "hostTestsPassed": 46,
+  "nativeTestsPassed": 13,
+  "emulatorCoreSHA256": "dcd4f89d08e3ac3d1701e9801e83bbfa27714e5c41ffa223a35fbae795e22bbc",
+  "signedHapSHA256": "79eecf0db746acea8d54465b2f79122e983de418348581e7b873ac617d9874fc",
+  "installed": [
+    "Pura X VDE-AL00 via Wi-Fi"
+  ],
+  "productionAppLaunched": false,
+  "realAccountAccessAutomated": false,
+  "liveProviderSignInVerified": false,
+  "emulatorExitVerified": true,
+  "configurationAbsentFromRepository": true,
+  "googleSyntheticProbe": "missing client_secret before fix; invalid_grant with deliberately fake code after adding matching registration",
+  "evidence": {
+    ".tools/google-desktop-host-tests.log": "5c6f80a288501200d29b27930743ea0b5bfc2268eb2e71dae362699ed18a663f",
+    ".tools/google-secret-emulator.log": "44a2993aeb599f106fab9b85e6e36b2110f1aa66026a1e16b62bdddd7be2376e",
+    ".tools/google-secret-device-build.log": "468b0a9a33da0fe032616084cfad18b7314e7db2195d84a7d8db151df7d37438",
+    ".tools/google-secret-pura-install.log": "a7c7f01aad5659daa03375cd6248b146f21db716dcdd99f52b45cbe785f4a370",
+    ".tools/google-synthetic-token-rejection.json": "ceee09e58bf5837b01fcee80f4eea518a22db91470c4dcc7daf22da36d2ddda3",
+    ".tools/google-synthetic-token-with-secret.json": "27fed7919cbcabece6c545fa6a046e1be25c0f5578dffee1cd8104a07f42d524"
+  }
+}

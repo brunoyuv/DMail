@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+[[ "$(uname -sm)" == 'Linux x86_64' ]] || { echo 'This setup pins the Linux x86_64 Swift host toolchain.' >&2; exit 1; }
+mkdir -p .tools/swift-downloads
+fetch() {
+  local name="$1" url="$2" expected="$3"
+  local archive="$ROOT/.tools/swift-downloads/$name"
+  if [[ ! -f "$archive" ]]; then
+    curl --fail --location --retry 2 --continue-at - --output "$archive.part" "$url"
+    mv "$archive.part" "$archive"
+  fi
+  printf '%s  %s\n' "$expected" "$archive" | sha256sum --check --status
+}
+# Compiler archive hash was recorded after verifying the Swift 6.x release
+# signature. SDK hash is the published 6.2.3 checksum; see docs/swift-probe.md.
+fetch swift-6.2.3-ubuntu24.04.tar.gz \
+  https://download.swift.org/swift-6.2.3-release/ubuntu2404/swift-6.2.3-RELEASE/swift-6.2.3-RELEASE-ubuntu24.04.tar.gz \
+  3e0b8eaf9210131a1756e6a1a9e9103bac83609a0ae604d6f2e791053f98f115
+fetch static-sdk.tar.gz \
+  https://download.swift.org/swift-6.2.3-release/static-sdk/swift-6.2.3-RELEASE/swift-6.2.3-RELEASE_static-linux-0.0.1.artifactbundle.tar.gz \
+  f30ec724d824ef43b5546e02ca06a8682dafab4b26a99fbb0e858c347e507a2c
+if [[ ! -x .tools/swift/usr/bin/swift ]]; then
+  mkdir -p .tools/swift
+  tar -xzf .tools/swift-downloads/swift-6.2.3-ubuntu24.04.tar.gz --strip-components=1 -C .tools/swift
+fi
+if [[ ! -f .tools/swift-sdk/swift-6.2.3-RELEASE_static-linux-0.0.1.artifactbundle/info.json ]]; then
+  mkdir -p .tools/swift-sdk
+  tar -xzf .tools/swift-downloads/static-sdk.tar.gz -C .tools/swift-sdk
+fi
+.tools/swift/usr/bin/swift --version

@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+"$ROOT/scripts/prepare-native-app"
+source "$ROOT/scripts/harmony-build-env"
+cd "$ROOT/harmony"
+exec "$THUNDERBIRD_BUILD_TOOLS/bin/hvigorw" assembleHap \
+  --mode module -p product=default -p module=entry@default --no-daemon "$@"

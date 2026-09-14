@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+"""Download pinned public MimeKit fixtures; email bodies are untrusted test data."""
+from pathlib import Path
+import urllib.request,hashlib,json
+root=Path(__file__).resolve().parent.parent
+revision='d899a2a4cd5161117c6ebdc329152b973620474c'
+base=f'https://raw.githubusercontent.com/jstedfast/MimeKit/{revision}/'
+names=[f'body.{i}.txt' for i in range(1,10)]+['japanese.txt','simple-multipart.anonymized.eml','simple-embedded-message.anonymized.eml','multipart-related-mhtml.txt','rfc2060.txt','empty-multipart.txt','delivery-status.anonymized.eml','missing-subtype.txt']
+out=root/'.tools/mail-corpus/mimekit';out.mkdir(parents=True,exist_ok=True)
+files={}
+for name in names:
+    path='UnitTests/TestData/messages/'+name
+    with urllib.request.urlopen(base+path,timeout=30) as response:data=response.read(2*1024*1024+1)
+    assert len(data)<=2*1024*1024
+    (out/name).write_bytes(data)
+    files[name]={'source':base+path,'bytes':len(data),'sha256':hashlib.sha256(data).hexdigest()}
+with urllib.request.urlopen(base+'LICENSE',timeout=30) as response:license=response.read()
+(out/'LICENSE').write_bytes(license)
+record={'repository':'https://github.com/jstedfast/MimeKit','revision':revision,'license':'MIT','files':files}
+manifest=root/'port/mail-corpus/manifest.json'
+if manifest.exists():assert json.loads(manifest.read_text())==record,'Fixture hashes changed'
+else:manifest.write_text(json.dumps(record,indent=2)+'\n')
+print(f'Downloaded and pinned {len(files)} public MimeKit messages.')

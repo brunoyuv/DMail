@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+# Sourced after ROOT is resolved. Keep the tested emulator SDK isolated from ARM.
+case "${THUNDERBIRD_SWIFT_ARCH:-x86_64}" in
+  x86_64) SWIFT_CPU=x86_64; HARMONY_CPU=x86_64; SWIFT_BUILD_SUFFIX='' ;;
+  aarch64) SWIFT_CPU=aarch64; HARMONY_CPU=arm64-v8a; SWIFT_BUILD_SUFFIX=-aarch64 ;;
+  *) echo 'THUNDERBIRD_SWIFT_ARCH must be x86_64 or aarch64.' >&2; exit 2 ;;
+esac
+SWIFT_TARGET="$SWIFT_CPU-unknown-linux-ohos"
+SWIFT_CLANG_TARGET="$SWIFT_CPU-linux-ohos"
+SWIFT_TARGET_SDK="$ROOT/.tools/swift-ohos-sdk$SWIFT_BUILD_SUFFIX"
+export THUNDERBIRD_SWIFT_ARCH="$SWIFT_CPU"
+export SWIFT_CPU HARMONY_CPU SWIFT_BUILD_SUFFIX SWIFT_TARGET SWIFT_CLANG_TARGET SWIFT_TARGET_SDK

@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+# Build with the emulator off, then run all prepared native mail regressions.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+case "${1:-build}" in
+  build)
+    ./scripts/test-native-app build
+    ./scripts/build-network-test-app --prepared-core
+    ./scripts/prepare-imap-fixture
+    ./scripts/build-imap-test-app
+    exec ./scripts/verify-mail-core-packages
+    ;;
+  device) ;;
+  *) echo 'Usage: scripts/test-mail-core [build|device]' >&2; exit 2 ;;
+esac
+./scripts/verify-mail-core-packages
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" != 1 ]]; then
+  exec "$ROOT/scripts/with-test-emulator" "$0" device
+fi
+./scripts/test-native-imap device
+./scripts/test-native-network device
+./scripts/test-native-app device
+./scripts/test-device device
+echo 'PASS: 62 original-core/platform checks and 15 prototype/UI regressions.'

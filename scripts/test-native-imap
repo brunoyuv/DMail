@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+if [[ "${1:-build}" == build ]]; then
+  "$ROOT/scripts/prepare-native-app"
+  "$ROOT/scripts/prepare-imap-fixture"
+  exec "$ROOT/scripts/build-imap-test-app"
+fi
+[[ "${1:-}" == device ]] || { echo 'Usage: scripts/test-native-imap [build|device]' >&2; exit 2; }
+OUT="$ROOT/.tools/swift-probe/native-imap"
+APP="$ROOT/.tools/imap-test-app"
+[[ -f "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap" ]] || { echo 'Build the diagnostic before starting the emulator.' >&2; exit 1; }
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" != 1 ]]; then exec "$ROOT/scripts/with-test-emulator" "$0" device; fi
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+DEVICE=127.0.0.1:5555
+NODE="$ROOT/.tools/runtime/node_modules/node/bin/node"
+FIXTURE_PID=''; FORWARDS=()
+UITEST_PREVIOUS="$($HDC -t "$DEVICE" shell param get persist.ace.testmode.enabled | tr -d '\r\n')"
+[[ "$UITEST_PREVIOUS" == 1 ]] || UITEST_PREVIOUS=0
+cleanup() {
+  "$HDC" -t "$DEVICE" shell hilog -x > .tools/imap-test-hilog.log 2>&1 || true
+  "$HDC" -t "$DEVICE" file recv /data/local/tmp/thunderbird-imap-reader.png "$ROOT/.tools/imap-reader.png" >/dev/null 2>&1 || true
+  "$HDC" -t "$DEVICE" shell param set persist.ace.testmode.enabled "$UITEST_PREVIOUS" >/dev/null 2>&1 || true
+  "$HDC" -t "$DEVICE" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  for port in "${FORWARDS[@]}"; do "$HDC" -t "$DEVICE" fport rm "tcp:$port" "tcp:$port" >/dev/null 2>&1 || true; done
+  if [[ -n "$FIXTURE_PID" ]]; then kill "$FIXTURE_PID" 2>/dev/null || true; wait "$FIXTURE_PID" 2>/dev/null || true; fi
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+"$HDC" -t "$DEVICE" shell param set persist.ace.testmode.enabled 1
+if "$HDC" fport ls | grep -Eq 'tcp:976[0-5] '; then echo 'IMAP test ports are already forwarded.' >&2; exit 1; fi
+"$NODE" port/swift-imap/fixture.cjs .tools/imap-test-certs > .tools/imap-fixture.log 2>&1 &
+FIXTURE_PID=$!
+READY=false
+for ((attempt=0; attempt<30; attempt++)); do
+  kill -0 "$FIXTURE_PID" || { cat .tools/imap-fixture.log; exit 1; }
+  if curl --fail --silent http://127.0.0.1:9760/health >/dev/null; then READY=true; break; fi
+  sleep 0.1
+done
+"$READY" || { echo 'Fixture failed to start.' >&2; exit 1; }
+for port in 9761 9762 9763 9764 9765; do
+  "$HDC" -t "$DEVICE" rport "tcp:$port" "tcp:$port" | grep -q 'Forwardport result:OK'
+  FORWARDS+=("$port")
+done
+"$HDC" -t "$DEVICE" install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap" \
+  "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+"$HDC" -t "$DEVICE" shell aa test -b org.thunderbird.harmony.imaptest -m entry_test \
+  -s unittest /ets/testrunner/IMAPTestRunner -s timeout 60000 | tee .tools/imap-test-device.log
+curl --fail --silent http://127.0.0.1:9760/stats > .tools/imap-fixture-stats.json
+grep -q 'Tests run: 26, Failure: 0, Error: 0, Pass: 26, Ignore: 0' .tools/imap-test-device.log
+"$NODE" - <<'JS'
+const assert = require('node:assert/strict');
+const stats = JSON.parse(require('node:fs').readFileSync('.tools/imap-fixture-stats.json'));
+assert.deepEqual(stats.violations, []);
+assert.equal(stats.active, 0);
+assert.equal(stats.sessions.filter(s => ['untrusted', 'wrong'].includes(s.server)).length, 0, 'untrusted TLS must not reach IMAP');
+assert.ok(stats.connections.untrusted > 0 && stats.connections.wrong > 0);
+assert.ok(stats.connections.pinwrong > 0);
+assert.ok(stats.sessions.filter(s => s.server === 'pinwrong').every(s => s.commands.length === 0), 'pin failure must precede IMAP commands');
+const direct = stats.sessions.filter(s => ['reader','bad','stall','drop','cancel','oversized','wrongtag'].includes(s.mode));
+assert.equal(direct.filter(s => s.mode === 'reader').length, 3);
+assert.equal(direct.filter(s => s.mode === 'bad').length, 2);
+for (const s of stats.sessions) {
+  assert.equal(s.closed, true);
+  assert.equal(s.violation, undefined);
+}
+for (const s of direct) {
+  assert.deepEqual(s.commands, s.mode === 'bad' ? ['CAPABILITY', 'LOGIN'] :
+    ['CAPABILITY', 'LOGIN', 'LIST', 'SELECT', 'UID FETCH', ...(s.mode === 'reader' ? ['LOGOUT'] : [])]);
+  assert.equal(s.fetches, s.mode === 'bad' ? 0 : 1);
+}
+const account = stats.sessions.filter(s => ['account','epoch','changed','missing','wronguid'].includes(s.mode));
+assert.ok(account.length >= 15);
+assert.ok(account.filter(s => s.server === 'plainlist').every(s => !s.listArguments.includes('RETURN')));
+assert.ok(account.some(s => s.server === 'plainlist' && s.commands.includes('STATUS')));
+assert.ok(account.some(s => s.accountFetches?.some(f => !f.full && f.start === 2 && f.end === 51)));
+assert.ok(account.some(s => s.accountFetches?.some(f => !f.full && f.start === 1 && f.end === 1)));
+assert.ok(account.filter(s => s.mode === 'epoch').every(s => !s.accountFetches));
+const mutations = stats.sessions.flatMap(s => (s.stores || []).map(m => ({ ...m, mode: s.mode })));
+assert.equal(mutations.filter(m => m.mode === 'writer').length, 4);
+assert.equal(mutations.filter(m => m.mode === 'account').length, 2, 'visible star/unstar actions');
+assert.equal(mutations.filter(m => m.mode === 'lost').length, 1, 'never replay an unacknowledged STORE');
+assert.equal(mutations.length, 11);
+assert.ok(stats.sessions.filter(s => ['readonly','noflags','wildcard','epoch','missing','wronguid'].includes(s.mode)).every(s => !s.stores));
+for (const mutation of mutations) {
+  assert.ok(mutation.before.includes('\\Answered') && mutation.after.includes('\\Answered'));
+  assert.ok(mutation.before.includes('CustomLabel') && mutation.after.includes('CustomLabel'));
+  assert.ok(['\\Seen', '\\Flagged'].includes(mutation.flag));
+}
+assert.ok(stats.sessions.every(s => !s.commands.includes('CLOSE') && !s.commands.includes('EXPUNGE')));
+console.log('PASS: 26 IMAP/account/body/UI tests agree with TLS, identity, permissions, UIDVALIDITY and single-flag STORE observations.');
+JS

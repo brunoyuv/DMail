@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# Compile original SwiftNIO dependencies against Huawei's ABI; no device launch.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+source "$ROOT/scripts/swift-target-env"
+NATIVE="$ROOT/.tools/command-line-tools/sdk/default/openharmony/native"
+SDK="$SWIFT_TARGET_SDK"
+export CC="$NATIVE/llvm/bin/clang"
+export CXX="$NATIVE/llvm/bin/clang++"
+unset CPATH C_INCLUDE_PATH CPLUS_INCLUDE_PATH LIBRARY_PATH SDKROOT
+export SWIFTPM_MODULECACHE_OVERRIDE="$ROOT/.tools/swift-probe/native-imap${SWIFT_BUILD_SUFFIX}/module-cache"
+exec "$ROOT/.tools/swift/usr/bin/swift" build \
+ --package-path "$ROOT/.tools/swift-probe/native-imap/package" \
+ --scratch-path "$ROOT/.tools/swift-probe/native-imap${SWIFT_BUILD_SUFFIX}/build" \
+ --cache-path "$ROOT/.tools/swift-probe/host-imap/cache" --config-path "$ROOT/.tools/swift-probe/config" \
+ --security-path "$ROOT/.tools/swift-probe/security" --disable-netrc --disable-sandbox --skip-update \
+ --triple ${SWIFT_TARGET} --sdk "$NATIVE/sysroot" -j 2 --target "${1:-NIOIMAP}" \
+ -Xswiftc -DTHUNDERBIRD_HARMONYOS \
+ -Xswiftc -resource-dir -Xswiftc "$SDK/lib/swift" \
+ -Xswiftc -I -Xswiftc "$SDK/lib/swift/musl/SwiftMusl" \
+ -Xswiftc -I -Xswiftc "$SDK/lib/swift/musl/${SWIFT_CPU}" \
+ -Xswiftc -I -Xswiftc "$SDK/lib/swift/ohos" \
+ -Xcc -I"$SDK/include" -Xcc -D_GNU_SOURCE -Xcc -fPIC -Xcxx -fPIC

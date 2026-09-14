@@ -1,0 +1,470 @@
+--- a/Core/Sources/JMAP/Email.swift
++++ b/Core/Sources/JMAP/Email.swift
+@@ -442,3 +442,7 @@
+         }
+     }
+ }
++
++extension Email: SetEntity {
++    typealias SetMethod = ObjectSetMethod<Email>
++}
+--- a/Core/Sources/JMAP/JMAPClient.swift
++++ b/Core/Sources/JMAP/JMAPClient.swift
+@@ -35,7 +35,7 @@
+         guard let response = try await urlSession.jmapAPI([
+             Email.QueryMethod(accountID, filter: .inMailbox(mailboxID), calculateTotal: true,
+                               position: position, limit: limit, sortByReceivedAt: true)
+-        ], url: session.apiURL, authorization: server.authorization!).first as? MethodQueryResponse else {
++        ], url: session.apiURL, authorization: server.authorization!, maxRequestBytes: session.capabilities[.core]?.maxSizeRequest).first as? MethodQueryResponse else {
+             throw URLError(.cannotDecodeContentData)
+         }
+         return response
+@@ -50,10 +50,120 @@
+             maxBodyValueBytes: 256 * 1024) : nil
+         guard let response = try await urlSession.jmapAPI([
+             Email.GetMethod(accountID, ids: ids, configuration: configuration)
+-        ], url: session.apiURL, authorization: server.authorization!).first as? MethodGetResponse else {
++        ], url: session.apiURL, authorization: server.authorization!, maxRequestBytes: session.capabilities[.core]?.maxSizeRequest).first as? MethodGetResponse else {
+             throw URLError(.cannotDecodeContentData)
+         }
+         return response
++    }
++
++    public enum MessageChangeError: String, Error { case archiveUnavailable }
++
++    public struct ArchiveUndo: Sendable {
++        public let accountID: String, emailID: String, inboxID: String, archiveID: String
++        public let addedArchive: Bool
++        public let expectedMailboxIDs: [String]
++        public init(accountID: String, emailID: String, inboxID: String, archiveID: String,
++                    addedArchive: Bool, expectedMailboxIDs: [String]) {
++            self.accountID = accountID; self.emailID = emailID; self.inboxID = inboxID; self.archiveID = archiveID
++            self.addedArchive = addedArchive; self.expectedMailboxIDs = expectedMailboxIDs
++        }
++    }
++
++    private func writableAccount() throws -> (Session, String) {
++        guard let session, let id = selectedAccountID(in: session), let account = session.accounts[id] else {
++            throw JMAPError.method(.accountNotFound)
++        }
++        guard !account.isReadOnly else { throw JMAPError.method(.accountReadOnly) }
++        return (session, id)
++    }
++    private func changeSnapshot(_ id: String) async throws -> (Email, String) {
++        guard Self.validChangeID(id) else { throw JMAPError.method(.invalidArguments) }
++        let response = try await getEmails([id])
++        let emails = try response.decode([Email].self)
++        if emails.isEmpty && response.notFound == [id] { throw JMAPError.set(.notFound) }
++        guard emails.count == 1, emails[0].id == id, response.notFound.isEmpty,
++              !emails[0].mailboxIDs.isEmpty,
++              emails[0].mailboxIDs.allSatisfy({ Self.validChangeID($0.key) && $0.value }) else {
++            throw URLError(.cannotDecodeContentData)
++        }
++        return (emails[0], response.state)
++    }
++    private func changeMailboxes() async throws -> [Mailbox] {
++        let boxes = try await mailboxes()
++        guard boxes.allSatisfy({ Self.validChangeID($0.id) }), Set(boxes.map(\.id)).count == boxes.count else {
++            throw URLError(.cannotDecodeContentData)
++        }
++        return boxes
++    }
++    private static func validChangeID(_ id: String) -> Bool {
++        !id.isEmpty && id.utf8.count <= 255 && id.utf8.allSatisfy {
++            (48...57).contains($0) || (65...90).contains($0) || (97...122).contains($0) || $0 == 45 || $0 == 95
++        }
++    }
++    private func updateEmail(_ id: String, patch: [String: Any], ifInState: String) async throws -> String {
++        let (session, accountID) = try writableAccount()
++        guard let response = try await urlSession.jmapAPI([
++            Email.SetMethod(accountID, actions: [.update([id: patch])], ifInState: ifInState)
++        ], url: session.apiURL, authorization: server.authorization!, maxRequestBytes: session.capabilities[.core]?.maxSizeRequest).first as? MethodSetResponse else {
++            throw URLError(.cannotDecodeContentData)
++        }
++        let reported = response.updated + response.notUpdated.keys
++        guard reported.count == 1, reported[0] == id, response.created.isEmpty,
++              response.destroyed.isEmpty, response.notCreated.isEmpty, response.notDestroyed.isEmpty else {
++            throw URLError(.cannotDecodeContentData)
++        }
++        if let error = response.notUpdated[id] { throw JMAPError.set(error) }
++        return response.newState
++    }
++
++    /// Patch one explicit keyword, preserving other keywords and memberships.
++    public func setKeyword(_ keyword: Email.Keyword, enabled: Bool, for id: String) async throws -> String {
++        _ = try writableAccount()
++        guard keyword == .seen || keyword == .flagged else { throw JMAPError.method(.invalidArguments) }
++        let boxes = try await changeMailboxes()
++        let (mail, state) = try await changeSnapshot(id)
++        guard mail.mailboxIDs.keys.allSatisfy({ id in
++            guard let box = boxes.first(where: { $0.id == id }) else { return false }
++            return keyword == .seen ? box.rights.maySetSeen : box.rights.maySetKeywords
++        }) else { throw JMAPError.set(.forbidden) }
++        return try await updateEmail(id, patch: ["keywords/\(keyword.rawValue)": enabled ? true : NSNull()], ifInState: state)
++    }
++
++    public func archiveEmail(_ id: String) async throws -> ArchiveUndo {
++        let (_, accountID) = try writableAccount()
++        let boxes = try await changeMailboxes()
++        let (mail, state) = try await changeSnapshot(id)
++        let inboxes = boxes.filter { $0.role == .inbox }, archives = boxes.filter { $0.role == .archive }
++        guard inboxes.count == 1, archives.count == 1 else { throw MessageChangeError.archiveUnavailable }
++        let inbox = inboxes[0], archive = archives[0]
++        let added = mail.mailboxIDs[archive.id] != true
++        guard inbox.id != archive.id, mail.mailboxIDs[inbox.id] == true, inbox.rights.mayRemoveItems,
++              !added || archive.rights.mayAddItems else { throw MessageChangeError.archiveUnavailable }
++        var patch: [String: Any] = ["mailboxIds/\(inbox.id)": NSNull()]
++        if added { patch["mailboxIds/\(archive.id)"] = true }
++        _ = try await updateEmail(id, patch: patch, ifInState: state)
++        return ArchiveUndo(accountID: accountID, emailID: id, inboxID: inbox.id, archiveID: archive.id,
++            addedArchive: added, expectedMailboxIDs: (mail.mailboxIDs.keys.filter { $0 != inbox.id } + (added ? [archive.id] : [])).sorted())
++    }
++
++    @discardableResult public func undoArchive(_ undo: ArchiveUndo) async throws -> String {
++        let (_, accountID) = try writableAccount()
++        guard accountID == undo.accountID, [undo.emailID, undo.inboxID, undo.archiveID].allSatisfy(Self.validChangeID),
++              undo.inboxID != undo.archiveID, undo.expectedMailboxIDs.allSatisfy(Self.validChangeID),
++              Set(undo.expectedMailboxIDs).count == undo.expectedMailboxIDs.count,
++              !undo.expectedMailboxIDs.contains(undo.inboxID), undo.expectedMailboxIDs.contains(undo.archiveID) else {
++            throw JMAPError.method(.invalidArguments)
++        }
++        let boxes = try await changeMailboxes()
++        guard boxes.first(where: { $0.id == undo.inboxID })?.rights.mayAddItems == true,
++              !undo.addedArchive || boxes.first(where: { $0.id == undo.archiveID })?.rights.mayRemoveItems == true else {
++            throw JMAPError.set(.forbidden)
++        }
++        let (mail, state) = try await changeSnapshot(undo.emailID)
++        guard Set(mail.mailboxIDs.keys) == Set(undo.expectedMailboxIDs) else { throw JMAPError.method(.stateMismatch) }
++        var patch: [String: Any] = ["mailboxIds/\(undo.inboxID)": true]
++        if undo.addedArchive { patch["mailboxIds/\(undo.archiveID)"] = NSNull() }
++        return try await updateEmail(undo.emailID, patch: patch, ifInState: state)
+     }
+ 
+     public func thread(for email: Email) async throws -> [Email] {
+@@ -69,7 +179,7 @@
+                             ids: [
+                                 email.threadID
+                             ])
+-                    ], url: session.apiURL, authorization: server.authorization!
++                    ], url: session.apiURL, authorization: server.authorization!, maxRequestBytes: session.capabilities[.core]?.maxSizeRequest
+                 ).first as? MethodGetResponse
+             else {
+                 throw URLError(.cannotDecodeContentData)
+@@ -96,7 +206,7 @@
+                 let response: MethodQueryResponse = try await urlSession.jmapAPI(
+                     [
+                         Email.QueryMethod(id, filter: .inMailbox(mailbox.id))
+-                    ], url: session.apiURL, authorization: server.authorization!
++                    ], url: session.apiURL, authorization: server.authorization!, maxRequestBytes: session.capabilities[.core]?.maxSizeRequest
+                 ).first as? MethodQueryResponse
+             else {
+                 throw JMAPError.underlying(URLError(.cannotDecodeContentData))
+@@ -117,7 +227,7 @@
+                 let response: MethodGetResponse = try await urlSession.jmapAPI(
+                     [
+                         Email.GetMethod(id, ids: ids)
+-                    ], url: session.apiURL, authorization: server.authorization!
++                    ], url: session.apiURL, authorization: server.authorization!, maxRequestBytes: session.capabilities[.core]?.maxSizeRequest
+                 ).first as? MethodGetResponse
+             else {
+                 throw URLError(.cannotDecodeContentData)
+@@ -147,7 +257,7 @@
+                             ]
+                         ])
+                     ])
+-            ], url: session.apiURL, authorization: server.authorization!
++            ], url: session.apiURL, authorization: server.authorization!, maxRequestBytes: session.capabilities[.core]?.maxSizeRequest
+         ).first as? MethodSetResponse
+     }
+ 
+@@ -169,7 +279,7 @@
+                             ]
+                         ])
+                     ])
+-            ], url: session.apiURL, authorization: server.authorization!
++            ], url: session.apiURL, authorization: server.authorization!, maxRequestBytes: session.capabilities[.core]?.maxSizeRequest
+         ).first as? MethodSetResponse
+     }
+ 
+@@ -188,7 +298,7 @@
+                             mailbox.id
+                         ])
+                     ])
+-            ], url: session.apiURL, authorization: server.authorization!
++            ], url: session.apiURL, authorization: server.authorization!, maxRequestBytes: session.capabilities[.core]?.maxSizeRequest
+         ).first as? MethodSetResponse
+     }
+ 
+@@ -201,11 +311,12 @@
+                 let response: MethodGetResponse = try await urlSession.jmapAPI(
+                     [
+                         Mailbox.GetMethod(id)
+-                    ], url: session.apiURL, authorization: server.authorization!
++                    ], url: session.apiURL, authorization: server.authorization!, maxRequestBytes: session.capabilities[.core]?.maxSizeRequest
+                 ).first as? MethodGetResponse
+             else {
+                 throw JMAPError.underlying(URLError(.cannotDecodeContentData))
+             }
++            guard response.notFound.isEmpty else { throw URLError(.cannotDecodeContentData) }
+             return try response.decode([Mailbox].self)
+         } else {
+             try await session()
+--- a/Core/Sources/JMAP/Mailbox.swift
++++ b/Core/Sources/JMAP/Mailbox.swift
+@@ -167,42 +167,7 @@
+         }
+     }
+ 
+-    struct SetMethod: Method {
+-        let actions: [MethodAction]
+-
+-        init(_ accountID: String, actions: [MethodAction], id: UUID = UUID()) throws {
+-            guard !accountID.isEmpty else {
+-                throw MethodError.accountNotFound
+-            }
+-            self.accountID = accountID
+-            self.actions = actions
+-            self.id = id
+-        }
+-
+-        // MARK: Method
+-        static let name: String = "\(prefix)set"
+-        let accountID: String
+-        let id: UUID
+-
+-        var object: [Any] {
+-            var object: [String: Any] = [
+-                "accountId": accountID
+-            ]
+-            for action in actions {
+-                switch action {
+-                case .create(let mailbox), .update(let mailbox):
+-                    object["\(action)"] = mailbox
+-                case .destroy(let ids):
+-                    object["\(action)"] = ids
+-                }
+-            }
+-            return [
+-                Self.name,
+-                object,
+-                id.uuidString
+-            ]
+-        }
+-    }
++    typealias SetMethod = ObjectSetMethod<Mailbox>
+ 
+     static let prefix: String = "Mailbox/"
+ }
+@@ -235,3 +200,5 @@
+         }
+     }
+ }
++
++extension Mailbox: SetEntity {}
+--- a/Core/Sources/JMAP/Method.swift
++++ b/Core/Sources/JMAP/Method.swift
+@@ -42,3 +42,47 @@
+         ]
+     }
+ }
++
++// Shared from the original Mailbox.SetMethod encoder.
++protocol SetEntity { static var prefix: String { get } }
++
++struct ObjectSetMethod<Entity: SetEntity>: Method {
++    let actions: [MethodAction]
++    let ifInState: String?
++
++    init(_ accountID: String, actions: [MethodAction], ifInState: String? = nil, id: UUID = UUID()) throws {
++        guard !accountID.isEmpty else {
++            throw MethodError.accountNotFound
++        }
++        self.accountID = accountID
++        self.actions = actions
++        self.ifInState = ifInState
++        self.id = id
++    }
++
++    // MARK: Method
++    static var name: String { "\(Entity.prefix)set" }
++    let accountID: String
++    let id: UUID
++
++    var object: [Any] {
++        var object: [String: Any] = [
++            "accountId": accountID
++        ]
++        if let ifInState { object["ifInState"] = ifInState }
++        for action in actions {
++            switch action {
++            case .create(let mailbox), .update(let mailbox):
++                object["\(action)"] = mailbox
++            case .destroy(let ids):
++                object["\(action)"] = ids
++            }
++        }
++        return [
++            Self.name,
++            object,
++            id.uuidString
++        ]
++    }
++}
++
+--- a/Core/Sources/JMAP/MethodError.swift
++++ b/Core/Sources/JMAP/MethodError.swift
+@@ -7,6 +7,7 @@
+ /// Errors describing impossible or ineligible``Method`` operation, part of [JMAP core](https://jmap.io/spec/rfc8620/#section-3.6)
+ public enum MethodError: String, CaseIterable, CustomStringConvertible, Decodable, Error, Identifiable {
+     case accountNotFound, accountNotSupportedByMethod, accountReadOnly
++    case stateMismatch, tooManyObjects
+     case forbidden
+     case invalidArguments, invalidResultReference
+     case serverFail, serverPartialFail, serverUnavailable
+@@ -18,6 +19,8 @@
+         case .accountNotFound: "Account not found"
+         case .accountNotSupportedByMethod: "Account not supported by method"
+         case .accountReadOnly: "Account read only"
++        case .stateMismatch: "State mismatch"
++        case .tooManyObjects: "Too many objects"
+         case .forbidden: "Forbidden"
+         case .invalidArguments: "Invalid arguments"
+         case .invalidResultReference: "Invalid result reference"
+--- a/Core/Sources/JMAP/MethodResponse.swift
++++ b/Core/Sources/JMAP/MethodResponse.swift
+@@ -53,6 +53,8 @@
+ }
+ 
+ public struct MethodSetResponse: MethodResponse {
++    public let oldState: String?
++    public let newState: String
+     public let created: [String: Any]
+     public let updated: [String]
+     public let destroyed: [String]
+@@ -68,6 +70,7 @@
+         notCreated: [String: SetError],
+         notUpdated: [String: SetError],
+         notDestroyed: [String: SetError],
++        oldState: String? = nil, newState: String = "",
+         id: UUID
+     ) {
+         self.name = name
+@@ -77,6 +80,7 @@
+         self.notCreated = notCreated
+         self.notUpdated = notUpdated
+         self.notDestroyed = notDestroyed
++        self.oldState = oldState; self.newState = newState
+         self.id = id
+     }
+ 
+--- a/Core/Sources/JMAP/SetError.swift
++++ b/Core/Sources/JMAP/SetError.swift
+@@ -6,6 +6,7 @@
+ 
+ /// Errors encountered during a `set` ``Method`` operation, returned exclusively in ``MethodResponse``
+ public enum SetError: String, CaseIterable, CustomStringConvertible, Error, Identifiable {
++    case unknown
+     case forbidden
+     case invalidPatch, invalidProperties
+     case mailboxHasEmail
+@@ -38,6 +39,7 @@
+     // MARK: CustomStringConvertible
+     public var description: String {
+         switch self {
++        case .unknown: "Unknown set error"
+         case .forbidden: "Forbidden"
+         case .invalidPatch: "Invalid patch"
+         case .invalidProperties: "Invalid properties"
+--- a/Core/Sources/JMAP/URLSession.swift
++++ b/Core/Sources/JMAP/URLSession.swift
+@@ -14,8 +14,12 @@
+     /// - Parameter url: API endpoint URL from ``Session``
+     /// - Parameter authorization: ``Authorization`` credentials or token for request header
+     /// - Returns: ``MethodResponse``
+-    public func jmapAPI(_ methods: [any Method], url: URL, authorization: Authorization) async throws -> [any MethodResponse] {
+-        let data: Data = try await data(for: try .jmapAPI(methods, url: url, authorization: authorization)).0
++    public func jmapAPI(_ methods: [any Method], url: URL, authorization: Authorization, maxRequestBytes: Int? = nil) async throws -> [any MethodResponse] {
++        let request = try URLRequest.jmapAPI(methods, url: url, authorization: authorization)
++        guard (request.httpBody?.count ?? 0) <= min(maxRequestBytes ?? 4 * 1024 * 1024, 4 * 1024 * 1024) else {
++            throw URLError(.dataLengthExceedsMaximum)
++        }
++        let data: Data = try await data(for: request).0
+         let object: Any = try JSONSerialization.jsonObject(with: data)
+ 
+         // Unwrap and map responses from "envelope" array
+@@ -29,15 +33,21 @@
+ 
+             // Parse each raw response into return response types
+             guard response.count == 3,
+-                let name: String = response[0] as? String, name.contains("/"),
++                let name: String = response[0] as? String,
+                 let object: [String: Any] = response[1] as? [String: Any],
+                 let id: UUID = UUID(uuidString: response[2] as? String ?? "")
+             else {
+                 throw URLError(.cannotDecodeContentData)
+             }
+             guard seen.insert(id).inserted,
+-                  let method = methods.first(where: { $0.id == id }),
+-                  name == type(of: method).name,
++                  let method = methods.first(where: { $0.id == id }) else {
++                throw URLError(.cannotDecodeContentData)
++            }
++            if name == "error" {
++                guard let type = object["type"] as? String else { throw URLError(.cannotDecodeContentData) }
++                throw JMAPError.method(MethodError(rawValue: type) ?? .serverFail)
++            }
++            guard name == type(of: method).name,
+                   name == "Core/echo" || object["accountId"] as? String == method.accountID else {
+                 throw URLError(.cannotDecodeContentData)
+             }
+@@ -70,22 +80,40 @@
+             case "set":
+ 
+                 // Map generic parts of [set response.](https://jmap.io/spec/rfc8620/#section-5.3)
+-                func mapErrorValues(for key: String) -> [String: SetError] {
+-                    (object[key] as? [String: Any] ?? [:])
+-                        .mapValues { SetError($0) ?? .notFound }
++                func map(for key: String) throws -> [String: Any] {
++                    guard let raw = object[key], !(raw is NSNull) else { return [:] }
++                    guard let value = raw as? [String: Any] else { throw URLError(.cannotDecodeContentData) }
++                    return value
+                 }
+-
+-                let created: [String: Any] = object["created"] as? [String: Any] ?? [:]
+-                let updated: [String] = (object["updated"] as? [String: Any] ?? [:]).keys.map { "\($0)" }
+-                let destroyed: [String] = object["destroyed"] as? [String] ?? []
++                func mapErrorValues(for key: String) throws -> [String: SetError] {
++                    try map(for: key).mapValues {
++                        guard let error = $0 as? [String: Any], let type = error["type"] as? String else {
++                            throw URLError(.cannotDecodeContentData)
++                        }
++                        return SetError(rawValue: type) ?? .unknown
++                    }
++                }
++                guard let old = object["oldState"], old is NSNull || old is String,
++                      let newState = object["newState"] as? String else { throw URLError(.cannotDecodeContentData) }
++                let created = try map(for: "created")
++                let updatedMap = try map(for: "updated")
++                guard created.values.allSatisfy({ $0 is [String: Any] }),
++                      updatedMap.values.allSatisfy({ $0 is NSNull || $0 is [String: Any] }) else { throw URLError(.cannotDecodeContentData) }
++                let updated = Array(updatedMap.keys)
++                let destroyed: [String]
++                if let raw = object["destroyed"], !(raw is NSNull) {
++                    guard let ids = raw as? [String] else { throw URLError(.cannotDecodeContentData) }
++                    destroyed = ids
++                } else { destroyed = [] }
+                 return MethodSetResponse(
+                     name,
+                     created: created,
+                     updated: updated,
+                     destroyed: destroyed,
+-                    notCreated: mapErrorValues(for: "notCreated"),
+-                    notUpdated: mapErrorValues(for: "notUpdated"),
+-                    notDestroyed: mapErrorValues(for: "notDestroyed"),
++                    notCreated: try mapErrorValues(for: "notCreated"),
++                    notUpdated: try mapErrorValues(for: "notUpdated"),
++                    notDestroyed: try mapErrorValues(for: "notDestroyed"),
++                    oldState: old as? String, newState: newState,
+                     id: id
+                 )
+             case "echo":

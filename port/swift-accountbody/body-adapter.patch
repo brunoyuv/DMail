@@ -1,0 +1,250 @@
+--- a/Sources/ImapAccountCore/EmailBody.swift
++++ b/Sources/ImapAccountCore/EmailBody.swift
+@@ -3,7 +3,7 @@
+ // file, You can obtain one at http://mozilla.org/MPL/2.0/
+ 
+ import Foundation
+-import JMAP
++import CoreFoundation
+ import MIME
+ 
+ /// Common email body interface decoded from either `IMAP.Message` or `JMAP.Email`, encodable to `SMTP.Email`.
+@@ -21,6 +21,7 @@
+ 
+     /// Every ``EmailAttachment`` decoded from `MIME.Body`, including both `ContentDisposition.attached` and `.inline`
+     public let attachments: [EmailAttachment]
++    public let decodingHadErrors: Bool
+ 
+     /// Plain-text only or alternative message body
+     public let text: String?
+@@ -30,7 +31,7 @@
+     /// By default, related media attachments are inlined as base64-encoded data attributes`.
+     public func html(_ format: HTMLFormat = .inlineAttachments) -> String? {
+         switch format {
+-        case .inlineAttachments: _html?.inlining(attachments: attachments)
++        case .inlineAttachments: _html?.inlining(attachments: attachments.filter { if case .image = $0.contentType { return true }; return false })
+         case .stripped: _html?.htmlTagsStripped().htmlEntitiesDecoded()
+         case .none: _html
+         }
+@@ -42,8 +43,9 @@
+         _preview
+     }
+ 
+-    public init(html: String? = nil, text: String? = nil, attachments: [EmailAttachment] = [], preview: String? = nil) {
++    public init(html: String? = nil, text: String? = nil, attachments: [EmailAttachment] = [], preview: String? = nil, decodingHadErrors: Bool = false) {
+         self.attachments = attachments
++        self.decodingHadErrors = decodingHadErrors
+         self.text = text
+         _preview = preview
+         _html = html
+@@ -57,21 +59,18 @@
+ }
+ 
+ extension EmailBody {
+-    init(body: MIME.Body?) throws {
++    public init(body: MIME.Body?) throws {
+         guard let body, !body.isEmpty else {
+-            throw AccountError.mime(.dataNotFound)
+-        }
+-        let components: MIME.Part.Components = try body.part.components()
++            throw MIMEError.dataNotFound
++        }
++        var remaining = 512, hadErrors = false
++        let components: MIME.Part.Components = try body.part.components(remaining: &remaining, hadErrors: &hadErrors)
+         let html: String? = !components.html.isEmpty ? components.html.joined() : nil
+         let text: String? = !components.text.isEmpty ? components.text.joined() : nil
+         let preview: String? = nil  // TODO: Generate preview text
+-        self.init(html: html, text: text, attachments: components.0, preview: preview)
+-    }
+-
+-    init(email: JMAP.Email) throws {
+-        // TODO: JMAP email body decoding and assembly not implemented
+-        throw URLError(.cancelled)
+-    }
++        self.init(html: html, text: text, attachments: components.0, preview: preview, decodingHadErrors: hadErrors)
++    }
++
+ }
+ 
+ extension MIME.Body {
+@@ -82,13 +81,21 @@
+     typealias Components = ([EmailAttachment], html: [String], text: [String])
+ 
+     // Recursively decode and collect all subparts into component arrays
+-    func components(appendedTo components: Components? = nil) throws -> Components {
++    func components(appendedTo components: Components? = nil, depth: Int = 0, remaining: inout Int, hadErrors: inout Bool) throws -> Components {
++        guard depth < 32, remaining > 0 else { throw MIMEError.dataNotFound }
++        remaining -= 1
+         var components: Components = components ?? ([], [], [])
++        if case .attachment = contentDisposition {
++            components.0.append(EmailAttachment(data: try data.decoded(from: contentTransferEncoding),
++                contentType: contentType, contentDisposition: contentDisposition, contentID: contentID, contentLocation: contentLocation))
++            return components
++        }
+         do {
+             switch contentType {
+             case .multipart:
+-                for part in try parts {
+-                    components = try part.components(appendedTo: components)
++                for decoded in try decodedParts {
++                    do { let part = try decoded.get(); components = try part.components(appendedTo: components, depth: depth + 1, remaining: &remaining, hadErrors: &hadErrors) }
++                    catch { hadErrors = true }
+                 }
+             case .text(let subtype, let characterSet):
+                 let string: String = try String(
+@@ -108,20 +115,16 @@
+                 // Single `message/rfc822` type identifier exists for type `message`
+                 // "No encoding other than 7bit, 8bit, or binary is permitted for messages or parts of type message"
+                 // https://www.w3.org/Protocols/rfc1341/7_3_Message.html
+-                if let body: Body = try? Body(data) {
+-                    // TODO: Handle forwarded/attached message
+-                    print(body)
+-                } else if let text: String = try? String(contentTransferEncoding, data: data, encoding: .ascii) {
+-                    // TODO: Handle inline plain text message
+-                    print(text)
+-                }
++                // Preserve forwarded messages as attachments; never log message contents.
++                components.0.append(EmailAttachment(data: data, contentType: contentType,
++                    contentDisposition: contentDisposition, contentID: contentID, contentLocation: contentLocation))
+             default:
+                 components.0.append(
+                     EmailAttachment(
+                         data: try data.decoded(from: contentTransferEncoding),
+                         contentType: contentType,
+                         contentDisposition: contentDisposition,
+-                        contentID: contentID
++                        contentID: contentID, contentLocation: contentLocation
+                     ))
+             }
+         } catch {
+@@ -135,36 +138,77 @@
+ extension MIME.CharacterSet {
+     var encoding: String.Encoding? {
+         switch self {
+-        case .ascii: .ascii
+-        case .iso8859: .isoLatin1
+-        case .utf8: .utf8
+-        default: nil
++        case .ascii: return .ascii
++        case .iso8859: return .isoLatin1
++        case .utf8: return .utf8
++        default:
++            let name = CFStringCreateWithCString(nil, rawValue, CFStringBuiltInEncodings.UTF8.rawValue)
++            let encoding = CFStringConvertIANACharSetNameToEncoding(name)
++            return encoding == kCFStringEncodingInvalidId ? nil : String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(encoding))
+         }
+     }
+ }
+ 
+ extension String {
+ 
+-    // Decode `MIME.Part` data with any `ContentTransferEncoding` to `String` of any `String.Encoding`
++    // Decode transfer bytes completely before converting the text's charset.
++    // Multibyte/stateful charsets can span escaped and literal QP bytes.
+     init(_ transferEncoding: ContentTransferEncoding?, data: Data, encoding: Encoding = .utf8) throws {
++        let decoded: Data
+         switch transferEncoding {
+         case .base64:
+-            do {
+-                try self.init(base64: data, encoding: encoding)  // Try strict decode first
+-            } catch {
+-                try self.init(nil, data: data, encoding: encoding)  // Try fuzzy (default) decode
++            // Keep the previous tolerance for a malformed transfer declaration,
++            // but never return encoded transport text after a charset failure.
++            decoded = Data(base64Encoded: data, options: .ignoreUnknownCharacters) ?? data
++        case .quotedPrintable:
++            decoded = data.bodyQuotedPrintableDecoded()
++        default:
++            decoded = data
++        }
++        // Some messages omit the charset (ASCII by MIME default), or label a
++        // valid UTF-8 body as ASCII. Recover only if the declared decode fails;
++        // do not reinterpret successfully decoded legacy text as UTF-8.
++        guard let string = Self(data: decoded, encoding: encoding) ??
++            (encoding == .utf8 ? nil : Self(data: decoded, encoding: .utf8)) else {
++            throw MIMEError.dataNotDecoded(decoded, encoding: encoding)
++        }
++        self = string
++    }
++}
++
++private extension Data {
++    func bodyQuotedPrintableDecoded() -> Data {
++        let bytes = Array(self)
++        var result = Data(capacity: count), index = 0
++        func hex(_ byte: UInt8) -> UInt8? {
++            switch byte {
++            case 48...57: byte - 48
++            case 65...70: byte - 55
++            case 97...102: byte - 87
++            default: nil
+             }
+-        case .quotedPrintable:
+-            do {
+-                try self.init(quotedPrintable: data, encoding: encoding)  // Try strict decode first
+-            } catch {
+-                try self.init(nil, data: data, encoding: encoding)  // Try fuzzy (default) decode
++        }
++        while index < bytes.count {
++            if bytes[index] == 61 {
++                // Accept transport-added whitespace before a soft line break.
++                var end = index + 1
++                while end < bytes.count && (bytes[end] == 32 || bytes[end] == 9) { end += 1 }
++                if end < bytes.count && bytes[end] == 13 { end += 1 }
++                if end < bytes.count && bytes[end] == 10 {
++                    index = end + 1
++                    continue
++                }
++                if index + 2 < bytes.count, let high = hex(bytes[index + 1]), let low = hex(bytes[index + 2]) {
++                    result.append(high * 16 + low)
++                    index += 3
++                    continue
++                }
+             }
+-        default:  // ASCII and unknown content transfer encodings
+-            guard let string: Self = Self(data: data, encoding: encoding) else {
+-                throw MIMEError.dataNotDecoded(data, encoding: encoding)
+-            }
+-            self = string
+-        }
+-    }
+-}
++            // Preserve a malformed escape locally instead of abandoning all
++            // correctly encoded characters in the rest of the body.
++            result.append(bytes[index])
++            index += 1
++        }
++        return result
++    }
++}
+--- a/Sources/ImapAccountCore/EmailAttachment.swift
++++ b/Sources/ImapAccountCore/EmailAttachment.swift
+@@ -11,6 +11,7 @@
+ 
+     public let contentDisposition: ContentDisposition
+     public let contentID: ContentID?
++    public let contentLocation: String?
+     public let contentType: ContentType
+     public let data: Data
+ 
+@@ -18,9 +19,11 @@
+         data: Data,
+         contentType: ContentType,
+         contentDisposition: ContentDisposition? = nil,
+-        contentID: ContentID? = nil
++        contentID: ContentID? = nil,
++        contentLocation: String? = nil
+     ) {
+         self.contentDisposition = contentDisposition ?? .attachment
++        self.contentLocation = contentLocation
+         self.contentID = contentID
+         self.contentType = contentType
+         self.data = data
+@@ -28,6 +31,7 @@
+ 
+     var links: [String] {
+         var links: [String] = []
++        if let contentLocation, !contentLocation.isEmpty { links.append(contentLocation) }
+         if let contentID {
+             links.append(contentID.description)
+             if let url: URL = try? URL(contentID: contentID) {

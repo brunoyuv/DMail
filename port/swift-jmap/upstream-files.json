@@ -1,0 +1,170 @@
+{
+  "repository": "https://github.com/thunderbird/thunderbird-ios",
+  "revision": "61c78d9ebe39ac5b61f31fce371bdfe8c001f7bf",
+  "files": [
+    {
+      "upstreamPath": "Core/Sources/JMAP/Account.swift",
+      "sha256": "89d75c56cdd278ede4c80554453bbbf4057db2dd1e4f0596bf7c894c584dc9b3"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Authorization.swift",
+      "sha256": "76c9d99c923d79a943cd13cfa8860191266ae92525ac8abf6af6da0a5314669a"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Capability.swift",
+      "sha256": "e53abd1b4abe3235b4af11ffa0aa0b32a67df82a9168f9109e63f965f5ff3c27"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Email.swift",
+      "sha256": "b6e9c3f309a3c32280c34cdf1f908187eded6d410b4cc1a3f8ae3f6ad79214c1"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/EmailAddress.swift",
+      "sha256": "39845c16e36d89ddfee65d50484f7cc38345f23393df4cfb998c414ae860e914"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Filter.swift",
+      "sha256": "de6f53956ffdfd9547bce215f90c0ca6aeacba7cf2497684db59dd7d63db679a"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/JMAPClient.swift",
+      "sha256": "fefb3d1c856c1bc2fca8f465804baa73f949369de08379f4dd48bb8f8044539b"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/JMAPError.swift",
+      "sha256": "8669c8493d3e5c3186cfe583ec678751f8f2bf9e3e687412673154f18eba0324"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/JSONDecoder.swift",
+      "sha256": "49c569215536fb79d3d6f47113dc1a2cdc7fc9b228c78118ac5dcbf747e34ebd"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Locale.swift",
+      "sha256": "c40b88df239091fe334ec486b14e4faf470c8b741eb0d8ae44b217467250176d"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Mailbox.swift",
+      "sha256": "28a8f76227ef583d6adc45fd5cdee941e3e38c81c89466a9c6c950055898e451"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Method.swift",
+      "sha256": "428073eb062431edd106283bb4f83404735da1c2dcab87b8f7675a789d1d3a39"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/MethodAction.swift",
+      "sha256": "494a86d38bf5a9ed7660fa62dc1192f831d1f91dfd09275e0e053609fb505d56"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/MethodError.swift",
+      "sha256": "7af81da559c2f1c12c4573932e7940b8a9267fcd528572dc7bd8ae4d383540e6"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/MethodResponse.swift",
+      "sha256": "dfc5b250c59db99f8c6c8b2f01ccdbdf8febfeb0b8e13821f48bf39918491c91"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/RequestError.swift",
+      "sha256": "0f3f731d80c50e401ebb4a40bc7a46d3881703b35497012b47d1829452ba229e"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Server.swift",
+      "sha256": "1b86b929304e5de7850e68e503a0ec9a4933a6e4186139897d3c60583ddc3523"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Session.swift",
+      "sha256": "84cb6e3e7544efb28e98bb57a222aa89a1758937c7555f597d05e4fcd7036318"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/SetError.swift",
+      "sha256": "1e0fa0042fa08ca7e0ffc42a26b653e1b108067fdd940b8f05133917d1c5e4b8"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/Thread.swift",
+      "sha256": "7079f76526562b42c1c6e85a0105a0cf2e9bbc29668dcdf04aedecb5e3f55d39"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/URL.swift",
+      "sha256": "8bea9562e9b90092e2c844dd684d2ea2882dabaf24ddac0bf8003661cb9149ae"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/URLRequest.swift",
+      "sha256": "8bdfb416cda9cc523a46e150bceeb5f9ab106b1c9c6025054e22cc82db899a10"
+    },
+    {
+      "upstreamPath": "Core/Sources/JMAP/URLSession.swift",
+      "sha256": "97bca6b815b875057b00bd44b6878bd1f4bec9f8c7cc3f5dd6e29eb10299ca6f"
+    },
+    {
+      "upstreamPath": "Core/Tests/JMAPTests/AccountTests.swift",
+      "sha256": "e0ae9bac267b8523c6f80ad9c254a40a062f67f990f1f9d162d7f291b07c3363"
+    },
+    {
+      "upstreamPath": "Core/Tests/JMAPTests/AuthorizationTests.swift",
+      "sha256": "6aad70d5342439f65ab0b0c97e2b2cac13aa267db42ca90fcf2dc03d67db2fc7"
+    },
+    {
+      "upstreamPath": "Core/Tests/JMAPTests/EmailAddressTests.swift",
+      "sha256": "fa7564f0d63156d24b8c09c8703f93078c2fc4e48f988d35a14b704edf67497c"
+    },
+    {
+      "upstreamPath": "Core/Tests/JMAPTests/EmailTests.swift",
+      "sha256": "b022761ab9bd9ecfc7e38ed0fc67b56987e2b306bb9eafcb3b008fc405fb1cdf"
+    },
+    {
+      "upstreamPath": "Core/Tests/JMAPTests/JMAPClientTests.swift",
+      "sha256": "41c3e2128758766977d88d5c53445d4bd9fd6fe7e4f73f09d635d6aa224b7849"
+    },
+    {
+      "upstreamPath": "Core/Tests/JMAPTests/JMAPErrorTests.swift",
+      "sha256": "0918986d853002934469669d9d32b67b6525b920cf933d5aa030b3ad01a742fb"
+    },
+    {
+      "upstreamPath": "Core/Tests/JMAPTests/JSONDecoderTests.swift",
+      "sha256": "6004d3b84ad0dc0a97dc71ea6478c4f84f5579a1ab3a93dcd663aedbb5e43c75"
+    },
+    {
+      "upstreamPath": "Core/Tests/JMAPTests/LocaleTests.swift",
+      "sha256": "869d81890df262ae4f520acf4477c708167ac79461f5ca48be72bf2bf912fc6b"
+    },
+    {
+      "upstreamPath": "Core/Tests/JMAPTests/MailboxTests.swift",
+      "sha256": "9aba93fdf07cb48085efd17832a4696c7743d039603ad05dcca8e62f99086be1"
+    },
+    {
+      "upstreamPath": "Core/Tests/JMAPTests/MethodErrorTests.swift",
+      "sha256": "9f760ef33d43966013a357777538dea353c7c8f82094712b2f4499ed989e8ec6"
+    },
+    {
+      "upstreamPath": "Core/Tests/JMAPTests/RequestErrorTests.swift",
+      "sha256": "b7e4e48c0c315ebbdfda125db848088b3d2febff1512631881a8e8abcf441e9b"
+    },
+    {
+      "upstreamPath": "Core/Tests/JMAPTests/Server.swift",
+      "sha256": "702edc9323cf84cc44364d10e4b459b97c79f2327d4f9c521682120d217a80e7"
+    },
+    {
+      "upstreamPath": "Core/Tests/JMAPTests/SessionTests.swift",
+      "sha256": "0a967f6761df7f780cc4c0b5510d1b61807f79c46d6c09fd927ad5c2501fd61d"
+    },
+    {
+      "upstreamPath": "Core/Tests/JMAPTests/SetErrorTests.swift",
+      "sha256": "3018a1ffa54e8065c6ef6030b5f3beecdf9441d5a1f760b06e75fa9203a9dce3"
+    },
+    {
+      "upstreamPath": "Core/Tests/JMAPTests/ThreadTests.swift",
+      "sha256": "5537cf0d1fac77883d0914818d72390edc415f1add6fc3ab9a13d1d416aac8ca"
+    },
+    {
+      "upstreamPath": "Core/Tests/JMAPTests/URLRequestTests.swift",
+      "sha256": "3fd46973dbb0ac94436393a29f5200e9e35b64b00cf595c84d90de79cace9d79"
+    },
+    {
+      "upstreamPath": "Core/Tests/JMAPTests/URLSessionTests.swift",
+      "sha256": "d2821964e9fb8fcc1a1e75569cba0093b09cd14e377965534985b4b6242bf48e"
+    },
+    {
+      "upstreamPath": "Core/Tests/JMAPTests/URLTests.swift",
+      "sha256": "c24995f5b3c79e5a42ffdc4d08f69aa443d42560036a8521819218ace2cb2e25"
+    }
+  ]
+}

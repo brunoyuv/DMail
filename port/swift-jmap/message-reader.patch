@@ -1,0 +1,235 @@
+--- a/Core/Sources/JMAP/Email.swift
++++ b/Core/Sources/JMAP/Email.swift
+@@ -74,10 +74,21 @@
+             self.subParts = subParts
+         }
+ 
++        private enum CodingKeys: String, CodingKey {
++            case partID = "partId", blobID = "blobId"
++            case size, headers, name, type, charset, disposition, cid, language, location, subParts
++        }
++
+         // MARK: Equatable
+         public static func == (lhs: Self, rhs: Self) -> Bool {
+             lhs.partID == rhs.partID && lhs.size == rhs.size && lhs.type == rhs.type
+         }
++    }
++
++    public struct BodyValue: Decodable, Equatable, Sendable {
++        public let value: String
++        public let isTruncated: Bool
++        public let isEncodingProblem: Bool
+     }
+ 
+     public struct Header: Decodable, Sendable {
+@@ -102,7 +113,7 @@
+     public let bcc: [EmailAddressProtocol]?
+     public let subject: String?
+     public let bodyStructure: BodyPart?
+-    // public let bodyValues: Any?
++    public let bodyValues: [String: BodyValue]?
+     public let textBody: [BodyPart]
+     public let htmlBody: [BodyPart]
+     public let attachments: [BodyPart]
+@@ -128,6 +139,7 @@
+         bcc: [EmailAddressProtocol]? = nil,
+         subject: String? = nil,
+         bodyStructure: BodyPart? = nil,
++        bodyValues: [String: BodyValue]? = nil,
+         textBody: [BodyPart] = [],
+         htmlBody: [BodyPart] = [],
+         attachments: [BodyPart] = [],
+@@ -152,6 +164,7 @@
+         self.cc = cc
+         self.bcc = bcc
+         self.subject = subject
++        self.bodyValues = bodyValues
+         self.bodyStructure = bodyStructure
+         self.textBody = textBody
+         self.htmlBody = htmlBody
+@@ -182,6 +195,7 @@
+         cc = try container.decodeIfPresent([EmailAddress.Group].self, forKey: .cc)?.erased()
+         bcc = try container.decodeIfPresent([EmailAddress.Group].self, forKey: .bcc)?.erased()
+         subject = try container.decodeIfPresent(String.self, forKey: .subject)
++        bodyValues = try container.decodeIfPresent([String: BodyValue].self, forKey: .bodyValues)
+         bodyStructure = try container.decodeIfPresent(BodyPart.self, forKey: .bodyStructure)
+         textBody = try container.decode([BodyPart].self, forKey: .textBody)
+         htmlBody = try container.decode([BodyPart].self, forKey: .htmlBody)
+@@ -191,7 +205,7 @@
+     }
+ 
+     private enum Key: CodingKey {
+-        case blobId, threadId, mailboxIds, keywords, size, receivedAt, sentAt, messageId, inReplyTo, references, sender, from, replyTo, to, cc, bcc, subject, bodyStructure, textBody, htmlBody, attachments, hasAttachment, preview, id
++        case blobId, threadId, mailboxIds, keywords, size, receivedAt, sentAt, messageId, inReplyTo, references, sender, from, replyTo, to, cc, bcc, subject, bodyStructure, bodyValues, textBody, htmlBody, attachments, hasAttachment, preview, id
+     }
+ 
+     // MARK: Equatable
+@@ -299,14 +313,20 @@
+         let filter: Filter?
+         let collapseThreads: Bool
+         let calculateTotal: Bool
+-
+-        init(_ accountID: String, filter: Filter? = nil, collapseThreads: Bool = false, calculateTotal: Bool = false, id: UUID = UUID()) throws {
++        let position: Int?
++        let limit: Int?
++        let sortByReceivedAt: Bool
++
++        init(_ accountID: String, filter: Filter? = nil, collapseThreads: Bool = false, calculateTotal: Bool = false, position: Int? = nil, limit: Int? = nil, sortByReceivedAt: Bool = false, id: UUID = UUID()) throws {
+             guard !accountID.isEmpty else {
+                 throw MethodError.accountNotFound
+             }
+             self.accountID = accountID
+             self.filter = filter
+             self.collapseThreads = collapseThreads
++            self.position = position
++            self.limit = limit
++            self.sortByReceivedAt = sortByReceivedAt
+             self.calculateTotal = calculateTotal
+             self.id = id
+         }
+@@ -317,6 +337,9 @@
+                 "collapseThreads": collapseThreads,
+                 "calculateTotal": calculateTotal
+             ]
++            if let position { query["position"] = position }
++            if let limit { query["limit"] = limit }
++            if sortByReceivedAt { query["sort"] = [["property": "receivedAt", "isAscending": false]] }
+             if let filter {
+                 query["filter"] = filter.object
+             }
+--- a/Core/Sources/JMAP/JMAPClient.swift
++++ b/Core/Sources/JMAP/JMAPClient.swift
+@@ -26,6 +26,35 @@
+ 
+     public let server: Server
+     public private(set) var session: Session?
++
++    /// Preserve query metadata so a UI can page without assuming every queried
++    /// message still exists by the time Email/get completes.
++    public func queryEmails(in mailboxID: String, position: Int, limit: Int) async throws -> MethodQueryResponse {
++        guard let session, let accountID = selectedAccountID(in: session) else { throw JMAPError.method(.accountNotFound) }
++        guard position >= 0, limit > 0 else { throw JMAPError.method(.invalidArguments) }
++        guard let response = try await urlSession.jmapAPI([
++            Email.QueryMethod(accountID, filter: .inMailbox(mailboxID), calculateTotal: true,
++                              position: position, limit: limit, sortByReceivedAt: true)
++        ], url: session.apiURL, authorization: server.authorization!).first as? MethodQueryResponse else {
++            throw URLError(.cannotDecodeContentData)
++        }
++        return response
++    }
++
++    /// Use the original request and Email decoder while exposing state/notFound
++    /// for callers that need a complete, correlated snapshot.
++    public func getEmails(_ ids: [String], includeTextBody: Bool = false) async throws -> MethodGetResponse {
++        guard let session, let accountID = selectedAccountID(in: session) else { throw JMAPError.method(.accountNotFound) }
++        let configuration: Email.GetMethod.Configuration? = includeTextBody ? .init(
++            bodyProperties: [.partID, .blobID, .size, .type], fetchTextBodyValues: true, fetchHTMLBodyValues: true,
++            maxBodyValueBytes: 256 * 1024) : nil
++        guard let response = try await urlSession.jmapAPI([
++            Email.GetMethod(accountID, ids: ids, configuration: configuration)
++        ], url: session.apiURL, authorization: server.authorization!).first as? MethodGetResponse else {
++            throw URLError(.cannotDecodeContentData)
++        }
++        return response
++    }
+ 
+     public func thread(for email: Email) async throws -> [Email] {
+         if let session {
+--- a/Core/Sources/JMAP/JSONDecoder.swift
++++ b/Core/Sources/JMAP/JSONDecoder.swift
+@@ -9,6 +9,25 @@
+     // https://jmap.io/spec/rfc8620/#section-1.4
+     convenience init(date decodingStrategy: DateDecodingStrategy) {
+         self.init()
+-        dateDecodingStrategy = decodingStrategy
++        if case .iso8601 = decodingStrategy {
++            // RFC 8620 UTCDate permits fractional seconds; Foundation's default
++            // ISO8601 strategy does not accept them on every supported platform.
++            dateDecodingStrategy = .custom { decoder in
++                let container = try decoder.singleValueContainer()
++                let text = try container.decode(String.self)
++                let formatter = ISO8601DateFormatter()
++                formatter.formatOptions = [.withInternetDateTime]
++                if text.contains(".") { formatter.formatOptions.insert(.withFractionalSeconds) }
++                guard text.range(of: #"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$"#, options: .regularExpression) != nil,
++                      let date = formatter.date(from: text) else {
++                    throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid UTCDate")
++                }
++                formatter.formatOptions = [.withInternetDateTime]
++                guard decoder.codingPath.last?.stringValue != "receivedAt" || (text.hasSuffix("Z") && formatter.string(from: date).prefix(19) == text.prefix(19)) else {
++                    throw DecodingError.dataCorruptedError(in: container, debugDescription: "Invalid UTCDate")
++                }
++                return date
++            }
++        } else { dateDecodingStrategy = decodingStrategy }
+     }
+ }
+--- a/Core/Sources/JMAP/MethodResponse.swift
++++ b/Core/Sources/JMAP/MethodResponse.swift
+@@ -13,10 +13,12 @@
+ public struct MethodGetResponse: MethodResponse {
+     public let data: Data
+     public let notFound: [String]
++    public let state: String
+ 
+-    init(_ name: String, data: Data, notFound: [String], id: UUID) {
++    init(_ name: String, data: Data, notFound: [String], state: String = "", id: UUID) {
+         self.name = name
+         self.data = data
++        self.state = state
+         self.notFound = notFound
+         self.id = id
+     }
+@@ -33,13 +35,15 @@
+ public struct MethodQueryResponse: MethodResponse {
+     public let ids: [String]
+     public let position: Int
+-    public let total: Int
++    public let total: Int?
++    public let queryState: String
+ 
+-    init(_ name: String, ids: [String], position: Int, total: Int, id: UUID) {
++    init(_ name: String, ids: [String], position: Int, total: Int?, queryState: String = "", id: UUID) {
+         self.name = name
+         self.ids = ids
+         self.position = position
+         self.total = total
++        self.queryState = queryState
+         self.id = id
+     }
+ 
+--- a/Core/Sources/JMAP/URLSession.swift
++++ b/Core/Sources/JMAP/URLSession.swift
+@@ -46,24 +46,27 @@
+ 
+                 // Map generic parts of [get response.](https://jmap.io/spec/rfc8620/#section-5.1)
+                 guard let notFound: [String] = object["notFound"] as? [String],
+-                    let list: [Any] = object["list"] as? [Any]
++                    let list: [Any] = object["list"] as? [Any],
++                    let state: String = object["state"] as? String
+                 else {
+                     throw URLError(.cannotDecodeContentData)
+                 }
+ 
+                 // Re-encode as `Decodable` data; now synthesized `Codable` conformance can be used for decoding models.
+                 let data: Data = try JSONSerialization.data(withJSONObject: list)
+-                return MethodGetResponse(name, data: data, notFound: notFound, id: id)
++                return MethodGetResponse(name, data: data, notFound: notFound, state: state, id: id)
+             case "query":
+ 
+                 // Map generic parts of [query response.](https://jmap.io/spec/rfc8620/#section-5.5)
+                 guard let ids: [String] = object["ids"] as? [String],
+-                    let position: Int = object["position"] as? Int,
+-                    let total: Int = object["total"] as? Int
++                    let state: String = object["queryState"] as? String
+                 else {
+                     throw URLError(.cannotDecodeContentData)
+                 }
+-                return MethodQueryResponse(name, ids: ids, position: position, total: total, id: id)
++                struct QueryMetadata: Decodable { let position: Int; let total: Int? }
++                let metadata = try JSONDecoder().decode(QueryMetadata.self, from: JSONSerialization.data(withJSONObject: object))
++                guard metadata.position >= 0, metadata.total.map({ $0 >= 0 }) ?? true else { throw URLError(.cannotDecodeContentData) }
++                return MethodQueryResponse(name, ids: ids, position: metadata.position, total: metadata.total, queryState: state, id: id)
+             case "set":
+ 
+                 // Map generic parts of [set response.](https://jmap.io/spec/rfc8620/#section-5.3)

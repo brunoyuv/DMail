@@ -1,0 +1,34 @@
+{
+  "date": "2026-09-14",
+  "hostTestsPassed": 65,
+  "nativeTestsPassed": 11,
+  "nativeLoadingTests": {
+    "tests": 4,
+    "nativeCoreSHA256": "e4301a376a37a43e15de97821ff0ef7d9c54e17bbfed334b4d16391eac392cd0",
+    "scope": "Synthetic TLS: minimal STATUS, rejected/dropped count request preserves reading, real pull-refresh recovers failed folder listing"
+  },
+  "nativeOAuthTests": {
+    "tests": 7,
+    "imapTlsSessions": 10,
+    "smtpTlsSessions": 3,
+    "nativeCoreSHA256": "e4301a376a37a43e15de97821ff0ef7d9c54e17bbfed334b4d16391eac392cd0",
+    "scope": "Synthetic verified-TLS IMAP XOAUTH2 reading; SMTP XOAUTH2 sending over implicit TLS and STARTTLS; no password fallback"
+  },
+  "signedHapSHA256": "3682b6f69ffd8b78a3a4e536d9d5e09242e0d70ed8f789d1aa41549ba6f34c11",
+  "installed": [
+    "Pura X VDE-AL00 via Wi-Fi"
+  ],
+  "productionAppLaunched": false,
+  "realMailboxAccessAutomated": false,
+  "liveGmailReadingVerified": false,
+  "emulatorExitVerified": true,
+  "firstUIRuns": "First setup failed while emulator locked; second found disabled pull-refresh guard; third passed after fixes",
+  "evidence": {
+    ".tools/mailbox-loading-host-tests.log": "ef5282f4b47109ccea745d88319e9bd9857f21c95ed97ed31aa64aefee6a8905",
+    ".tools/mailbox-loading-native-test/test.log": "7df758b636987432d82b8af0272b3562fefc71fa7b394e64cd9babff36c68d76",
+    ".tools/mailbox-loading-native-test/stats.json": "726366e15b15832d8b0eda41f6e44bf61fc0b8d642e99b68b4c3286da2fe87de",
+    ".tools/mailbox-loading-emulator-3.log": "6a0239f26e2974cbfb9043beec33baa4705929c5fe9e569956b098527c9752a7",
+    ".tools/mailbox-loading-device-ui-build.log": "e1877b40a4a1b078c8db1af45303e92b3940afaa77bf0a3297dd9d841ecbe2f1",
+    ".tools/mailbox-loading-pura-install.log": "a7c7f01aad5659daa03375cd6248b146f21db716dcdd99f52b45cbe785f4a370"
+  }
+}

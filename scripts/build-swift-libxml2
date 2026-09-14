@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT/scripts/swift-target-env"
+cd "$ROOT"
+NATIVE="$ROOT/.tools/command-line-tools/sdk/default/openharmony/native"
+CMAKE="$ROOT/.tools/swift-build-tools/bin/cmake"
+"$CMAKE" -S .tools/libxml2-source -B .tools/swift-ohos-libxml2${SWIFT_BUILD_SUFFIX} -G Ninja \
+  -DCMAKE_MAKE_PROGRAM="$NATIVE/build-tools/cmake/bin/ninja" \
+  -DCMAKE_TOOLCHAIN_FILE="$NATIVE/build/cmake/ohos.toolchain.cmake" \
+  -DOHOS_ARCH="$HARMONY_CPU" -DCMAKE_INSTALL_PREFIX="$SWIFT_TARGET_SDK" \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON \
+  -DLIBXML2_WITH_PYTHON=OFF -DLIBXML2_WITH_TESTS=OFF -DLIBXML2_WITH_PROGRAMS=OFF
+"$CMAKE" --build .tools/swift-ohos-libxml2${SWIFT_BUILD_SUFFIX} -j "${SWIFT_RUNTIME_JOBS:-4}"
+"$CMAKE" --install .tools/swift-ohos-libxml2${SWIFT_BUILD_SUFFIX}

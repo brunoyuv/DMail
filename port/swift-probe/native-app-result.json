@@ -1,0 +1,61 @@
+{
+  "target": "x86_64-unknown-linux-ohos",
+  "upstreamRevision": "61c78d9ebe39ac5b61f31fce371bdfe8c001f7bf",
+  "sourcePatches": [],
+  "sourceFiles": {
+    "EmailAddress/EmailAddress.swift": "72dd0173ee8633b8bffd5a08f13add33d231bca210f788ee7a9d175b4579dfb7",
+    "EmailAddress/String.swift": "91d6ec45460ff875726c5f978b089fe230c860d6930d89b43a0a1e11a1538187",
+    "MIME/Body.swift": "612d1b5441f33507a0d2db1d8b7a6deef8d25440e8fbcbcd8d4f845776aa3409",
+    "MIME/Boundary.swift": "e7631f34b56097038a7d6d9afefe55e9cc39e1018cd16f264315f022e6733115",
+    "MIME/Character.swift": "c67260b2639b88a4a5260de88190244972b0598c24febdd6585c593509fc94ab",
+    "MIME/CharacterSet.swift": "8eff998bc64f915b4806395d7fa83906ac9af82ed2d0b1ef6ef15ce4b9475d22",
+    "MIME/ContentDisposition.swift": "700e3f20058e3c19bf0d508166c6bf305a1571d95e1d7dc5f4bb08b2b47f2b95",
+    "MIME/ContentID.swift": "abdb47537081a769457bfca2910af521ddbcc2940c747061d669aac4e24f91c7",
+    "MIME/ContentTransferEncoding.swift": "8308196ac325386af6cff1d454a4efe3e4fc8957ad22d02a67a1d59690d951c0",
+    "MIME/ContentType.swift": "0f394e3c104598c962f728983e7667c68381bb003fb829f77e0c16485d8cfc92",
+    "MIME/Header.swift": "f2eda55afd23cfc84b432be9a057c85ad02138b28cec3c24a182fd97f7dda5c9",
+    "MIME/MIMEError.swift": "657b4a7c855fa57904e2fb49af7b699924d6e51ab8709b74d90e2f2ba8d4f4f5",
+    "MIME/Part.swift": "74214d63327e9a6f34d85e981f19ea5ded035dca23b9dfcdb62008ba69f1a076",
+    "MIME/RFC822DateFormatter.swift": "437ba0b7d6986cd2718191897702a7c5e14bf391dda636ee103ed5d442c6e4dd",
+    "MIME/String.swift": "65db6588d9942570a048b1ac314e6f0dcdfc4e675092da8a3780ee50553c22e7",
+    "MIME/URL.swift": "63a82ad0c0eb477f611195ad69858f11f26dbc82598c7c17b7e0ce4b60be6c22",
+    "MIME/UUID.swift": "0cfcf0cf69b5c287ba748ca010a31dab96b13724c2918a779ccef019425e73f5"
+  },
+  "verified": "2026-09-13",
+  "emulator": "ThunderbirdPhone / HarmonyOS 6.0.2 / x86_64",
+  "hapSha256": "88fb627457c1e6e0c8073ee3847bfda6d2a057e589f89a9a0c149e795ebe2b2c",
+  "nativeLibraries": 22,
+  "upstreamModules": [
+    "EmailAddress",
+    "MIME",
+    "JMAP"
+  ],
+  "testCommand": "./scripts/test-native-app build && ./scripts/test-native-app device",
+  "testsPassed": [
+    "original_email_address_validation_through_node_api",
+    "composer_uses_swift_validation_and_recovers_after_edit",
+    "upstream_header_vectors_and_concurrent_worker_calls",
+    "all_thirteen_upstream_body_fixtures_parse_and_serialize",
+    "malformed_mime_rejects_without_breaking_later_requests"
+  ],
+  "testSummary": "Tests run: 5, Failure: 0, Error: 0, Pass: 5, Ignore: 0",
+  "emulatorFinalStatus": "stopped",
+  "armDeviceVerified": false,
+  "fullMailCorePorted": false,
+  "nativeCoreSha256": "13cfdd35540f2bceed7c082d9fcc281fa158e12b728f65f07a21ffd7432ef53b",
+  "sourceInventoryScope": "EmailAddress and MIME, unchanged; JMAP source inventory and patches are recorded separately",
+  "jmapProvenance": "port/swift-jmap/native-result.json",
+  "accountBridgeHapTestsPassed": 5,
+  "evidence": {
+    ".tools/native-app-device.log": "6983829256da0a68acacaae19875487b9236d95822385c054064b341d23297ba",
+    "harmony/entry/build/default/outputs/default/entry-default-unsigned.hap": "88fb627457c1e6e0c8073ee3847bfda6d2a057e589f89a9a0c149e795ebe2b2c",
+    ".tools/native-draft-device-session.log": "ac9571079f429ca860f36d0dc3357c0eb51d6c39bb1a151fe2abdfcf11d1f383",
+    ".tools/native-facade-device-session.log": "42be0577db101299872546ac3e6d18a5dba3977d0d3d4f45a6ebda2339559816",
+    ".tools/native-facade-ui-session.log": "bbc1d77b6e085bb427c6ac7c3155634cbb35d369fc3ef0fae3adbba83296977b",
+    ".tools/facade-host-tests.log": "d584e026ad83525dac51f8ab9ecdb3e7af7a6f9036490ad4a889cfe24d6373d1"
+  },
+  "readerBridgeHapTestsPassed": 6,
+  "messageChangeHapTestsPassed": 6,
+  "draftCreationHapTestsPassed": 5,
+  "emulatorStoppedAfterTests": true
+}

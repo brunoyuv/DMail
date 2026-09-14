@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+export PATH="$ROOT/.tools/runtime/node_modules/node/bin:$PATH"
+node .tools/test/node_modules/typescript/bin/tsc \
+  harmony/entry/src/main/ets/mail/html/HtmlDocument.ts \
+  harmony/entry/src/main/ets/mail/smtp/Reply.ts \
+  harmony/entry/src/main/ets/mail/smtp/SentMail.ts \
+  harmony/entry/src/main/ets/mail/Conversation.ts \
+  harmony/entry/src/main/ets/model/Mail.ts \
+  harmony/entry/src/main/ets/model/SampleMail.ts \
+  harmony/entry/src/main/ets/mail/jmap/JmapClient.ts \
+  harmony/entry/src/main/ets/data/MailCacheModel.ts \
+  harmony/entry/src/main/ets/mail/notifications/NotificationModel.ts \
+  harmony/entry/src/main/ets/mail/notifications/NotificationEngine.ts \
+  --strict --target ES2021 --module commonjs --rootDir harmony/entry/src/main/ets --outDir .tools/test-output
+node .tools/test/node_modules/typescript/bin/tsc \
+  harmony/entry/src/ohosTest/ets/support/PrototypeJmapClient.ts \
+  --strict --target ES2021 --module commonjs --rootDir harmony/entry/src --outDir .tools/prototype-test-output
+for suite in tests/*.test.cjs; do node "$suite"; done

@@ -1,0 +1,80 @@
+{
+  "version": "0.1.8",
+  "versionCode": 100008,
+  "status": "installed-and-verified",
+  "nativeInboxUI": {
+    "tests": 1,
+    "passed": 1,
+    "scope": "Synthetic main-HAP automatic Inbox rows without pull; same-turn events coalesce; foreign account ignored; selected reader and cached body retention preserved; exactly two Inbox page requests, zero body/mailboxes/Sent requests, notifications off"
+  },
+  "emulator": {
+    "status": "stopped",
+    "boundedWrapper": true,
+    "isolatedTestAppRemoved": true,
+    "screenProfileRestored": true
+  },
+  "privacy": {
+    "syntheticOnly": true,
+    "realAccountsAccessed": false,
+    "productionLaunched": false,
+    "realMessagesSent": false
+  },
+  "behavior": {
+    "visibleAccountUpdatesRequireNotificationPermission": false,
+    "visibleAccountUpdatesRequireAlertOptIn": false,
+    "perAccountArrivalRevisions": true,
+    "foregroundOnlyUIRefresh": true,
+    "privateRelayRequired": false,
+    "backgroundIntervalsChanged": false
+  },
+  "evidence": {
+    "nativeGateLogSha256": "77d17b76722e4bef6f4988a343ca55a3a9ea4ed6f7bf069cf0de9fcc6e1f1cdc",
+    "nativeDurationMs": 16331,
+    "hostLogSha256": "de184fea7aa6d6005082cc6c30e6741061414f973d242cb74a6f76428a7af58a"
+  },
+  "host": {
+    "tests": 204,
+    "pass": 204,
+    "fail": 0,
+    "skipped": 0,
+    "focusedInboxRegressions": {
+      "tests": 4,
+      "passed": 4,
+      "scope": "Stale manual responses; coalesced updates preserving reader, cached bodies, loaded tail and pending flags; deferred arrivals on resume; manual refresh sharing an automatic in-flight request"
+    }
+  },
+  "installations": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "target": "PURA_X_WIFI_TARGET_REDACTED",
+      "versionCode": 100008,
+      "versionName": "0.1.8",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "1e082410dd58b5596f8d9993eb642829f84186a67227cf9d7c24e70ca1b7cf8c"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "target": "MATEPAD_SERIAL_REDACTED",
+      "versionCode": 100008,
+      "versionName": "0.1.8",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "1e082410dd58b5596f8d9993eb642829f84186a67227cf9d7c24e70ca1b7cf8c"
+    }
+  ],
+  "builds": {
+    "armSigned": true,
+    "x86Production": true,
+    "x86IsolatedFixture": true,
+    "sourceAndNativeParity": true,
+    "hapSha256": "1e082410dd58b5596f8d9993eb642829f84186a67227cf9d7c24e70ca1b7cf8c"
+  },
+  "validationLimits": [
+    "Synthetic native UI verifies automatic arrival rows and reader preservation; scroll anchoring is not a physical-device visual claim.",
+    "No new native Swift changes; prior release IDLE and inbox-check protocol gates remain applicable.",
+    "Background checks remain OS-deferred; no minute-level background guarantee or relay was added."
+  ]
+}

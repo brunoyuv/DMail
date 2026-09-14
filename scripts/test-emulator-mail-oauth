@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+APP="$ROOT/.tools/imap-test-app"
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" != 1 ]]; then
+  for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+    [[ -f "$APP/entry/build/default/outputs/$hap" ]]
+  done
+  export EMULATOR_SCREEN=pura-main EMULATOR_TEST_SECONDS=150
+  exec "$ROOT/scripts/with-test-emulator" "$0"
+fi
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+NODE="$ROOT/.tools/runtime/node_modules/node/bin/node"
+OUT="$ROOT/.tools/imap-oauth-native-test"
+mkdir -p "$OUT"
+FIXTURE_PID=''; SMTP_PID=''; FORWARDS=()
+cleanup() {
+  local result=$?
+  trap - EXIT
+  "$HDC" -t 127.0.0.1:5555 shell hilog -x > "$OUT/hilog.txt" 2>&1 || true
+  "$HDC" -t 127.0.0.1:5555 uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  for port in "${FORWARDS[@]}"; do "$HDC" -t 127.0.0.1:5555 fport rm "tcp:$port" "tcp:$port" >/dev/null 2>&1 || true; done
+  if [[ -n "$FIXTURE_PID" ]]; then kill "$FIXTURE_PID" 2>/dev/null || true; wait "$FIXTURE_PID" 2>/dev/null || true; fi
+  if [[ -n "$SMTP_PID" ]]; then kill "$SMTP_PID" 2>/dev/null || true; wait "$SMTP_PID" 2>/dev/null || true; fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+if "$HDC" fport ls | grep -Eq 'tcp:(976[156]|977[12]) '; then echo 'OAuth fixture ports are already forwarded.' >&2; exit 1; fi
+THUNDERBIRD_IMAP_OAUTH=1 "$NODE" port/swift-imap/fixture.cjs .tools/imap-test-certs > "$OUT/fixture.log" 2>&1 &
+FIXTURE_PID=$!
+THUNDERBIRD_SMTP_OAUTH=1 "$NODE" port/swift-smtp/fixture.cjs .tools/imap-test-certs > "$OUT/smtp-fixture.log" 2>&1 &
+SMTP_PID=$!
+READY=false
+for ((attempt=0; attempt<30; attempt++)); do
+  kill -0 "$FIXTURE_PID" || { cat "$OUT/fixture.log"; exit 1; }
+  kill -0 "$SMTP_PID" || { cat "$OUT/smtp-fixture.log"; exit 1; }
+  if curl --fail --silent http://127.0.0.1:9760/health >/dev/null && curl --fail --silent http://127.0.0.1:9770/health >/dev/null; then READY=true; break; fi
+  sleep 0.1
+done
+"$READY" || { echo 'OAuth fixture did not start.' >&2; exit 1; }
+for port in 9761 9765 9766 9771 9772; do
+  "$HDC" -t 127.0.0.1:5555 rport "tcp:$port" "tcp:$port" | grep -q 'Forwardport result:OK'
+  FORWARDS+=("$port")
+done
+"$HDC" -t 127.0.0.1:5555 uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+"$HDC" -t 127.0.0.1:5555 install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+"$HDC" -t 127.0.0.1:5555 install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+timeout --foreground --kill-after=5s 100s "$HDC" -t 127.0.0.1:5555 shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/MailOAuthRunner \
+  -s timeout 90000 | tee "$OUT/test.log"
+curl --fail --silent http://127.0.0.1:9760/stats > "$OUT/stats.json"
+curl --fail --silent http://127.0.0.1:9770/stats > "$OUT/smtp-stats.json"
+grep -q 'Tests run: 7, Failure: 0, Error: 0, Pass: 7, Ignore: 0' "$OUT/test.log"
+python3 - "$ROOT" "$OUT" <<'PY'
+from pathlib import Path
+import base64,hashlib,json,sys,zipfile
+root,out=map(Path,sys.argv[1:])
+stats=json.loads((out/'stats.json').read_text())
+assert stats['violations']==[],stats['violations']
+assert stats['active']==0
+assert len(stats['sessions'])==10
+assert all(s['closed'] and 'LOGIN' not in s['commands'] for s in stats['sessions'])
+readers=[s for s in stats['sessions'] if s.get('oauthMode')=='oauth-reader']
+assert len(readers)==8
+for s in readers:
+    assert s['commands'][:3]==['CAPABILITY','AUTHENTICATE','CAPABILITY']
+    assert s['oauthResponses']==1
+    assert s['initialOAuthResponse']==(s['server']=='server')
+rejected=[s for s in stats['sessions'] if s.get('oauthMode')=='oauth-reject']
+assert len(rejected)==1 and rejected[0]['emptyOAuthErrorReply'] and rejected[0]['oauthResponses']==1
+unsupported=[s for s in stats['sessions'] if s['server']=='oauthnone']
+assert len(unsupported)==1 and unsupported[0]['commands']==['CAPABILITY']
+smtp=json.loads((out/'smtp-stats.json').read_text())
+assert smtp['violations']==[],smtp['violations']
+assert len(smtp['sessions'])==3
+assert all(s['closed'] and s['secure'] and s['oauthResponses']==1 for s in smtp['sessions'])
+sent=[s for s in smtp['sessions'] if s['mode']=='oauth-success']
+assert len(sent)==2 and {s['startTLS'] for s in sent}=={True,False}
+for s in sent:
+    assert s['hello']==(2 if s['startTLS'] else 1)
+    assert len(s['messages'])==1
+    body=s['messages'][0].split('\r\n\r\n',1)[1]
+    assert base64.b64decode(''.join(body.split()),validate=True).decode()=='OAuth SMTP 日本語\r\n.\r\nLast line'
+rejected=[s for s in smtp['sessions'] if s['mode']=='oauth-reject']
+assert len(rejected)==1 and rejected[0]['emptyOAuthErrorReply'] and rejected[0]['messages']==[] and rejected[0]['recipients']==[]
+with zipfile.ZipFile(root/'.tools/imap-test-app/entry/build/default/outputs/default/entry-default-unsigned.hap') as hap:
+    core=hap.read('libs/x86_64/libThunderbirdCore.so')
+assert core==(root/'harmony/entry/libs/x86_64/libThunderbirdCore.so').read_bytes()
+(out/'result.json').write_text(json.dumps({'tests':7,'imapTlsSessions':10,'smtpTlsSessions':3,'nativeCoreSHA256':hashlib.sha256(core).hexdigest(),
+ 'scope':'Synthetic verified-TLS IMAP XOAUTH2 reading; SMTP XOAUTH2 sending over implicit TLS and STARTTLS; no password fallback'},indent=2)+'\n')
+PY

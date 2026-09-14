@@ -1,0 +1,13 @@
+{
+  "module": {
+    "name": "entry_test",
+    "type": "feature",
+    "deviceTypes": ["phone", "tablet", "2in1"],
+    "deliveryWithInstall": true,
+    "installationFree": false,
+    "requestPermissions": [{ "name": "ohos.permission.INTERNET" }],
+    "pages": "$profile:test_pages",
+    "abilities": [{ "name": "AccountTestAbility", "srcEntry": "./ets/testability/AccountTestAbility.ets", "exported": false,
+      "startWindowIcon": "$media:app_icon", "startWindowBackground": "$color:start_window_background" }]
+  }
+}

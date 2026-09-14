@@ -1,0 +1,6 @@
+{
+  "name": "libthunderbird.so",
+  "version": "0.1.0",
+  "description": "C ABI adapter to the original Thunderbird Swift core",
+  "types": "./index.d.ts"
+}

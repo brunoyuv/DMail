@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+source "$ROOT/scripts/swift-target-env"
+./scripts/build-native-jmap
+./scripts/build-native-mime
+./scripts/prepare-imap-core-objects
+./scripts/build-native-autoconfiguration
+NATIVE="$ROOT/.tools/command-line-tools/sdk/default/openharmony/native"
+SDK="$SWIFT_TARGET_SDK"
+OUT="$ROOT/.tools/swift-probe/native-email${SWIFT_BUILD_SUFFIX}"
+APP_PROJECT="$ROOT/harmony"
+if [[ "$SWIFT_CPU" == aarch64 ]]; then APP_PROJECT="$ROOT/.tools/device-app"; fi
+DEST="$APP_PROJECT/entry/libs/$HARMONY_CPU"
+mkdir -p "$DEST"
+.tools/swift/usr/bin/swiftc -target ${SWIFT_TARGET} -sdk "$NATIVE/sysroot" \
+  -resource-dir "$SDK/lib/swift" -I "$SDK/lib/swift/ohos" \
+  -I "$SDK/lib/swift/musl/SwiftMusl" -I "$SDK/lib/swift/musl/${SWIFT_CPU}" \
+  -I "$ROOT/.tools/swift-probe/native-mime${SWIFT_BUILD_SUFFIX}" -module-cache-path "$OUT/cache" \
+  -parse-as-library -O -module-name ThunderbirdMimeBridge -emit-object \
+  port/swift-bridge/MimeBridge.swift -o "$OUT/mime-bridge.o"
+"$ROOT/.tools/swift/usr/bin/swiftc" -target ${SWIFT_TARGET} -sdk "$NATIVE/sysroot" \
+  -resource-dir "$SDK/lib/swift" -I "$SDK/lib/swift/ohos" -I "$SDK/lib/swift/musl/SwiftMusl" \
+  -I "$SDK/lib/swift/musl/${SWIFT_CPU}" -I "$ROOT/.tools/swift-probe/native-jmap${SWIFT_BUILD_SUFFIX}" \
+  -I "$OUT" -I "$ROOT/port/swift-platform" -module-cache-path "$OUT/jmap-cache" \
+  -parse-as-library -swift-version 6 -O -whole-module-optimization -module-name ThunderbirdJmapBridge -emit-object \
+  port/swift-bridge/JmapAccountBridge.swift port/swift-bridge/JmapTransport.swift \
+  port/swift-bridge/JmapReaderBridge.swift port/swift-bridge/JmapWriteBridge.swift -o "$OUT/jmap-bridge.o"
+# Combine the original mail modules once, excluding every diagnostic entry point.
+"$NATIVE/llvm/bin/clang" -target ${SWIFT_CLANG_TARGET} --sysroot="$NATIVE/sysroot" \
+  -shared "$OUT/EmailAddress.o" "$OUT/bridge.o" "$OUT/mime-bridge.o" "$OUT/jmap-bridge.o" \
+  @"$ROOT/.tools/swift-probe/native-imap${SWIFT_BUILD_SUFFIX}/core-objects.rsp" \
+  "$ROOT/.tools/swift-probe/native-autoconfiguration${SWIFT_BUILD_SUFFIX}/Autoconfiguration.o" \
+  "$ROOT/.tools/swift-probe/native-autoconfiguration${SWIFT_BUILD_SUFFIX}/crypto.o" \
+  "$ROOT/.tools/swift-probe/native-jmap${SWIFT_BUILD_SUFFIX}/JMAP.o" "$ROOT/.tools/swift-probe/native-jmap${SWIFT_BUILD_SUFFIX}/HarmonyLogging.o" \
+  "$ROOT/.tools/swift-probe/native-jmap${SWIFT_BUILD_SUFFIX}/logging.o" \
+  "$ROOT/.tools/swift-probe/native-mime${SWIFT_BUILD_SUFFIX}/MIME.o" "$SDK/lib/swift/musl/${SWIFT_CPU}/swiftrt.o" \
+  -L "$SDK/lib/swift/musl" -L "$SDK/lib/swift/musl/${SWIFT_CPU}" -L "$SDK/lib/swift/ohos" -L "$SDK/lib" \
+  -lFoundationXML -lFoundationNetworking -lhilog_ndk.z -lFoundation -lFoundationEssentials -lFoundationInternationalization -l_FoundationICU \
+  -lswiftCore -lswift_Concurrency -lswiftMusl -lswiftSynchronization \
+  -lswift_StringProcessing -lswift_RegexParser -lswiftDispatch -ldispatch -lBlocksRuntime \
+  -lfts -lxml2 -lswiftSwiftOnoneSupport -lc++_shared -lcrypto -lnet_ssl \
+  -Wl,--no-undefined -Wl,-soname,libThunderbirdCore.so -Wl,-rpath,'$ORIGIN' \
+  -o "$DEST/libThunderbirdCore.so"
+for file in "$OUT"/deploy/lib*; do
+  [[ "$(basename "$file")" == libThunderbirdCore.so ]] || cp "$file" "$DEST/"
+done
+cp "$SDK/lib/swift/musl/libFoundationXML.so" "$SDK/lib/swift/musl/libFoundationNetworking.so" "$SDK/lib/libssl.so.3" \
+  "$SDK/lib/libcrypto.so.3" "$SDK/lib/libcurl.so.4" "$DEST/"
+cp "$SDK/lib/swift/musl/${SWIFT_CPU}/libswiftSwiftOnoneSupport.so" \
+  "$NATIVE/llvm/lib/${SWIFT_CLANG_TARGET}/libc++_shared.so" "$DEST/"

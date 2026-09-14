@@ -1,0 +1,39 @@
+--- a/Sources/MIME/String.swift
++++ b/Sources/MIME/String.swift
+@@ -109,35 +109,7 @@
+ 
+     /// Decode any [RFC 2047](https://www.rfc-editor.org/rfc/rfc2047)-encoded email header string
+     public func headerDecoded() throws -> Self {
+-
+-        // Because encoding creates significantly longer strings, headers can be encoded in multiple segments
+-        // Allows selecting the shortest encoding method for arbitrary chunks
+-        let segments: [Self] = trimmed().components(separatedBy: "?= =?")
+-        if segments.count > 1 {
+-            let segments: [Self] = try segments.map {
+-                try "\(!$0.hasPrefix("=?") ? "=?" : "")\($0)\(!$0.hasSuffix("?=") ? "?=" : "")".headerDecoded()
+-            }
+-            return segments.joined(separator: "")
+-        }
+-        var string: Self = trimmed()
+-        guard string.hasPrefix("=?"), string.hasSuffix("?=") else {
+-            return self  // String not header-encoded; skip decoding
+-        }
+-        let components: [Self] = Array(string.components(separatedBy: "?").dropLast().dropFirst())
+-        guard components.count > 2 else {
+-            throw MIMEError.headerNotDecoded(string)
+-        }
+-        let encoding: Encoding = try Encoding(components[0])
+-        let contentTransferEncoding: ContentTransferEncoding = try ContentTransferEncoding(components[1])
+-        string = components.dropFirst(2).joined(separator: "?")
+-        switch contentTransferEncoding {
+-        case .base64:
+-            return try Self(base64: string, encoding: encoding)
+-        case .quotedPrintable:
+-            return try Self(quotedPrintable: string, encoding: encoding)
+-        default:
+-            throw MIMEError.headerNotDecoded(string)
+-        }
++        HeaderDecoding.decode(self)
+     }
+ 
+     /// Encode any string as a UTF-8, base64 email header.

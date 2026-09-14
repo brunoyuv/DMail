@@ -1,0 +1,82 @@
+{
+  "date": "2026-09-14",
+  "scope": "Remember per-message picture consent and encrypted offline image bytes",
+  "design": "docs/picture-cache.md",
+  "tests": {
+    "hostPassed": 111,
+    "failed": 0,
+    "pictureCache": 8,
+    "rendererConsent": 7,
+    "stableMessageIdentity": 1,
+    "log": "/tmp/thunderbird-pictures-host-tests.log",
+    "nativeUI": "Not run this round; user requested focused checks and installation.",
+    "realMailAccess": false
+  },
+  "build": {
+    "target": "aarch64-unknown-linux-ohos",
+    "hap": ".tools/device-app/entry/build/default/outputs/default/entry-default-signed.hap",
+    "hapSha256": "6b69e8a78004eb308883faf31b763c7194563659c0b31cad5376abc29c463a81",
+    "signedArtifact": true,
+    "deviceExecutionVerified": false,
+    "libraries": {
+      "libBlocksRuntime.so": "3db890900a413f4d996f0b476b3eeed8caf68cfbe35004c2a754763ad8b5ae95",
+      "libFoundation.so": "df1ed03407516f0c41f3276a92bb54a9d0562f05569c14e3dbd60780a1f355da",
+      "libFoundationEssentials.so": "88beb0c95755d135eabb0a26ca87afe9a57f2ce557b565c387bb262670e44fba",
+      "libFoundationInternationalization.so": "5c31544d1945cb999bcf02c676bf8fbdd78867cb46365397b6e2fdc5dacef62e",
+      "libFoundationNetworking.so": "03b7cf0dc7a05da8cba224e7658569ffce3f9deb58c52ac2edede0fb11cf0e3d",
+      "libFoundationXML.so": "9c780d208c79f0dccea52fc0154cae4d163810bdd9edfea7f21100abf63a7c8d",
+      "libThunderbirdCore.so": "fa4dcfc58a127fe70f3b17b8dfaca7d4441758338c556e90c533e0efee72deff",
+      "lib_FoundationICU.so": "a7149cfe358dbea269b75d924f7acbef4445de377a8c0be624d1c5d816b2d2de",
+      "libc++_shared.so": "cf2ea887af365557f4ad258c62631a4f92f902b4b79203a2185dba10efe19e62",
+      "libcrypto.so.3": "583023538ebcbd8a04fad69dc214b6c15bacf0d431cdb879e26392250d64abbe",
+      "libcurl.so.4": "d99cbf616a79220f6f18151ae54fd630fbf58c6adfe8c3d05e54b3d61fb79931",
+      "libdispatch.so": "d7b7304ca6152b46c5ecbb746cf54da6532ea4d11fcdb5bee7ef536a3293f832",
+      "libfts.so": "b3109ef91e6119c47adf95a09ca5ddf6f54348f64f744508e852709a6ebe51da",
+      "libssl.so.3": "3b884cefcc97def6282a8e7374f8fcbc138b5faa6e9b2d5e6e9bff4d5508a531",
+      "libswiftCore.so": "cb78733db77fbc742633882f8f8d8dba585c41207dd05aced6a24ce4579374fd",
+      "libswiftDispatch.so": "53b2248f5e9e9fd14991c0fe70f418b2767701bbf48e104e05242e94803241a7",
+      "libswiftMusl.so": "d959b823a185661890e57a0bb0f2aad631631b9b16dc17825b9a149e5ee423a8",
+      "libswiftSwiftOnoneSupport.so": "422a7cf4c82a2c81d01489cd55cfa90346aeeae950bed1ff7508e94bdfcadb65",
+      "libswiftSynchronization.so": "6f503892b3014820e720930957511f02fb2af83add8644566ea86865db204682",
+      "libswift_Concurrency.so": "45d8f1dcec8b94644a376d18702fbae1d4be145cd1fb7005afa07fd8df489774",
+      "libswift_RegexParser.so": "ca398af367915111c6b0d4c44a01c594651cb2964267a9a23d50813a35996d70",
+      "libswift_StringProcessing.so": "7b60f54ac6181a3772e1b441d8293c857b9cf11dcb3deedb76f0cad18076c777",
+      "libthunderbird.so": "e7bf034a839db5d19a5780b3525671dbf3ac652faf9b7199c58cebcdd4a355a7",
+      "libxml2.so.16": "ed8f17eca668a93794659eb188aba48a68a245c39a5083cda4ccd2bb796b422c"
+    }
+  },
+  "installations": [
+    {
+      "device": "Pura X",
+      "model": "VDE-AL00",
+      "version": "0.1.3",
+      "versionCode": 100003,
+      "upgradeInPlace": true,
+      "productionAppLaunched": false,
+      "firstInstallTime": 1789293885755,
+      "updateTime": 1789354310404
+    },
+    {
+      "device": "MatePad",
+      "model": "MRO-W00",
+      "version": "0.1.3",
+      "versionCode": 100003,
+      "upgradeInPlace": true,
+      "productionAppLaunched": false,
+      "firstInstallTime": 1789300965462,
+      "updateTime": 1789354317089
+    }
+  ],
+  "emulator": "Kept stopped throughout this round",
+  "sourcesSHA256": {
+    "harmony/entry/src/main/ets/data/PictureCache.ets": "85d16e11831cb0c23eef04821106b48045febc4916a1937d9783356705486770",
+    "harmony/entry/src/main/ets/data/AccountStore.ets": "7440dc3f3e520b50bfd6713b725f89843a4214e24d4afb0b43cbbaf6d30ce6bf",
+    "harmony/entry/src/main/ets/pages/HtmlMail.ets": "faf73eecfa7e1d951ae79f62bc82e325ec80d0fa79053a61d8265a7ea21453ed",
+    "harmony/entry/src/main/ets/pages/ConnectedMail.ets": "3801b01abcfaa44a76280e87c4f906f1c99df5f5af22cac89df28a688809a86a",
+    "harmony/entry/src/main/ets/pages/ComposeMail.ets": "baadf030805b03bd4d5114b46b2d55b24b4647b80bab45e830620178ba71849a",
+    "harmony/entry/src/main/ets/mail/Conversation.ts": "76c105a0e1f5fd2d63ccd4473c0f07d5eae0876f686557b9456ce88230de2001",
+    "tests/picture-cache.test.cjs": "e05b4bf9ee8dc7ee98e4074288d0a532b0bf69291fad5663ff34b125a7020660",
+    "tests/picture-consent.test.cjs": "953b3b6fa5ad830b36953dc38debc5ec36742547aadacf59ece83034a74fc828",
+    "tests/conversation.test.cjs": "a1e6887ffa2bfcf486eeec83360f9afd43a2bd02eafb0db73f295856e768ee2f"
+  }
+}

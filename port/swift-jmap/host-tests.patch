@@ -1,0 +1,34 @@
+--- a/Tests/JMAPTests/URLRequestTests.swift
++++ b/Tests/JMAPTests/URLRequestTests.swift
+@@ -3,6 +3,9 @@
+ // file, You can obtain one at http://mozilla.org/MPL/2.0/
+ 
+ import Foundation
++#if canImport(FoundationNetworking)
++import FoundationNetworking
++#endif
+ @testable import JMAP
+ import Testing
+ 
+--- a/Tests/JMAPTests/URLSessionTests.swift
++++ b/Tests/JMAPTests/URLSessionTests.swift
+@@ -3,6 +3,9 @@
+ // file, You can obtain one at http://mozilla.org/MPL/2.0/
+ 
+ import Foundation
++#if canImport(FoundationNetworking)
++import FoundationNetworking
++#endif
+ @testable import JMAP
+ import Testing
+ 
+--- a/Tests/JMAPTests/JMAPErrorTests.swift
++++ b/Tests/JMAPTests/JMAPErrorTests.swift
+@@ -14,6 +14,6 @@
+         #expect(JMAPError.request(RequestError(.notRequest, detail: "unrecognized value")).description == "Request error: Not request; unrecognized value")
+         #expect(JMAPError.request(RequestError(.unknownCapability)).description == "Request error: Unknown capability")
+         #expect(JMAPError.set(.requestTooLarge).description == "Set error: Request too large")
+-        #expect(JMAPError.underlying(URLError(.cannotConnectToHost)).description == "Underlying error: The operation couldn’t be completed. (NSURLErrorDomain error -1004.)")
++        #expect(JMAPError.underlying(URLError(.cannotConnectToHost)).description == "Underlying error: \(URLError(.cannotConnectToHost).localizedDescription)")
+     }
+ }

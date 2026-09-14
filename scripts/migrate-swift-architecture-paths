@@ -1,0 +1,12 @@
+#!/usr/bin/env python3
+"""Upgrade the two known native CMake link paths in previously patched trees."""
+from pathlib import Path
+root = Path(__file__).resolve().parent.parent
+for directory in ['swift-foundation-source', 'swift-corelibs-foundation-source']:
+    # Only the exact path from the previous checked-in patch is replaced.
+    path = root/'.tools'/directory/'CMakeLists.txt'
+    if path.exists():
+        old = path.read_text()
+        new = old.replace('${HarmonySwiftSDK}/lib/swift/musl/x86_64',
+                          '${HarmonySwiftSDK}/lib/swift/musl/${CMAKE_SYSTEM_PROCESSOR}')
+        if new != old: path.write_text(new)

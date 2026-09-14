@@ -1,0 +1,34 @@
+#!/usr/bin/env python3
+from pathlib import Path
+import hashlib,json,shutil,subprocess
+root=Path(__file__).resolve().parent.parent;pkg=root/'.tools/swift-probe/mime-port/package';pkg.mkdir(parents=True,exist_ok=True)
+subprocess.run([str(root/'scripts/prepare-swift-probe')],check=True)
+subprocess.run([str(root/'scripts/prepare-mime'),str(pkg)],check=True)
+shutil.copytree(root/'upstream/thunderbird-ios/Core/Tests/MIMETests',pkg/'Tests/MIMETests',dirs_exist_ok=True)
+subprocess.run(['patch','-p1','-d',str(pkg)],input=(root/'port/swift-mime/host-tests.patch').read_text(),text=True,check=True)
+shutil.copy2(root/'port/swift-mime/CompatibilityTests.swift',pkg/'Tests/MIMETests/CompatibilityTests.swift')
+shutil.copy2(root/'port/swift-mime/HeaderDecodingTests.swift',pkg/'Tests/MIMETests/HeaderDecodingTests.swift')
+account=pkg/'Sources/ImapAccountCore';account.mkdir(parents=True,exist_ok=True)
+for rel,expected in json.loads((root/'port/swift-accountbody/upstream-files.json').read_text())['files'].items():
+    source=root/'upstream/thunderbird-ios'/rel
+    assert hashlib.sha256(source.read_bytes()).hexdigest()==expected
+    shutil.copy2(source,account/source.name)
+subprocess.run(['patch','-p1','-d',str(pkg)],input=(root/'port/swift-accountbody/body-adapter.patch').read_text(),text=True,check=True)
+test=pkg/'Tests/AccountBodyTests';test.mkdir(parents=True,exist_ok=True)
+shutil.copy2(root/'port/swift-accountbody/CompatibilityTests.swift',test/'CompatibilityTests.swift')
+corpus=root/'.tools/mail-corpus/mimekit'
+if corpus.exists():
+    shutil.copytree(corpus,test/'Corpus',dirs_exist_ok=True)
+    shutil.copy2(root/'port/mail-corpus/CorpusBodyTests.swift',test/'CorpusBodyTests.swift')
+else:
+    (test/'CorpusBodyTests.swift').unlink(missing_ok=True)
+    (test/'Corpus').mkdir(exist_ok=True)
+(pkg/'Package.swift').write_text('''// swift-tools-version: 6.2
+import PackageDescription
+let package = Package(name: "MIMEPort", targets: [
+.target(name: "MIME"),
+.target(name: "AccountBody", dependencies: ["MIME"], path: "Sources/ImapAccountCore"),
+.testTarget(name: "AccountBodyTests", dependencies: ["AccountBody", "MIME"], resources: [.copy("Corpus")]),
+.testTarget(name: "MIMETests", dependencies: ["MIME"], resources: [.process("Resources")])
+])
+''')

@@ -1,0 +1,31 @@
+#!/usr/bin/env python3
+"""Fetch exact upstream dependencies; native copies receive only recorded patches."""
+from pathlib import Path
+import json,subprocess,shutil,sys
+root=Path(__file__).resolve().parent.parent
+manifest=json.loads((root/'port/swift-imap/dependencies.json').read_text())
+for name,source in manifest.items():
+    path=root/'.tools/imap-dependencies'/name
+    if not (path/'.git').is_dir():
+        path.mkdir(parents=True,exist_ok=True)
+        subprocess.run(['git','init',str(path)],check=True)
+        subprocess.run(['git','-C',str(path),'remote','add','origin',source['repository']+'.git'],check=True)
+        subprocess.run(['git','-C',str(path),'fetch','--depth','1','origin',source['revision']],check=True)
+        subprocess.run(['git','-C',str(path),'checkout','--detach','FETCH_HEAD'],check=True)
+    assert subprocess.check_output(['git','-C',str(path),'rev-parse','HEAD'],text=True).strip()==source['revision'],name
+    subprocess.run(['git','-C',str(path),'diff','--exit-code','HEAD'],check=True,stdout=subprocess.DEVNULL)
+    if '--native' in sys.argv:
+        dest=root/'.tools/imap-native-dependencies'/name
+        if not dest.exists(): shutil.copytree(path,dest)
+        assert subprocess.check_output(['git','-C',str(dest),'rev-parse','HEAD'],text=True).strip()==source['revision'],name
+        if name=='swift-nio':
+            # Reset only the two generated patch inputs from the verified originals.
+            for rel in ['Sources/CNIOLinux/include/CNIOLinux.h','Sources/CNIOLinux/shim.c']:
+                shutil.copy2(path/rel,dest/rel)
+            subprocess.run(['patch','--forward','--force','-p1','-d',str(dest)],
+                input=(root/'port/swift-imap/nio-harmonyos.patch').read_text(),text=True,check=True)
+        if name=='swift-nio-ssl':
+            rel='Sources/NIOSSL/PosixPort.swift'
+            shutil.copy2(path/rel,dest/rel)
+            subprocess.run(['patch','--forward','--force','-p1','-d',str(dest)], input=(root/'port/swift-imap/niossl-harmonyos.patch').read_text(),text=True,check=True)
+print('Verified pinned SwiftNIO dependencies.')

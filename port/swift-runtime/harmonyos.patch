@@ -1,0 +1,312 @@
+--- a/Runtimes/Core/SwiftOnoneSupport/CMakeLists.txt
++++ b/Runtimes/Core/SwiftOnoneSupport/CMakeLists.txt
+@@ -4,6 +4,11 @@
+ 
+ set_target_properties(swiftSwiftOnoneSupport PROPERTIES
+  Swift_MODULE_NAME SwiftOnoneSupport)
++
++# Use the native linker driver, as swiftCore does, for OHOS toolchain flags.
++if(CMAKE_SYSTEM_NAME STREQUAL "OHOS")
++  set_target_properties(swiftSwiftOnoneSupport PROPERTIES LINKER_LANGUAGE CXX)
++endif()
+ 
+ if(APPLE AND BUILD_SHARED_LIBS)
+   target_link_options(swiftSwiftOnoneSupport PRIVATE "SHELL:-Xlinker -headerpad_max_install_names")
+--- a/Runtimes/Core/core/BuiltinMath.swift
++++ b/Runtimes/Core/core/BuiltinMath.swift
+@@ -113,7 +113,7 @@
+ 
+ // Float80 Intrinsics (80 bits)
+ 
+-#if !(os(Windows) || os(Android) || ($Embedded && !os(Linux) && !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS)))) && (arch(i386) || arch(x86_64))
++#if false // HarmonyOS: native long double is binary128, not Float80.
+ @_transparent
+ public func _cos(_ x: Float80) -> Float80 {
+   return Float80(Builtin.int_cos_FPIEEE80(x._value))
+--- a/Runtimes/Core/core/CMakeLists.txt
++++ b/Runtimes/Core/core/CMakeLists.txt
+@@ -256,7 +256,7 @@
+   "${CMAKE_CURRENT_BINARY_DIR}/Tuple.swift")
+ 
+ # https://github.com/swiftlang/swift/issues/77705 - Freestanding and Linux/Android builds both have failures to resolve.
+-if(NOT LINUX AND NOT ANDROID)
++if(NOT LINUX AND NOT ANDROID AND NOT CMAKE_SYSTEM_NAME STREQUAL "OHOS")
+   target_sources(swiftCore PRIVATE ObjectIdentifier+DebugDescription.swift)
+ endif()
+ 
+@@ -330,6 +330,11 @@
+ if("${SwiftCore_OBJECT_FORMAT_lc}" STREQUAL "elf")
+   target_link_libraries(swiftCore INTERFACE
+     swiftrt)
++  if(CMAKE_SYSTEM_NAME STREQUAL "OHOS")
++    target_link_libraries(swiftCore INTERFACE
++      "$<BUILD_INTERFACE:$<TARGET_OBJECTS:swiftrt>>"
++      "$<INSTALL_INTERFACE:$<INSTALL_PREFIX>/${SwiftCore_INSTALL_LIBDIR}/swiftrt.o>")
++  endif()
+ elseif("${SwiftCore_OBJECT_FORMAT_lc}" STREQUAL "coff")
+   if(BUILD_SHARED_LIBS)
+     target_link_libraries(swiftCore INTERFACE
+@@ -352,7 +357,7 @@
+     $<TARGET_OBJECTS:swiftThreading>)
+ endif()
+ 
+-if(NOT ANDROID AND NOT APPLE AND NOT LINUX AND NOT WIN32 AND UNIX)
++if(NOT ANDROID AND NOT APPLE AND NOT LINUX AND NOT WIN32 AND NOT CMAKE_SYSTEM_NAME STREQUAL "OHOS" AND UNIX)
+   find_library(EXECINFO_LIBRARY execinfo)
+   target_link_libraries(swiftCore PRIVATE "${EXECINFO_LIBRARY}")
+ endif()
+--- a/Runtimes/Core/core/CTypes.swift
++++ b/Runtimes/Core/core/CTypes.swift
+@@ -87,6 +87,9 @@
+ #elseif os(Windows)
+ // On Windows, long double is always Double.
+ public typealias CLongDouble = Double
++#elseif true // This patched runtime is built exclusively for HarmonyOS.
++// HarmonyOS uses binary128 long double, which Swift does not represent.
++// Leave CLongDouble undefined, as on other binary128 platforms.
+ #elseif os(Linux)
+ // On Linux/x86, long double is Float80.
+ // TODO: Fill in definitions for additional architectures as needed. IIRC
+--- a/Runtimes/Core/core/FloatingPoint.swift
++++ b/Runtimes/Core/core/FloatingPoint.swift
+@@ -1522,7 +1522,7 @@
+   /// - Parameter value: A floating-point value to be converted.
+   init(_ value: Double)
+ 
+-#if !(os(Windows) || os(Android) || ($Embedded && !os(Linux) && !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS)))) && (arch(i386) || arch(x86_64))
++#if false // HarmonyOS: native long double is binary128, not Float80.
+   /// Creates a new instance from the given value, rounded to the closest
+   /// possible representation.
+   ///
+@@ -1933,7 +1933,7 @@
+         significandBitPattern:
+           UInt64(truncatingIfNeeded: value.significandBitPattern))
+       self = Self(value_)
+-#if !(os(Windows) || os(Android) || ($Embedded && !os(Linux) && !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS)))) && (arch(i386) || arch(x86_64))
++#if false // HarmonyOS: native long double is binary128, not Float80.
+     case (15, 63):
+       let value_ = value as? Float80 ?? Float80(
+         sign: value.sign,
+--- a/Runtimes/Core/core/FloatingPointParsing.swift.gyb
++++ b/Runtimes/Core/core/FloatingPointParsing.swift.gyb
+@@ -41,7 +41,7 @@
+ %   Self = floatName(bits)
+ 
+ % if bits == 80:
+-#if !(os(Windows) || os(Android) || ($Embedded && !os(Linux) && !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS)))) && (arch(i386) || arch(x86_64))
++#if false // HarmonyOS: native long double is binary128, not Float80.
+ % elif bits == 16:
+ #if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
+ % end
+--- a/Runtimes/Core/core/FloatingPointTypes.swift.gyb
++++ b/Runtimes/Core/core/FloatingPointTypes.swift.gyb
+@@ -66,7 +66,7 @@
+ }%
+ 
+ % if bits == 80:
+-#if !(os(Windows) || os(Android) || ($Embedded && !os(Linux) && !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS)))) && (arch(i386) || arch(x86_64))
++#if false // HarmonyOS: native long double is binary128, not Float80.
+ % elif bits == 16:
+ #if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
+ % end
+@@ -921,7 +921,7 @@
+ }
+ 
+ % if bits != 80:
+-#if !(os(Windows) || os(Android) || ($Embedded && !os(Linux) && !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS)))) && (arch(i386) || arch(x86_64))
++#if false // HarmonyOS: native long double is binary128, not Float80.
+ % end
+ 
+ % builtinFloatLiteralBits = 80
+@@ -1128,7 +1128,7 @@
+ %   That = src_type.stdlib_name
+ 
+ %   if srcBits == 80:
+-#if !(os(Windows) || os(Android) || ($Embedded && !os(Linux) && !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS)))) && (arch(i386) || arch(x86_64))
++#if false // HarmonyOS: native long double is binary128, not Float80.
+ %   elif srcBits == 16:
+ #if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
+ %   end
+--- a/Runtimes/Core/core/IntegerTypes.swift.gyb
++++ b/Runtimes/Core/core/IntegerTypes.swift.gyb
+@@ -128,7 +128,7 @@
+ %     (lower, upper) = getFtoIBounds(floatBits=FloatBits, intBits=int(bits), signed=signed)
+ 
+ %     if FloatType == 'Float80':
+-#if !(os(Windows) || os(Android) || ($Embedded && !os(Linux) && !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS)))) && (arch(i386) || arch(x86_64))
++#if false // HarmonyOS: native long double is binary128, not Float80.
+ %     elif FloatType == 'Float16':
+ #if !((os(macOS) || targetEnvironment(macCatalyst)) && arch(x86_64))
+ %     end
+--- a/Runtimes/Core/core/Mirrors.swift
++++ b/Runtimes/Core/core/Mirrors.swift
+@@ -252,7 +252,7 @@
+   }
+ }
+ 
+-#if !(os(Windows) || os(Android) || ($Embedded && !os(Linux) && !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS)))) && (arch(i386) || arch(x86_64))
++#if false // HarmonyOS: native long double is binary128, not Float80.
+ extension Float80: CustomReflectable {
+   /// A mirror that reflects the Float80 instance.
+   public var customMirror: Mirror {
+--- a/Runtimes/Core/core/Policy.swift
++++ b/Runtimes/Core/core/Policy.swift
+@@ -168,7 +168,7 @@
+ //===----------------------------------------------------------------------===//
+ // Default types for unconstrained number literals
+ //===----------------------------------------------------------------------===//
+-#if !(os(Windows) || os(Android) || ($Embedded && !os(Linux) && !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS)))) && (arch(i386) || arch(x86_64))
++#if false // HarmonyOS: native long double is binary128, not Float80.
+ public typealias _MaxBuiltinFloatType = Builtin.FPIEEE80
+ #else
+ public typealias _MaxBuiltinFloatType = Builtin.FPIEEE64
+--- a/Runtimes/Core/core/Runtime.swift
++++ b/Runtimes/Core/core/Runtime.swift
+@@ -422,7 +422,7 @@
+ }
+ 
+ 
+-#if !(os(Windows) || os(Android) || ($Embedded && !os(Linux) && !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS)))) && (arch(i386) || arch(x86_64))
++#if false // HarmonyOS: native long double is binary128, not Float80.
+ 
+ // Returns a UInt64, but that value is the length of the string, so it's
+ // guaranteed to fit into an Int. This is part of the ABI, so we can't
+--- a/Runtimes/Core/core/VarArgs.swift
++++ b/Runtimes/Core/core/VarArgs.swift
+@@ -419,7 +419,7 @@
+   }
+ }
+ 
+-#if !(os(Windows) || os(Android) || ($Embedded && !os(Linux) && !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS)))) && (arch(i386) || arch(x86_64))
++#if false // HarmonyOS: native long double is binary128, not Float80.
+ extension Float80: CVarArg, _CVarArgAligned {
+   /// Transform `self` into a series of machine words that can be
+   /// appropriately interpreted by C varargs.
+--- a/Runtimes/Core/stubs/Stubs.cpp
++++ b/Runtimes/Core/stubs/Stubs.cpp
+@@ -204,7 +204,7 @@
+ 
+ // We only support float80 on platforms that use that exact format for 'long double'
+ // This should match the conditionals in Runtime.swift
+-#if !defined(_WIN32) && !defined(__ANDROID__) && (defined(__i386__) || defined(__i686__) || defined(__x86_64__))
++#if !defined(_WIN32) && !defined(__ANDROID__) && !defined(__OHOS__) && (defined(__i386__) || defined(__i686__) || defined(__x86_64__))
+ SWIFT_CC(swift) SWIFT_RUNTIME_STDLIB_API
+ uint64_t swift_float80ToString(char *Buffer, size_t BufferLength,
+                                long double Value, bool Debug) {
+--- a/Runtimes/Supplemental/StringProcessing/CMakeLists.txt
++++ b/Runtimes/Supplemental/StringProcessing/CMakeLists.txt
+@@ -9,7 +9,7 @@
+   set(BUILD_NUMBER ".${BUILD_NUMBER}")
+ endif()
+ project(SwiftStringProcessing
+-  LANGUAGES Swift C
++  LANGUAGES Swift C CXX
+   VERSION 6.2.0${BUILD_NUMBER})
+ 
+ if(NOT PROJECT_IS_TOP_LEVEL)
+--- a/Runtimes/Supplemental/StringProcessing/RegexBuilder/CMakeLists.txt
++++ b/Runtimes/Supplemental/StringProcessing/RegexBuilder/CMakeLists.txt
+@@ -13,3 +13,7 @@
+   swift_RegexParser
+   swift_StringProcessing
+   swiftCore)
++
++if(CMAKE_SYSTEM_NAME STREQUAL "OHOS")
++  set_target_properties(swiftRegexBuilder PROPERTIES LINKER_LANGUAGE CXX)
++endif()
+--- a/Runtimes/Supplemental/StringProcessing/_RegexParser/CMakeLists.txt
++++ b/Runtimes/Supplemental/StringProcessing/_RegexParser/CMakeLists.txt
+@@ -36,3 +36,7 @@
+ 
+ set_target_properties(swift_RegexParser PROPERTIES
+   Swift_MODULE_NAME _RegexParser)
++
++if(CMAKE_SYSTEM_NAME STREQUAL "OHOS")
++  set_target_properties(swift_RegexParser PROPERTIES LINKER_LANGUAGE CXX)
++endif()
+--- a/Runtimes/Supplemental/StringProcessing/_StringProcessing/CMakeLists.txt
++++ b/Runtimes/Supplemental/StringProcessing/_StringProcessing/CMakeLists.txt
+@@ -78,3 +78,7 @@
+ target_link_libraries(swift_StringProcessing PRIVATE
+     swift_RegexParser
+     swiftCore)
++
++if(CMAKE_SYSTEM_NAME STREQUAL "OHOS")
++  set_target_properties(swift_StringProcessing PROPERTIES LINKER_LANGUAGE CXX)
++endif()
+--- a/stdlib/public/Platform/Musl.swift.gyb
++++ b/stdlib/public/Platform/Musl.swift.gyb
+@@ -36,7 +36,7 @@
+ 
+ %for type, prefix in [('Float', 'FLT'), ('Double', 'DBL'), ('Float80', 'LDBL')]:
+ % if type == "Float80":
+-#if !os(Android) && (arch(i386) || arch(x86_64))
++#if false // HarmonyOS long double is binary128, not Float80.
+ % end
+ //  Where does the 1 come from? C counts the usually-implicit leading
+ //  significand bit, but Swift does not. Neither is really right or wrong.
+--- a/stdlib/public/Platform/tgmath.swift.gyb
++++ b/stdlib/public/Platform/tgmath.swift.gyb
+@@ -222,7 +222,7 @@
+ // Note these do not have a corresponding LLVM intrinsic
+ % for T, CT, f, ufunc in TypedUnaryFunctions():
+ %  if T == 'Float80':
+-#if (arch(i386) || arch(x86_64)) && !(os(Windows) || os(Android) || ($Embedded && !os(Linux) && !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS))))
++#if false // HarmonyOS long double is binary128, not Float80.
+ %  end
+ @_transparent
+ public func ${ufunc}(_ x: ${T}) -> ${T} {
+@@ -239,7 +239,7 @@
+ // Note these have a corresponding LLVM intrinsic
+ % for T, ufunc in TypedUnaryIntrinsicFunctions():
+ %  if T == 'Float80':
+-#if (arch(i386) || arch(x86_64)) && !(os(Windows) || os(Android) || ($Embedded && !os(Linux) && !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS))))
++#if false // HarmonyOS long double is binary128, not Float80.
+ %  end
+ @_transparent
+ public func ${ufunc}(_ x: ${T}) -> ${T} {
+@@ -258,7 +258,7 @@
+ % for ufunc in UnaryIntrinsicFunctions:
+ %  for T, CT, f in OverlayFloatTypes():
+ %   if T == 'Float80':
+-#if (arch(i386) || arch(x86_64)) && !(os(Windows) || os(Android) || ($Embedded && !os(Linux) && !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS))))
++#if false // HarmonyOS long double is binary128, not Float80.
+ %   end
+ @_transparent
+ public func ${ufunc}(_ x: ${T}) -> ${T} {
+@@ -275,7 +275,7 @@
+ 
+ % for T, CT, f, bfunc in TypedBinaryFunctions():
+ %  if T == 'Float80':
+-#if (arch(i386) || arch(x86_64)) && !(os(Windows) || os(Android) || ($Embedded && !os(Linux) && !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS))))
++#if false // HarmonyOS long double is binary128, not Float80.
+ %  end
+ @_transparent
+ public func ${bfunc}(_ lhs: ${T}, _ rhs: ${T}) -> ${T} {
+@@ -290,7 +290,7 @@
+ % # This is AllFloatTypes not OverlayFloatTypes because of the tuple return.
+ % for T, CT, f in AllFloatTypes():
+ %  if T == 'Float80':
+-#if (arch(i386) || arch(x86_64)) && !(os(Windows) || os(Android) || os(OpenBSD) || ($Embedded && !os(Linux) && !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS))))
++#if false // HarmonyOS long double is binary128, not Float80.
+ %  else:
+ //  lgamma not available on Windows, apparently?
+ #if !os(Windows)
+@@ -308,7 +308,7 @@
+ % # This is AllFloatTypes not OverlayFloatTypes because of the tuple return.
+ % for T, CT, f in AllFloatTypes():
+ %  if T == 'Float80':
+-#if (arch(i386) || arch(x86_64)) && !(os(Windows) || os(Android) || ($Embedded && !os(Linux) && !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS))))
++#if false // HarmonyOS long double is binary128, not Float80.
+ %  end
+ @_transparent
+ public func remquo(_ x: ${T}, _ y: ${T}) -> (${T}, Int) {
+@@ -324,7 +324,7 @@
+ 
+ % for T, CT, f in OverlayFloatTypes():
+ %  if T == 'Float80':
+-#if (arch(i386) || arch(x86_64)) && !(os(Windows) || os(Android) || ($Embedded && !os(Linux) && !(os(macOS) || os(iOS) || os(watchOS) || os(tvOS))))
++#if false // HarmonyOS long double is binary128, not Float80.
+ %  end
+ @available(swift, deprecated: 4.2/*, obsoleted: 5.1*/, message:
+            "use ${T}(nan: ${T}.RawSignificand).")

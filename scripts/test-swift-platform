@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+source "$ROOT/scripts/swift-target-env"
+NATIVE="$ROOT/.tools/command-line-tools/sdk/default/openharmony/native"
+RUNTIME="$SWIFT_TARGET_SDK/lib/swift"
+MODE="${1:-build}"
+case "$MODE" in build|device) ;; *) echo 'Usage: scripts/test-swift-platform [build|device]' >&2; exit 1;; esac
+if [[ "$MODE" == build ]]; then
+.tools/swift/usr/bin/swiftc -target ${SWIFT_TARGET} \
+  -sdk "$NATIVE/sysroot" -resource-dir "$RUNTIME" -I "$RUNTIME/musl/SwiftMusl" \
+  -I "$RUNTIME/ohos" \
+  -module-cache-path "$ROOT/.tools/swift-probe/platform-test-cache${SWIFT_BUILD_SUFFIX}" \
+  -parse-as-library -O -emit-object port/swift-runtime/platform-probe.swift \
+  -o .tools/swift-probe/platform-probe${SWIFT_BUILD_SUFFIX}.o
+"$NATIVE/llvm/bin/clang" -target ${SWIFT_CLANG_TARGET} --sysroot="$NATIVE/sysroot" \
+  port/swift-runtime/probe.c .tools/swift-probe/platform-probe${SWIFT_BUILD_SUFFIX}.o \
+  "$RUNTIME/musl/${SWIFT_CPU}/swiftrt.o" -L "$RUNTIME/musl/${SWIFT_CPU}" \
+  -L "$SWIFT_TARGET_SDK/lib" \
+  -L "$RUNTIME/musl" -lFoundationEssentials \
+  -lswiftCore -lswift_Concurrency -lswiftMusl -lswiftSynchronization \
+  -lswiftRegexBuilder -lswift_StringProcessing -lswift_RegexParser \
+  -ldispatch -lBlocksRuntime -lfts -Wl,-rpath,'$ORIGIN' -Wl,--no-undefined \
+  -o .tools/swift-probe/platform-probe${SWIFT_BUILD_SUFFIX}
+fi
+if [[ "$MODE" == device ]]; then
+  [[ -f .tools/swift-probe/platform-probe${SWIFT_BUILD_SUFFIX} ]] || { echo 'Build the target probe before device testing.' >&2; exit 1; }
+  HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+  if [[ "$SWIFT_CPU" == aarch64 && -z "${HDC_TARGET:-}" ]]; then
+    echo 'Set HDC_TARGET to an authorized ARM device; the default emulator is x86-64.' >&2; exit 2
+  fi
+  TARGET="${HDC_TARGET:-127.0.0.1:5555}"
+  OBSERVED_CPU="$("$HDC" -t "$TARGET" shell uname -m | tr -d '\r\n')"
+  [[ "$OBSERVED_CPU" == "$SWIFT_CPU" ]] || { echo "Device CPU differs from build: $OBSERVED_CPU" >&2; exit 1; }
+  DEST=/data/local/tmp/thunderbird-swift-ohos${SWIFT_BUILD_SUFFIX}
+  "$HDC" -t "$TARGET" shell mkdir -p "$DEST"
+  for name in swiftCore swift_Concurrency swiftMusl swiftSynchronization swiftRegexBuilder swift_StringProcessing swift_RegexParser; do
+    "$HDC" -t "$TARGET" file send "$RUNTIME/musl/${SWIFT_CPU}/lib$name.so" "$DEST/lib$name.so"
+  done
+  for name in dispatch BlocksRuntime fts; do
+    "$HDC" -t "$TARGET" file send "$SWIFT_TARGET_SDK/lib/lib$name.so" "$DEST/lib$name.so"
+  done
+  "$HDC" -t "$TARGET" file send "$RUNTIME/musl/libFoundationEssentials.so" "$DEST/libFoundationEssentials.so"
+  "$HDC" -t "$TARGET" file send .tools/swift-probe/platform-probe${SWIFT_BUILD_SUFFIX} "$DEST/platform-probe"
+  "$HDC" -t "$TARGET" shell chmod 755 "$DEST/platform-probe"
+  "$HDC" -t "$TARGET" shell "$DEST/platform-probe" | tee .tools/swift-probe/platform-device${SWIFT_BUILD_SUFFIX}.log
+  grep -qx 'SWIFT_OHOS_RUNTIME_OK' .tools/swift-probe/platform-device${SWIFT_BUILD_SUFFIX}.log
+fi

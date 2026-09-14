@@ -1,0 +1,117 @@
+#!/usr/bin/env bash
+# Run one prepared viewport profile and stop it before the next test/build.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+SCREEN="${1:?Choose pura-main, pura-cover, matepad-landscape or matepad-portrait}"
+KIND="${2:-corpus}"
+[[ "$KIND" == corpus || "$KIND" == attachments || "$KIND" == layout ]]
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" != 1 ]]; then
+  for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+    [[ -f "$ROOT/.tools/imap-test-app/entry/build/default/outputs/$hap" ]] || { echo 'Build the test HAPs first.' >&2; exit 1; }
+  done
+  "$ROOT/.tools/runtime/node_modules/node/bin/node" -e "require('./port/mail-corpus/fixture.cjs')"
+  export EMULATOR_SCREEN="$SCREEN" EMULATOR_TEST_SECONDS=240
+  if [[ "$KIND" == layout ]]; then export EMULATOR_TEST_SECONDS=180; fi
+  exec "$ROOT/scripts/with-test-emulator" "$0" "$SCREEN" "$KIND"
+fi
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app"
+OUT="$ROOT/.tools/mail-ui/$SCREEN"
+if [[ "$KIND" != corpus ]]; then OUT="$OUT-$KIND"; fi
+mkdir -p "$OUT"
+# Keep prior attempts separate so failed captures cannot be mistaken for fresh ones.
+if [[ -f "$OUT/corpus-test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  find "$OUT" -maxdepth 1 -type f -exec mv -t "$PREVIOUS" {} +
+fi
+FIXTURE_PID=''; FORWARDS=()
+cleanup() {
+  local result=$?
+  trap - EXIT
+  if [[ -n "$FIXTURE_PID" ]]; then curl -fsS http://127.0.0.1:9760/stats > "$OUT/corpus-stats.json" || true; fi
+  "$HDC" -t 127.0.0.1:5555 shell hidumper -s DisplayManagerService -a '-a' > "$OUT/display.txt" 2>&1 || true
+  "$HDC" -t 127.0.0.1:5555 shell hilog -x > "$OUT/hilog.txt" 2>&1 || true
+  if [[ "$KIND" == layout ]]; then
+    for name in inbox compose compose-expanded 112 112-body 117 117-body 117-end 118 118-body; do
+      "$HDC" -t 127.0.0.1:5555 file recv "/data/local/tmp/layout-$name.png" "$OUT/$name.png" >/dev/null 2>&1 || true
+    done
+  elif [[ "$KIND" == corpus ]]; then
+    for name in inbox compose $(seq 100 118); do
+      "$HDC" -t 127.0.0.1:5555 file recv "/data/local/tmp/corpus-$name.png" "$OUT/$name.png" >/dev/null 2>&1 || true
+      if [[ "$name" =~ ^[0-9]+$ ]]; then
+        "$HDC" -t 127.0.0.1:5555 file recv "/data/local/tmp/corpus-$name-body.png" "$OUT/$name-body.png" >/dev/null 2>&1 || true
+      fi
+    done
+  else
+    for name in attachment-reader attachment-open; do "$HDC" -t 127.0.0.1:5555 file recv "/data/local/tmp/$name.png" "$OUT/$name.png" >/dev/null 2>&1 || true; done
+  fi
+  "$HDC" -t 127.0.0.1:5555 uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  for port in "${FORWARDS[@]}"; do "$HDC" -t 127.0.0.1:5555 fport rm "tcp:$port" "tcp:$port" >/dev/null 2>&1 || true; done
+  if [[ -n "$FIXTURE_PID" ]]; then kill "$FIXTURE_PID" 2>/dev/null || true; wait "$FIXTURE_PID" 2>/dev/null || true; fi
+  if [[ "$result" == 0 ]]; then
+    python3 - "$ROOT" "$SCREEN" "$OUT" "$KIND" <<'PY' || result=1
+from pathlib import Path
+import json,sys,struct,hashlib,zipfile
+root,profile,out=map(Path,sys.argv[1:4]);kind=sys.argv[4]
+screen=json.loads((root/'port/mail-corpus/screens.json').read_text())[str(profile)]
+stats=json.loads((out/'corpus-stats.json').read_text())
+if kind in ('corpus','layout'):
+    expected_cases=19 if kind=='corpus' else 3
+    assert len(stats['corpusResults'])==expected_cases
+    assert len({item['name'] for item in stats['corpusResults']})==expected_cases
+    assert all(not item['error'] for item in stats['corpusResults'])
+    assert sum(session.get('attachmentDownloads',0) for session in stats['sessions'])==0
+    if kind=='layout':
+        assert {item['name'] for item in stats['corpusResults']}=={'large-pdf.eml','wide-newsletter.eml','multipart-related-mhtml.txt'}
+        assert all(item['html'] for item in stats['corpusResults'])
+        assert all(item['inlineImages']>0 for item in stats['corpusResults'] if item['name']!='large-pdf.eml')
+else:
+    expected_cases=1
+    assert sum(session.get('attachmentDownloads',0) for session in stats['sessions'])==1
+    assert 'ATTACHMENT_CACHE: repeated open made zero IMAP connections' in (out/'hilog.txt').read_text()
+    assert 'ATTACHMENT_PDF: 2495611 bytes, verified SHA256 ' in (out/'hilog.txt').read_text()
+assert not stats['violations'] and stats['active']==0
+assert all(session['closed'] and not session.get('violation') for session in stats['sessions'])
+screenshots={}
+for image in out.glob('*.png'):
+    data=image.read_bytes()
+    assert struct.unpack('>II',data[16:24])==(screen['width'],screen['height']),image.name
+    screenshots[image.name]=hashlib.sha256(data).hexdigest()
+if kind=='corpus':
+    for uid in range(100,119): assert f'{uid}.png' in screenshots
+elif kind=='layout':
+    for name in ['inbox','compose','compose-expanded','112','112-body','117','117-body','117-end','118','118-body']:
+        assert f'{name}.png' in screenshots,name
+else:
+    assert 'attachment-reader.png' in screenshots and 'attachment-open.png' in screenshots
+with zipfile.ZipFile(root/'.tools/imap-test-app/entry/build/default/outputs/default/entry-default-unsigned.hap') as hap:
+    core=hap.read('libs/x86_64/libThunderbirdCore.so')
+assert core==(root/'harmony/entry/libs/x86_64/libThunderbirdCore.so').read_bytes()
+(out/'result.json').write_text(json.dumps({'screen':screen,'kind':kind,'cases':expected_cases,'nativeCoreSHA256':hashlib.sha256(core).hexdigest(),'screenshots':screenshots},indent=2)+'\n')
+print('PASS:',kind,'expected screen dimensions, shipping native core, closed connections.')
+PY
+  fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+if "$HDC" fport ls | grep -Eq 'tcp:976[01] '; then echo 'Corpus fixture ports already forwarded' >&2;exit 1;fi
+for port in 9760 9761;do
+  "$HDC" -t 127.0.0.1:5555 rport "tcp:$port" "tcp:$port" | grep -q 'Forwardport result:OK';FORWARDS+=("$port")
+done
+"$HDC" -t 127.0.0.1:5555 shell param set persist.ace.testmode.enabled 0
+"$HDC" -t 127.0.0.1:5555 uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+"$HDC" -t 127.0.0.1:5555 install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+"$HDC" -t 127.0.0.1:5555 install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+"$HDC" -t 127.0.0.1:5555 shell 'rm -f /data/local/tmp/corpus-*.png /data/local/tmp/layout-*.png /data/local/tmp/attachment-reader.png /data/local/tmp/attachment-open.png'
+THUNDERBIRD_MAIL_CORPUS=1 "$ROOT/.tools/runtime/node_modules/node/bin/node" port/swift-imap/fixture.cjs .tools/imap-test-certs > "$OUT/fixture.log" 2>&1 & FIXTURE_PID=$!
+for ((attempt=0;attempt<30;attempt++)); do curl -fsS http://127.0.0.1:9760/health >/dev/null 2>&1 && break;sleep 0.1;done
+curl -fsS http://127.0.0.1:9760/health >/dev/null
+RUNNER=CorpusRunner; EXPECTED=3
+COMMAND_SECONDS=220; RUNNER_MILLISECONDS=210000
+if [[ "$KIND" == attachments ]]; then RUNNER=AttachmentsRunner; EXPECTED=1; fi
+if [[ "$KIND" == layout ]]; then RUNNER=LayoutRunner; EXPECTED=1; COMMAND_SECONDS=150; RUNNER_MILLISECONDS=140000; fi
+timeout --foreground --kill-after=10s "${COMMAND_SECONDS}s" "$HDC" -t 127.0.0.1:5555 shell aa test -b org.thunderbird.harmony.imaptest -m entry_test \
+  -s unittest /ets/testrunner/"$RUNNER" -s timeout "$RUNNER_MILLISECONDS" | tee "$OUT/corpus-test.log"
+grep -q "Tests run: $EXPECTED, Failure: 0, Error: 0, Pass: $EXPECTED, Ignore: 0" "$OUT/corpus-test.log"

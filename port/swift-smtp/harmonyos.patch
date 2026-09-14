@@ -1,0 +1,640 @@
+--- a/Sources/SMTP/Email.swift
++++ b/Sources/SMTP/Email.swift
+@@ -12,6 +12,8 @@
+     public let recipients: [EmailAddress]
+     public let copied: [EmailAddress]
+     public let blindCopied: [EmailAddress]
++    public let inReplyTo: [String]
++    public let references: [String]
+     public let subject: String
+     public let date: Date
+     public let body: Body
+@@ -28,6 +30,8 @@
+         copied: [EmailAddress] = [],
+         blindCopied: [EmailAddress] = [],
+         subject: String = "",
++        inReplyTo: [String] = [],
++        references: [String] = [],
+         date: Date = Date(),
+         body: Body = .empty,
+         id: UUID = UUID()
+@@ -36,6 +40,8 @@
+         self.recipients = recipients
+         self.copied = copied
+         self.blindCopied = blindCopied
++        self.inReplyTo = inReplyTo
++        self.references = references
+         self.subject = subject
+         self.date = date
+         self.body = body
+--- a/Sources/SMTP/LoggingHandler.swift
++++ b/Sources/SMTP/LoggingHandler.swift
+@@ -3,7 +3,7 @@
+ // file, You can obtain one at http://mozilla.org/MPL/2.0/
+ 
+ import NIOCore
+-import OSLog
++import HarmonyLogging
+ 
+ // Generic NIO channel logger, a pass-through duplex handler
+ // Reads the raw bytes going both directions without modifying
+@@ -33,9 +33,3 @@
+         context.fireChannelRead(data)  // Pass unmodified data to next handler
+     }
+ }
+-
+-extension ByteBufferView: @retroactive CustomStringConvertible {
+-
+-    // MARK: CustomStringConvertible
+-    public var description: String { String(decoding: self, as: UTF8.self) }
+-}
+--- a/Sources/SMTP/MessageHandler.swift
++++ b/Sources/SMTP/MessageHandler.swift
+@@ -7,7 +7,7 @@
+ // Proxy `ByteToMessageHandler` as `@unchecked Sendable`
+ final class MessageHandler<Decoder: ByteToMessageDecoder>: ChannelInboundHandler, @unchecked Sendable {
+     init(_ decoder: Decoder) {
+-        handler = ByteToMessageHandler(decoder)
++        handler = ByteToMessageHandler(decoder, maximumBufferSize: 4096)
+     }
+ 
+     private let handler: ByteToMessageHandler<Decoder>
+--- a/Sources/SMTP/RequestEncoder.swift
++++ b/Sources/SMTP/RequestEncoder.swift
+@@ -10,6 +10,7 @@
+ enum Request {
+     case hello(String)
+     case startTLS
++    case authPlain(String, String)
+     case authLogin
+     case authUser(String)
+     case authPassword(String)
+@@ -31,6 +32,8 @@
+             out.writeString("EHLO \(hostname)")
+         case .startTLS:
+             out.writeString("STARTTLS")
++        case .authPlain(let user, let password):
++            out.writeString("AUTH PLAIN \(Data(("\0" + user + "\0" + password).utf8).base64EncodedString())")
+         case .authLogin:
+             out.writeString("AUTH LOGIN")
+         case .authUser(let value), .authPassword(let value):
+@@ -42,13 +45,22 @@
+         case .data:
+             out.writeString("DATA")
+         case .transferData(let email):
+-            out.writeString("From: \(email.sender)\(crlf)")
+-            out.writeString("To: \(email.recipients.map { $0.description }.joined(separator: " "))\(crlf)")
+-            out.writeString("Date: \(email.date.rfc822Format())\(crlf)")
+-            out.writeString("Message-ID: \(email.messageID)\(crlf)")
+-            out.writeString("Subject: \(email.subject)\(crlf)")
+-            out.writeBytes(email.body.rawValue)
+-            out.writeString("\(crlf).")
++            try validateMessage(email)
++            var message = "From: \(email.sender.value)\(crlf)"
++            if !email.recipients.isEmpty { message += "To: \(email.recipients.map { $0.value }.joined(separator: ",\r\n "))\(crlf)" }
++            if !email.copied.isEmpty { message += "Cc: \(email.copied.map { $0.value }.joined(separator: ",\r\n "))\(crlf)" }
++            message += "Date: \(email.date.rfc822Format())\(crlf)Message-ID: \(email.messageID)\(crlf)"
++            if !email.inReplyTo.isEmpty { message += "In-Reply-To: \(try replyHeader(email.inReplyTo))\(crlf)" }
++            if !email.references.isEmpty { message += "References: \(try replyHeader(email.references))\(crlf)" }
++            message += "Subject: \(try subjectHeader(email.subject))\(crlf)MIME-Version: 1.0\(crlf)"
++            guard let body = String(data: email.body.rawValue, encoding: .ascii) else { throw SMTPError.invalidMessage }
++            message += body
++            // Normalize all newlines and SMTP dot-stuff the entire DATA payload.
++            let lines = message.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n").components(separatedBy: "\n")
++            let wire = lines.map { $0.hasPrefix(".") ? "." + $0 : $0 }.joined(separator: crlf)
++            out.writeString(wire)
++            if !wire.hasSuffix(crlf) { out.writeString(crlf) }
++            out.writeString(".")
+         case .quit:
+             out.writeString("QUIT")
+         }
+--- a/Sources/SMTP/ResponseHandler.swift
++++ b/Sources/SMTP/ResponseHandler.swift
+@@ -1,36 +1,26 @@
+ // This Source Code Form is subject to the terms of the Mozilla Public
+-// License, v. 2.0. If a copy of the MPL was not distributed with this
+-// file, You can obtain one at http://mozilla.org/MPL/2.0/
+-
++// License, v. 2.0. https://mozilla.org/MPL/2.0/
+ import NIOCore
+ 
+-enum Response {
+-    case ok(Int, String)
+-    case error(String)
+-}
+-
+-final class ResponseHandler: ChannelInboundHandler, Sendable {
+-
+-    // MARK: ChannelInboundHandler
++enum Response { case reply(Int, [String]) }
++final class ResponseHandler: ChannelInboundHandler, @unchecked Sendable {
+     typealias InboundIn = ByteBuffer
+     typealias InboundOut = Response
+-
++    private var code: Int?
++    private var lines = [String]()
++    private var bytes = 0
+     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+-        var buffer: ByteBuffer = unwrapInboundIn(data)
+-        guard let prefix: String = buffer.readString(length: 4),
+-            let code: Int = Int(prefix.dropLast())
+-        else {
+-            context.fireErrorCaught(SMTPError.responseNotDecoded)
+-            return
++        var buffer = unwrapInboundIn(data)
++        bytes += buffer.readableBytes
++        guard buffer.readableBytes <= 4096, bytes <= 16384, lines.count < 100,
++              let prefix = buffer.readString(length: 4), let value = Int(prefix.prefix(3)), (200...599).contains(value),
++              prefix.last == " " || prefix.last == "-", code == nil || code == value else {
++            context.fireErrorCaught(SMTPError.responseNotDecoded); return
+         }
+-        let string: String = buffer.readString(length: buffer.readableBytes) ?? ""
+-        switch (prefix.first!, prefix.last!) {
+-        case ("2", " "), ("3", " "):
+-            context.fireChannelRead(wrapInboundOut(.ok(code, string)))
+-        case (_, "-"):
+-            break  // Ignore messages except OK and error
+-        default:
+-            context.fireChannelRead(wrapInboundOut(.error("\(prefix)\(string)")))
++        code = value; lines.append(buffer.readString(length: buffer.readableBytes) ?? "")
++        if prefix.last == " " {
++            let reply = Response.reply(value, lines); code = nil; lines = []; bytes = 0
++            context.fireChannelRead(wrapInboundOut(reply))
+         }
+     }
+ }
+--- a/Sources/SMTP/SMTPClient.swift
++++ b/Sources/SMTP/SMTPClient.swift
+@@ -1,117 +1,55 @@
+ // This Source Code Form is subject to the terms of the Mozilla Public
+-// License, v. 2.0. If a copy of the MPL was not distributed with this
+-// file, You can obtain one at http://mozilla.org/MPL/2.0/
++// License, v. 2.0. https://mozilla.org/MPL/2.0/
++// HarmonyOS transport adaptation of Thunderbird's SMTPClient.
++import EmailAddress
++import NIOCore
++import NIOPosix
++import NIOSSL
++import HarmonyLogging
+ 
+-import EmailAddress
+-import Network
+-import NIOCore
+-import NIOExtras
+-import NIOSSL
+-import NIOTransportServices
+-import OSLog
++public struct SMTPClient: Sendable {
++    public let server: Server
++    private let configuration: TLSConfiguration
++    private let verifyPeer: (@Sendable (NIOSSLCertificate, Channel) -> EventLoopFuture<Void>)?
+ 
+-/// Configure `SMTPClient` with a single ``Server`` and send ``Email``.
+-public struct SMTPClient {
+-    public let server: Server
+-
+-    public init(
+-        _ server: Server,
+-        logger: Logger? = Logger(subsystem: "net.thunderbird", category: "SMTP")
+-    ) {
+-        group = NIOTSEventLoopGroup(loopCount: 1, defaultQoS: .utility)
+-        self.server = server
+-        self.logger = logger
++    public init(_ server: Server, tlsConfiguration: TLSConfiguration = .makeClientConfiguration(),
++                additionalPeerVerification: (@Sendable (NIOSSLCertificate, Channel) -> EventLoopFuture<Void>)? = nil) {
++        self.server = server; configuration = tlsConfiguration; verifyPeer = additionalPeerVerification
+     }
+ 
+-    public func send(_ email: [Email]) async throws {
+-        for email in email {
+-            try await send(email)
+-        }
++    public func send(_ emails: [Email]) async throws {
++        for email in emails { try await send(email) }
+     }
+ 
+     public func send(_ email: Email) async throws {
+-        for recipient in email.allRecipients {
+-            try await send(email, to: recipient)
+-        }
+-    }
+-
+-    func send(_ email: Email, to recipient: EmailAddress) async throws {
++        guard server.connectionSecurity != .none else { throw SMTPError.requiredTLSNotConfigured }
++        try validateMessage(email)
++        let tls = try NIOSSLContext(configuration: configuration)
++        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
++        let done: EventLoopPromise<Void> = group.next().makePromise()
++        let handler = SendHandler(email, server: server, tlsContext: tls, verifyPeer: verifyPeer, done: done)
++        var connection: Channel?
+         do {
+-            let done: EventLoopPromise<Void> = group.next().makePromise()
+-            let bootstrap: NIOClientTCPBootstrap = try .bootstrap(
+-                email: email,
+-                recipient: recipient,
+-                server: server,
+-                group: group,
+-                done: done
+-            )
+-            let logger: Logger? = logger
+-            logger?.info("Connecting to \(server)…")
+-            let connection: EventLoopFuture<any Channel> = bootstrap.connect(host: server.hostname, port: server.port)
+-            connection.cascadeFailure(to: done)
+-            logger?.info("Sending…")
+-            try await withCheckedThrowingContinuation { continuation in
+-                done.futureResult.map {
+-                    logger?.info("Sent")
+-                    connection.whenSuccess { $0.close(promise: nil) }
+-                    continuation.resume()
+-                }.whenFailure { error in
+-                    logger?.error("Send failed: \(error.localizedDescription)")
+-                    connection.whenSuccess { $0.close(promise: nil) }
+-                    continuation.resume(throwing: error)
+-                }
++            let bootstrap = ClientBootstrap(group: group).connectTimeout(.seconds(10)).channelInitializer { channel in
++                do {
++                    if server.connectionSecurity == .tls {
++                        try channel.pipeline.syncOperations.addHandler(smtpTLS(tls, host: server.hostname, verify: verifyPeer))
++                    }
++                    try channel.pipeline.syncOperations.addHandlers([
++                        MessageHandler(LineBasedFrameDecoder()), ResponseHandler(), ByteHandler(RequestEncoder()), handler
++                    ])
++                    return channel.eventLoop.makeSucceededFuture(())
++                } catch { return channel.eventLoop.makeFailedFuture(error) }
+             }
++            connection = try await bootstrap.connect(host: server.hostname, port: server.port).get()
++            try await done.futureResult.get()
++            try? await connection?.close()
++            try await group.shutdownGracefully()
+         } catch {
+-            throw SMTPError(error)
+-        }
+-    }
+-
+-    private let group: EventLoopGroup
+-    private let logger: Logger?
+-}
+-
+-private extension NIOClientTCPBootstrap {
+-    static func bootstrap(
+-        email: Email,
+-        recipient: EmailAddress,
+-        server: Server,
+-        logger: Logger? = nil,
+-        group: EventLoopGroup,
+-        done: EventLoopPromise<Void>
+-    ) throws -> Self {
+-        let bootstrap: Self
+-        switch server.connectionSecurity {
+-        case .startTLS:
+-            bootstrap = try Self(
+-                NIOTSConnectionBootstrap(group: group),
+-                tls: NIOSSLClientTLSProvider(context: .ssl, serverHostname: server.hostname)
+-            )
+-        case .tls:
+-            bootstrap = Self(
+-                NIOTSConnectionBootstrap(group: group),
+-                tls: NIOTSClientTLSProvider()
+-            )
+-            bootstrap.enableTLS()
+-        case .none:
+-            bootstrap = Self(
+-                NIOTSConnectionBootstrap(group: group),
+-                tls: NIOTSClientTLSProvider()
+-            )
+-        }
+-        return bootstrap.channelInitializer { channel in
+-            channel.pipeline.addHandlers(
+-                [
+-                    LoggingHandler(logger),
+-                    MessageHandler(LineBasedFrameDecoder()),
+-                    ResponseHandler(),
+-                    ByteHandler(RequestEncoder()),
+-                    SendHandler(email, recipient: recipient, server: server, done: done)
+-                ]
+-            )
++            group.next().execute { handler.connectionFailed(error) }
++            try? await connection?.close()
++            try? await group.shutdownGracefully()
++            throw error
+         }
+     }
+ }
+-
+-private extension NIOSSLContext {
+-    static var ssl: Self { try! Self(configuration: .makeClientConfiguration()) }
+-}
+--- a/Sources/SMTP/SMTPError.swift
++++ b/Sources/SMTP/SMTPError.swift
+@@ -2,8 +2,15 @@
+ // License, v. 2.0. If a copy of the MPL was not distributed with this
+ // file, You can obtain one at http://mozilla.org/MPL/2.0/
+ 
++import Foundation
++
+ /// ``SMTPClient`` throws `SMTPError`.
+ public enum SMTPError: Error, CustomStringConvertible, Equatable {
++    case deliveryUnconfirmed
++    case authenticationRequired
++    case rejected
++    case timeout
++    case invalidMessage
+     case emailRecipientNotFound
+     case remoteConnectionClosed
+     case requiredTLSNotConfigured
+@@ -17,6 +24,11 @@
+     // MARK: CustomStringConvertible
+     public var description: String {
+         switch self {
++        case .deliveryUnconfirmed: "Delivery could not be confirmed"
++        case .authenticationRequired: "SMTP authentication required"
++        case .rejected: "SMTP server rejected the message"
++        case .timeout: "SMTP connection timed out"
++        case .invalidMessage: "Invalid message"
+         case .emailRecipientNotFound: "Email recipient not found"
+         case .remoteConnectionClosed: "Remote connection closed"
+         case .requiredTLSNotConfigured: "Required TLS not configured"
+--- a/Sources/SMTP/SendHandler.swift
++++ b/Sources/SMTP/SendHandler.swift
+@@ -1,172 +1,121 @@
+ // This Source Code Form is subject to the terms of the Mozilla Public
+-// License, v. 2.0. If a copy of the MPL was not distributed with this
+-// file, You can obtain one at http://mozilla.org/MPL/2.0/
+-
++// License, v. 2.0. https://mozilla.org/MPL/2.0/
++// Thunderbird's SMTP command pipeline, with TLS, response and delivery fixes.
+ import EmailAddress
+ import NIOCore
+ import NIOSSL
++import NIOTLS
+ 
+ final class SendHandler: ChannelInboundHandler, @unchecked Sendable {
++    typealias InboundIn = Response
++    typealias OutboundOut = Request
+     let email: Email
+-    let recipient: EmailAddress
+     let server: Server
++    private let tlsContext: NIOSSLContext
++    private let verifyPeer: (@Sendable (NIOSSLCertificate, Channel) -> EventLoopFuture<Void>)?
++    private let done: EventLoopPromise<Void>
++    private var timer: Scheduled<Void>?
++    private var secure = false
++    private var recipients: [EmailAddress]
++    private var recipientIndex = 0
++    private var finished = false
++    private enum Expect { case greeting, hello, startTLS, handshake, authBegin, username, password, mailFrom, recipient, data, transfer }
++    private var expect: Expect = .greeting
+ 
+-    init(_ email: Email, recipient: EmailAddress?, server: Server, done: EventLoopPromise<Void>) {
+-        self.email = email
+-        self.recipient = recipient ?? email.recipients.first ?? ""
+-        self.server = server
+-        self.done = done
+-        if self.recipient.value.isEmpty {
+-            expect = .error(SMTPError.emailRecipientNotFound)
++    init(_ email: Email, server: Server, tlsContext: NIOSSLContext,
++         verifyPeer: (@Sendable (NIOSSLCertificate, Channel) -> EventLoopFuture<Void>)?, done: EventLoopPromise<Void>) {
++        self.email = email; self.server = server; self.tlsContext = tlsContext; self.verifyPeer = verifyPeer; self.done = done
++        var seen = Set<String>()
++        recipients = email.allRecipients.filter { seen.insert($0.value).inserted }
++    }
++    func connectionFailed(_ error: Error) {
++        guard !finished else { return }; finished = true; timer?.cancel(); done.fail(error)
++    }
++    func handlerAdded(context: ChannelHandlerContext) {
++        timer = context.eventLoop.scheduleTask(in: .seconds(30)) { self.fail(context, SMTPError.timeout) }
++    }
++    private func fail(_ context: ChannelHandlerContext, _ error: Error, explicitRejection: Bool = false) {
++        guard !finished else { return }; finished = true; timer?.cancel()
++        done.fail(expect == .transfer && !explicitRejection ? SMTPError.deliveryUnconfirmed : error)
++        context.close(promise: nil)
++    }
++    private func send(_ context: ChannelHandlerContext, _ request: Request, expecting: Expect) {
++        expect = expecting
++        context.writeAndFlush(wrapOutboundOut(request)).whenFailure { self.fail(context, $0) }
++    }
++    func userInboundEventTriggered(context: ChannelHandlerContext, event: Any) {
++        if case TLSUserEvent.handshakeCompleted = event {
++            secure = true
++            if expect == .handshake { send(context, .hello("localhost"), expecting: .hello) }
++        }
++        context.fireUserInboundEventTriggered(event)
++    }
++    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
++        guard !finished else { return }
++        let response = unwrapInboundIn(data)
++        let code: Int, lines: [String]
++        switch response {
++        case .reply(let value, let text): code = value; lines = text
++        }
++        if code >= 400 {
++            let authentication = expect == .authBegin || expect == .username || expect == .password
++            fail(context, authentication ? SMTPError.authenticationRequired : SMTPError.rejected, explicitRejection: true)
++            return
++        }
++        func require(_ codes: [Int]) -> Bool {
++            if codes.contains(code) { return true }
++            fail(context, SMTPError.responseNotDecoded); return false
++        }
++        switch expect {
++        case .greeting:
++            guard require([220]) else { return }
++            send(context, .hello("localhost"), expecting: .hello)
++        case .hello:
++            guard require([250]) else { return }
++            let capabilities = lines.map { $0.uppercased().split(separator: " ").map(String.init) }
++            if !secure {
++                guard server.connectionSecurity == .startTLS, capabilities.contains(where: { $0.first == "STARTTLS" }) else {
++                    fail(context, SMTPError.requiredTLSNotConfigured); return
++                }
++                send(context, .startTLS, expecting: .startTLS)
++            } else {
++                let mechanisms = capabilities.filter { $0.first == "AUTH" || $0.first?.hasPrefix("AUTH=") == true }
++                    .flatMap { $0 }.map { $0.replacingOccurrences(of: "AUTH=", with: "") }
++                if mechanisms.contains("PLAIN") {
++                    send(context, .authPlain(server.username, server.password), expecting: .password)
++                } else if mechanisms.contains("LOGIN") {
++                    send(context, .authLogin, expecting: .authBegin)
++                } else { fail(context, SMTPError.authenticationRequired) }
++            }
++        case .startTLS:
++            guard require([220]) else { return }
++            expect = .handshake
++            do {
++                try context.pipeline.syncOperations.addHandler(smtpTLS(tlsContext, host: server.hostname, verify: verifyPeer), position: .first)
++            } catch { fail(context, error) }
++        case .handshake: fail(context, SMTPError.requiredTLSNotConfigured)
++        case .authBegin:
++            guard require([334]) else { return }; send(context, .authUser(server.username), expecting: .username)
++        case .username:
++            guard require([334]) else { return }; send(context, .authPassword(server.password), expecting: .password)
++        case .password:
++            guard require([235]) else { return }; send(context, .mailFrom(email.sender), expecting: .mailFrom)
++        case .mailFrom:
++            guard require([250]) else { return }; send(context, .recipient(recipients[0]), expecting: .recipient)
++        case .recipient:
++            guard require([250, 251]) else { return }
++            recipientIndex += 1
++            if recipientIndex < recipients.count { send(context, .recipient(recipients[recipientIndex]), expecting: .recipient) }
++            else { send(context, .data, expecting: .data) }
++        case .data:
++            guard require([354]) else { return }; send(context, .transferData(email), expecting: .transfer)
++        case .transfer:
++            guard require([250]) else { return }
++            // The server accepted DATA. Losing QUIT cannot undo acceptance.
++            finished = true; timer?.cancel(); done.succeed(())
++            context.writeAndFlush(wrapOutboundOut(.quit), promise: nil)
+         }
+     }
+-
+-    private enum Expect {
+-        case initialMessageFromServer
+-        case okForHello
+-        case okForStartTLS
+-        case tlsHandlerToBeAdded
+-        case okForAuthBegin
+-        case okAfterUsername
+-        case okAfterPassword
+-        case okAfterMailFrom
+-        case okAfterRecipient
+-        case okAfterData
+-        case okAfterTransferData
+-        case okAfterQuit
+-        case error(Error)
+-        case nothing
+-    }
+-
+-    private let done: EventLoopPromise<Void>
+-    private var context: ChannelHandlerContext?
+-
+-    private var expect: Expect = .initialMessageFromServer {
+-        didSet {
+-            guard case .error(let error) = expect else { return }
+-            done.fail(error)
+-        }
+-    }
+-
+-    private func send(context: ChannelHandlerContext, command: Request) {
+-        context.writeAndFlush(wrapOutboundOut(command)).cascadeFailure(to: done)
+-    }
+-
+-    private func sendAuthLogin() {
+-        @Sendable func send() {
+-            guard let context else { return }
+-            self.send(context: context, command: .authLogin)
+-            expect = .okForAuthBegin
+-        }
+-
+-        switch server.connectionSecurity {
+-        case .startTLS, .tls:
+-            if let context {
+-                context.channel.pipeline.handler(type: NIOSSLClientHandler.self).map { _ in
+-                    send()  // SSL handler present in pipeline
+-                }.whenFailure { error in
+-                    guard self.server.connectionSecurity == .tls else { return }
+-                    self.expect = .error(error)
+-                }
+-            } else {
+-                expect = .error(SMTPError.requiredTLSNotConfigured)
+-            }
+-        case .none:
+-            send()  // Authenticate in plain text
+-        }
+-        self.context = nil
+-    }
+-
+-    // MARK: ChannelInboundHandler
+-    typealias OutboundIn = Email
+-    typealias OutboundOut = Request
+-    typealias InboundIn = Response
+-
+-    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+-        switch unwrapInboundIn(data) {
+-        case .error(let error):
+-            expect = .error(SMTPError.response(error))
+-        case .ok:
+-            switch expect {
+-            case .initialMessageFromServer:
+-                send(context: context, command: .hello(server.hostname))
+-                expect = .okForHello
+-            case .okForHello:
+-                switch server.connectionSecurity {
+-                case .startTLS:
+-                    send(context: context, command: .startTLS)
+-                    expect = .okForStartTLS
+-                case .tls, .none:
+-                    self.context = context
+-                    sendAuthLogin()
+-                }
+-            case .okForStartTLS:
+-                expect = .tlsHandlerToBeAdded
+-                self.context = context
+-                context.channel.eventLoop.makeCompletedFuture {
+-                    try context.channel.pipeline.syncOperations.addHandler(
+-                        try NIOSSLClientHandler(context: .ssl, serverHostname: server.hostname),
+-                        position: .first
+-                    )
+-                }.whenComplete { result in
+-                    switch self.expect {
+-                    case .tlsHandlerToBeAdded:
+-                        switch result {
+-                        case .failure(let error):
+-                            self.expect = .error(error)
+-                        case .success:
+-                            self.sendAuthLogin()
+-                        }
+-                        break
+-                    default:
+-                        self.expect = .error(SMTPError.requiredTLSNotConfigured)
+-                    }
+-                }
+-            case .tlsHandlerToBeAdded:
+-                fatalError("SMTP.SendHandler.channelRead(context:data:) before TLS handler added to pipeline")
+-            case .okForAuthBegin:
+-                send(context: context, command: .authUser(server.username))
+-                expect = .okAfterUsername
+-            case .okAfterUsername:
+-                send(context: context, command: .authPassword(server.password))
+-                expect = .okAfterPassword
+-            case .okAfterPassword:
+-                send(context: context, command: .mailFrom(email.sender))
+-                expect = .okAfterMailFrom
+-            case .okAfterMailFrom:
+-                send(context: context, command: .recipient(recipient))
+-                expect = .okAfterRecipient
+-            case .okAfterRecipient:
+-                send(context: context, command: .data)
+-                expect = .okAfterData
+-            case .okAfterData:
+-                send(context: context, command: .transferData(email))
+-                expect = .okAfterTransferData
+-            case .okAfterTransferData:
+-                send(context: context, command: .quit)
+-                expect = .okAfterQuit
+-            case .okAfterQuit:
+-                done.succeed()
+-                context.close(promise: nil)
+-                expect = .nothing
+-            case .error(let error):
+-                fatalError("SMTP.SendHandler.channelRead(context:data:) after error: \(error)")
+-            case .nothing:
+-                break
+-            }
+-        }
+-    }
+-
+-    func channelInactive(context: ChannelHandlerContext) {
+-        expect = .error(SMTPError.remoteConnectionClosed)
+-    }
+-
+-    func errorCaught(context: ChannelHandlerContext, error: any Error) {
+-        expect = .error(error)
+-        context.close(promise: nil)
+-    }
++    func channelInactive(context: ChannelHandlerContext) { fail(context, SMTPError.remoteConnectionClosed) }
++    func errorCaught(context: ChannelHandlerContext, error: Error) { fail(context, error) }
+ }
+-
+-private extension NIOSSLContext {
+-    static var ssl: Self { try! Self(configuration: .makeClientConfiguration()) }
+-}

@@ -1,0 +1,23 @@
+{
+  "verified": "2026-09-13",
+  "dependencies": [
+    {
+      "name": "openssl",
+      "version": "3.5.8",
+      "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.8/openssl-3.5.8.tar.gz",
+      "archive": "openssl-3.5.8.tar.gz",
+      "directory": "openssl-source",
+      "sha256": "a8f84a39918ec6415ce765d9b429d313ba97b8143169c172e734b9514464f5b2",
+      "verification": "Publisher SHA-256 from openssl-library.org source link"
+    },
+    {
+      "name": "curl",
+      "version": "8.22.0",
+      "url": "https://curl.se/download/curl-8.22.0.tar.xz",
+      "archive": "curl-8.22.0.tar.xz",
+      "directory": "curl-source",
+      "sha256": "f7ef3ae8a22e521f289803fe93543eb64c329b58aa73a9e224dfd915a2a5f4f7",
+      "verification": "Valid PGP signature from 27EDEAF22F3ABCEB50DB9A125CC908FDB71E12C2, fingerprint checked against curl.se/docs/verify.html"
+    }
+  ]
+}

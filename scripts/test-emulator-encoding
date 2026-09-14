@@ -1,0 +1,90 @@
+#!/usr/bin/env bash
+# Run only prepared synthetic UTF8/MIME checks, then stop the emulator.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+APP="$ROOT/.tools/imap-test-app"
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" != 1 ]]; then
+  for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+    [[ -f "$APP/entry/build/default/outputs/$hap" ]] || { echo 'Build encoding test HAPs before starting the emulator.' >&2; exit 1; }
+  done
+  export EMULATOR_SCREEN=pura-main EMULATOR_TEST_SECONDS=180
+  exec "$ROOT/scripts/with-test-emulator" "$0"
+fi
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+NODE="$ROOT/.tools/runtime/node_modules/node/bin/node"
+OUT="$ROOT/.tools/encoding-native-test"
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  find "$OUT" -maxdepth 1 -type f -exec mv -t "$PREVIOUS" {} +
+fi
+FIXTURE_PID=''; FORWARDS=(); UITEST_PREVIOUS=''
+cleanup() {
+  local result=$?
+  trap - EXIT
+  if [[ -n "$FIXTURE_PID" ]]; then curl -fsS http://127.0.0.1:9760/stats > "$OUT/stats.json" || true; fi
+  for name in inbox reader cached; do
+    "$HDC" -t 127.0.0.1:5555 file recv "/data/local/tmp/encoding-$name.png" "$OUT/$name.png" >/dev/null 2>&1 || true
+  done
+  "$HDC" -t 127.0.0.1:5555 shell hilog -x > "$OUT/hilog.txt" 2>&1 || true
+  "$HDC" -t 127.0.0.1:5555 uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  for port in "${FORWARDS[@]}"; do "$HDC" -t 127.0.0.1:5555 fport rm "tcp:$port" "tcp:$port" >/dev/null 2>&1 || true; done
+  if [[ -n "$UITEST_PREVIOUS" ]]; then "$HDC" -t 127.0.0.1:5555 shell param set persist.ace.testmode.enabled "$UITEST_PREVIOUS" >/dev/null 2>&1 || true; fi
+  if [[ -n "$FIXTURE_PID" ]]; then kill "$FIXTURE_PID" 2>/dev/null || true; wait "$FIXTURE_PID" 2>/dev/null || true; fi
+  if [[ "$result" == 0 ]]; then
+    python3 - "$ROOT" "$OUT" <<'PY' || result=1
+from pathlib import Path
+import hashlib,json,re,struct,sys,zipfile
+root,out=map(Path,sys.argv[1:]);stats=json.loads((out/'stats.json').read_text())
+assert stats['violations']==[] and stats['active']==0
+assert stats['sessions'] and all(s['mode']=='encoding' and s['closed'] and not s.get('violation') for s in stats['sessions'])
+fetches=[f for s in stats['sessions'] for f in s.get('encodingFetches',[])]
+for uid in [201,202,203]:
+    assert any(f['uidFetch'] and f['start']==uid and '1' in f['sections'] for f in fetches),uid
+# Hypium's captured named-test result is authoritative. Optional console.info
+# markers can be dropped from the system hilog ring despite all assertions passing.
+log=(out/'test.log').read_text()
+name='headers_bodies_render_and_cached_revisit_preserve_unicode'
+assert re.search(r'OHOS_REPORT_STATUS: test='+re.escape(name)+r'\r?\nOHOS_REPORT_STATUS_CODE: 0(?:\r?\n|$)',log)
+assert 'OHOS_REPORT_RESULT: stream=Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' in log
+screenshots={}
+for name in ['inbox','reader','cached']:
+    image=(out/f'{name}.png').read_bytes()
+    assert struct.unpack('>II',image[16:24])==(1320,2120)
+    screenshots[name]=hashlib.sha256(image).hexdigest()
+with zipfile.ZipFile(root/'.tools/imap-test-app/entry/build/default/outputs/default/entry-default-unsigned.hap') as hap:
+    core=hap.read('libs/x86_64/libThunderbirdCore.so')
+assert core==(root/'harmony/entry/libs/x86_64/libThunderbirdCore.so').read_bytes()
+(out/'result.json').write_text(json.dumps({'tests':1,'nativeCases':3,'nativeCoreSHA256':hashlib.sha256(core).hexdigest(),
+    'screenshots':screenshots,'scope':'Synthetic TLS: exact Unicode subject/sender and selected MIME parts through shipping Swift/NAPI, rendered HTML and cached revisit without refetch'},indent=2)+'\n')
+print('PASS: Unicode headers, three MIME body cases, native HTML, cache revisit, and fixture cleanup.')
+PY
+  fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+if "$HDC" fport ls | grep -Eq 'tcp:976[01] '; then echo 'Encoding fixture ports already forwarded.' >&2; exit 1; fi
+"$NODE" port/swift-imap/fixture.cjs .tools/imap-test-certs > "$OUT/fixture.log" 2>&1 & FIXTURE_PID=$!
+READY=false
+for ((attempt=0; attempt<30; attempt++)); do
+  kill -0 "$FIXTURE_PID"
+  if curl -fsS http://127.0.0.1:9760/health >/dev/null; then READY=true; break; fi
+  sleep 0.1
+done
+"$READY"
+for port in 9760 9761; do
+  "$HDC" -t 127.0.0.1:5555 rport "tcp:$port" "tcp:$port" | grep -q 'Forwardport result:OK'; FORWARDS+=("$port")
+done
+UITEST_PREVIOUS="$("$HDC" -t 127.0.0.1:5555 shell param get persist.ace.testmode.enabled | tr -d '\r\n')"
+[[ "$UITEST_PREVIOUS" == 1 ]] || UITEST_PREVIOUS=0
+"$HDC" -t 127.0.0.1:5555 shell param set persist.ace.testmode.enabled 0
+"$HDC" -t 127.0.0.1:5555 uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+"$HDC" -t 127.0.0.1:5555 install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+"$HDC" -t 127.0.0.1:5555 install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+"$HDC" -t 127.0.0.1:5555 shell 'rm -f /data/local/tmp/encoding-inbox.png /data/local/tmp/encoding-reader.png /data/local/tmp/encoding-cached.png'
+timeout --foreground --kill-after=5s 130s "$HDC" -t 127.0.0.1:5555 shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/EncodingRunner \
+  -s timeout 120000 | tee "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"

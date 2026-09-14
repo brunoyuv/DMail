@@ -1,0 +1,878 @@
+{
+  "verified": "2026-09-13",
+  "target": "x86_64-unknown-linux-ohos",
+  "buildPassed": true,
+  "runtimeVerified": true,
+  "hapIntegration": true,
+  "trustStoreIntegration": "system and app-scoped anchors verified; user CA policy incomplete",
+  "artifacts": {
+    "lib/libssl.so.3": "de80af2122857af01b7c073908210d2985b0fe25f767b62a4f5638a892c03339",
+    "lib/libcrypto.so.3": "12fdff96530095eaefcb97d409fb0fdb14332f80417a7c25b6a28d775706c9c4",
+    "lib/libcurl.so.4": "5e3cb72802d584638afe3b0b6992c5c243608a7fc3f0bfba5c45e99a9df7c4ba",
+    "lib/swift/musl/libFoundationNetworking.so": "7342d0674377574d287b4832c75e178f6f030eb88b7d8d1fc7bf6a4d1a47168e",
+    "lib/swift/musl/libFoundation.so": "5ac6d87f8d164e317a52253ef5a3071651d0f1c27f47d0a7cd47294300b628b7"
+  },
+  "commands": [
+    "./scripts/build-native-tls",
+    "./scripts/build-native-curl",
+    "./scripts/build-swift-networking",
+    "./scripts/test-native-network build",
+    "./scripts/test-native-network device"
+  ],
+  "diagnosticHapIntegration": true,
+  "tests": {
+    "passed": 6,
+    "failed": 0,
+    "ignored": 0,
+    "trustedTLSSessions": 21,
+    "cases": [
+      "HTTP response",
+      "App-scoped trusted TLS and repeated teardown",
+      "Untrusted issuer and hostname mismatch rejected",
+      "Swift Task cancellation",
+      "Cleartext policy enforced",
+      "System-trusted HTTPS example.com"
+    ],
+    "combinedSuitePassed": 32
+  },
+  "fixtureObservations": {
+    "plain": 1,
+    "trusted": 21,
+    "untrusted": 0,
+    "wrongHost": 0,
+    "cancelled": 1,
+    "cancelStarted": 1,
+    "tlsErrors": 0,
+    "nativeAccount": {
+      "sessions": 6,
+      "unauthorized": 1,
+      "selectedAccounts": [
+        "z_selected",
+        "z_selected",
+        "z_selected"
+      ],
+      "forbidden": 0,
+      "oversizedBytes": 4325376,
+      "oversizedCancelled": true,
+      "postRedirects": 1,
+      "mismatchedReplies": 1,
+      "violations": []
+    },
+    "nativeReader": {
+      "sessions": 27,
+      "queries": [
+        [
+          "paged",
+          0
+        ],
+        [
+          "paged",
+          2
+        ],
+        [
+          "ordered",
+          0
+        ],
+        [
+          "unknown",
+          0
+        ],
+        [
+          "unknown",
+          1
+        ],
+        [
+          "changed",
+          0
+        ],
+        [
+          "wrongPosition",
+          0
+        ]
+      ],
+      "gets": [
+        {
+          "ids": [
+            "first",
+            "deleted"
+          ],
+          "includeBody": false
+        },
+        {
+          "ids": [
+            "last"
+          ],
+          "includeBody": false
+        },
+        {
+          "ids": [
+            "first",
+            "last"
+          ],
+          "includeBody": false
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": false
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "html"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "missing"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "badbody"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "duplicate"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "badDate"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "tooLarge"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "long"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        },
+        {
+          "ids": [
+            "first"
+          ],
+          "includeBody": true
+        }
+      ],
+      "violations": []
+    },
+    "nativeWrites": {
+      "scenarios": {
+        "flags": {
+          "sessions": 5,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Email/get"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "keywords/$seen": true
+              },
+              "ifInState": "v0"
+            },
+            {
+              "patch": {
+                "keywords/$seen": null
+              },
+              "ifInState": "v1"
+            },
+            {
+              "patch": {
+                "keywords/$flagged": true
+              },
+              "ifInState": "v2"
+            },
+            {
+              "patch": {
+                "keywords/$flagged": null
+              },
+              "ifInState": "v3"
+            }
+          ],
+          "applied": 4,
+          "version": 4,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "archive": {
+          "sessions": 3,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Email/get"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "mailboxIds/archive": true,
+                "mailboxIds/inbox": null
+              },
+              "ifInState": "v0"
+            },
+            {
+              "patch": {
+                "mailboxIds/archive": null,
+                "mailboxIds/inbox": true
+              },
+              "ifInState": "v2"
+            }
+          ],
+          "applied": 2,
+          "version": 3,
+          "keywords": {
+            "$custom": true,
+            "$other": true
+          },
+          "mailboxIds": {
+            "label": true,
+            "inbox": true
+          },
+          "external": true
+        },
+        "already": {
+          "sessions": 3,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Email/get"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "mailboxIds/inbox": null
+              },
+              "ifInState": "v0"
+            },
+            {
+              "patch": {
+                "mailboxIds/inbox": true
+              },
+              "ifInState": "v1"
+            }
+          ],
+          "applied": 2,
+          "version": 2,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "label": true,
+            "archive": true,
+            "inbox": true
+          },
+          "external": false
+        },
+        "stale": {
+          "sessions": 2,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Mailbox/get",
+            "Email/get"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "mailboxIds/archive": true,
+                "mailboxIds/inbox": null
+              },
+              "ifInState": "v0"
+            }
+          ],
+          "applied": 1,
+          "version": 2,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "label": true,
+            "archive": true,
+            "extra": true
+          },
+          "external": true
+        },
+        "race": {
+          "sessions": 1,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "keywords/$flagged": true
+              },
+              "ifInState": "v0"
+            }
+          ],
+          "applied": 0,
+          "version": 1,
+          "keywords": {
+            "$custom": true,
+            "$race": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "readonly": {
+          "sessions": 1,
+          "methods": [],
+          "sets": [],
+          "applied": 0,
+          "version": 0,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "denied": {
+          "sessions": 1,
+          "methods": [
+            "Mailbox/get",
+            "Email/get"
+          ],
+          "sets": [],
+          "applied": 0,
+          "version": 0,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "limit": {
+          "sessions": 1,
+          "methods": [],
+          "sets": [],
+          "applied": 0,
+          "version": 0,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "archiveDenied": {
+          "sessions": 1,
+          "methods": [
+            "Mailbox/get",
+            "Email/get"
+          ],
+          "sets": [],
+          "applied": 0,
+          "version": 0,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "forbidden": {
+          "sessions": 1,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "keywords/$flagged": true
+              },
+              "ifInState": "v0"
+            }
+          ],
+          "applied": 0,
+          "version": 0,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "notFound": {
+          "sessions": 1,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "keywords/$flagged": true
+              },
+              "ifInState": "v0"
+            }
+          ],
+          "applied": 0,
+          "version": 0,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "unknown": {
+          "sessions": 1,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "keywords/$flagged": true
+              },
+              "ifInState": "v0"
+            }
+          ],
+          "applied": 0,
+          "version": 0,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "methodReadonly": {
+          "sessions": 1,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "keywords/$flagged": true
+              },
+              "ifInState": "v0"
+            }
+          ],
+          "applied": 0,
+          "version": 0,
+          "keywords": {
+            "$custom": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "conflicting": {
+          "sessions": 1,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "keywords/$flagged": true
+              },
+              "ifInState": "v0"
+            }
+          ],
+          "applied": 1,
+          "version": 1,
+          "keywords": {
+            "$custom": true,
+            "$flagged": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "badValue": {
+          "sessions": 1,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "keywords/$flagged": true
+              },
+              "ifInState": "v0"
+            }
+          ],
+          "applied": 1,
+          "version": 1,
+          "keywords": {
+            "$custom": true,
+            "$flagged": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        },
+        "lost": {
+          "sessions": 2,
+          "methods": [
+            "Mailbox/get",
+            "Email/get",
+            "Email/set",
+            "Email/get"
+          ],
+          "sets": [
+            {
+              "patch": {
+                "keywords/$flagged": true
+              },
+              "ifInState": "v0"
+            }
+          ],
+          "applied": 1,
+          "version": 1,
+          "keywords": {
+            "$custom": true,
+            "$flagged": true
+          },
+          "mailboxIds": {
+            "inbox": true,
+            "label": true
+          },
+          "external": false
+        }
+      },
+      "violations": []
+    },
+    "nativeDrafts": {
+      "scenarios": {
+        "snapshot": {
+          "sessions": 2,
+          "creates": 1,
+          "applied": 1,
+          "reads": 1,
+          "bodyBytes": 150000
+        },
+        "empty": {
+          "sessions": 2,
+          "creates": 1,
+          "applied": 1,
+          "reads": 1,
+          "bodyBytes": 0
+        },
+        "unknown": {
+          "sessions": 1,
+          "creates": 0,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 0
+        },
+        "readonly": {
+          "sessions": 1,
+          "creates": 0,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 0
+        },
+        "missing": {
+          "sessions": 1,
+          "creates": 0,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 0
+        },
+        "ambiguous": {
+          "sessions": 1,
+          "creates": 0,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 0
+        },
+        "denied": {
+          "sessions": 1,
+          "creates": 0,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 0
+        },
+        "limit": {
+          "sessions": 1,
+          "creates": 0,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 0
+        },
+        "reject": {
+          "sessions": 1,
+          "creates": 1,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 13
+        },
+        "quota": {
+          "sessions": 1,
+          "creates": 1,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 13
+        },
+        "large": {
+          "sessions": 1,
+          "creates": 1,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 13
+        },
+        "invalid": {
+          "sessions": 1,
+          "creates": 1,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 13
+        },
+        "future": {
+          "sessions": 1,
+          "creates": 1,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 13
+        },
+        "lost": {
+          "sessions": 2,
+          "creates": 1,
+          "applied": 1,
+          "reads": 1,
+          "bodyBytes": 13
+        },
+        "malformed": {
+          "sessions": 1,
+          "creates": 1,
+          "applied": 1,
+          "reads": 0,
+          "bodyBytes": 13
+        },
+        "conflicting": {
+          "sessions": 1,
+          "creates": 1,
+          "applied": 1,
+          "reads": 0,
+          "bodyBytes": 13
+        },
+        "method": {
+          "sessions": 1,
+          "creates": 1,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 13
+        },
+        "http": {
+          "sessions": 1,
+          "creates": 1,
+          "applied": 0,
+          "reads": 0,
+          "bodyBytes": 13
+        }
+      },
+      "violations": [],
+      "submissions": 0
+    },
+    "jmap": {
+      "sessions": 3,
+      "unauthorized": 1,
+      "malformed": 1,
+      "calls": [
+        "Mailbox/get",
+        "Email/query",
+        "Email/get",
+        "Thread/get",
+        "Email/get",
+        "Mailbox/get",
+        "Mailbox/set",
+        "Mailbox/set",
+        "Mailbox/set"
+      ],
+      "violations": [],
+      "created": [
+        "created-folder"
+      ],
+      "updated": [
+        "created-folder"
+      ],
+      "destroyed": [
+        "created-folder"
+      ]
+    },
+    "trustedConnections": 232,
+    "untrustedConnections": 1,
+    "wrongHostConnections": 1
+  },
+  "limitations": [
+    "Production protocol entry points use native JMAP, including draft creation; connected composer and durable draft recovery remain unfinished",
+    "User-installed CA policy is not implemented",
+    "Certificate pinning has not been exercised; account-bridge cross-origin and POST redirect rejection verified",
+    "HTTP/2, optional compression and IDN support are not enabled",
+    "HAP Bundle metadata/resources are not mapped to Apple bundle conventions",
+    "x86_64 only"
+  ],
+  "evidence": {
+    ".tools/network-test-app/entry/build/default/outputs/default/entry-default-unsigned.hap": "ebdc815747fde885f879a5bed5306dfa9b6a8a3ad6fc173636ada38076261460",
+    ".tools/network-test-app/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap": "aa36ca639afaef21cf09e8b1ff91c407b855a9ccdb6c78a95af372350ea42e65",
+    ".tools/network-test-device.log": "704155add444ecca71bd6ad88c32ebfc12371190705158c8f55482c0a903f17b",
+    "port/swift-runtime/corelibs-harmonyos.patch": "abc08f2b7e1400fb6590f25927fa71342fb8959319affc2800b00c3bbdcd453a",
+    "port/swift-runtime/HarmonyTrust.c": "4d18d464a338c6c1592b3f2434e1cdecae6e264806319ea2ad17f7592f4368b7",
+    ".tools/network-fixture-stats.json": "da79ff8dcbae16ebdb03a507b61c10c5eb0fe787f0dc33db58c0e66a5b991137",
+    ".tools/native-draft-device-session.log": "ac9571079f429ca860f36d0dc3357c0eb51d6c39bb1a151fe2abdfcf11d1f383",
+    "port/swift-jmap/ReaderCore.test.ets": "bf9f801503ed573e473f23dc8d95cd6d792b2c577c8d2ba4a824aba2f265c194",
+    ".tools/native-facade-device-session.log": "42be0577db101299872546ac3e6d18a5dba3977d0d3d4f45a6ebda2339559816",
+    ".tools/native-facade-ui-session.log": "bbc1d77b6e085bb427c6ac7c3155634cbb35d369fc3ef0fae3adbba83296977b",
+    ".tools/facade-host-tests.log": "d584e026ad83525dac51f8ab9ecdb3e7af7a6f9036490ad4a889cfe24d6373d1"
+  },
+  "emulatorStoppedAfterTests": true,
+  "completionRaceRegression": {
+    "patch": "port/swift-runtime/corelibs-harmonyos.patch",
+    "source": "Sources/FoundationNetworking/URLSession/URLSessionTask.swift",
+    "behavior": "Atomically claim completion before success/error callbacks; only the winner resumes and removes the task",
+    "sequentialReaderRequests": 12,
+    "passed": true
+  }
+}

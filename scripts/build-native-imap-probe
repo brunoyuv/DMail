@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+"""Build and stage the isolated native IMAP diagnostic with the emulator off."""
+from pathlib import Path
+import hashlib, json, shutil, subprocess
+root = Path(__file__).resolve().parent.parent
+for args in [['prepare-imap-native'], ['probe-native-imap-dependencies', 'IMAPProbe'],
+             ['link-native-imap'], ['prepare-imap-fixture']]:
+    subprocess.run([str(root/'scripts'/args[0]), *args[1:]], check=True)
+native = root/'.tools/command-line-tools/sdk/default/openharmony/native'
+sdk = root/'.tools/swift-ohos-sdk'; out = root/'.tools/swift-probe/native-imap'
+subprocess.run([str(native/'llvm/bin/clang'), '-target', 'x86_64-linux-ohos', '--sysroot='+str(native/'sysroot'),
+                str(root/'port/swift-imap/probe.c'), '-L'+str(out), '-lThunderbirdIMAP',
+                '-Wl,-rpath,$ORIGIN', '-o', str(out/'probe')], check=True)
+deploy = out/'deploy'; deploy.mkdir(exist_ok=True)
+files = []
+for name in ['Foundation', 'FoundationEssentials', 'FoundationInternationalization', 'swiftDispatch', 'dispatch', 'BlocksRuntime']:
+    files.append(sdk/f'lib/swift/musl/lib{name}.so')
+for name in ['swiftCore', 'swift_Concurrency', 'swiftMusl', 'swiftSynchronization', 'swiftSwiftOnoneSupport', 'swift_StringProcessing', 'swift_RegexParser']:
+    files.append(sdk/f'lib/swift/musl/x86_64/lib{name}.so')
+files += [sdk/'lib/swift/ohos/lib_FoundationICU.so', sdk/'lib/libfts.so', sdk/'lib/libxml2.so.16',
+          native/'llvm/lib/x86_64-linux-ohos/libc++_shared.so', out/'libThunderbirdIMAP.so', out/'probe']
+for source in files: shutil.copy2(source, deploy/source.name)
+subprocess.run([str(native/'llvm/bin/llvm-strip'), '--strip-debug', str(deploy/'libThunderbirdIMAP.so')], check=True)
+shutil.copy2(root/'.tools/imap-test-certs/root.crt', deploy/'root.crt')
+def digest(path): return hashlib.sha256(path.read_bytes()).hexdigest()
+record = {'target': 'x86_64-unknown-linux-ohos', 'appIntegration': False,
+          'payload': {p.name: digest(p) for p in sorted(deploy.iterdir())},
+          'sources': {str(p.relative_to(root)): digest(p) for p in sorted((root/'port/swift-imap').iterdir())
+                      if p.suffix in ['.swift', '.patch', '.c', '.cjs']},
+          'imapStagedSources': {p.name: digest(p) for p in sorted((out/'package/Sources/IMAP').glob('*.swift'))}}
+(out/'probe-provenance.json').write_text(json.dumps(record, indent=2)+'\n')
+print('Prepared native IMAP diagnostic:', deploy)

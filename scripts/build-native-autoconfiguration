@@ -1,0 +1,31 @@
+#!/usr/bin/env bash
+# Compile and link the upstream discovery module; no emulator or shipping HAP mutation.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+source "$ROOT/scripts/swift-target-env"
+./scripts/prepare-autoconfiguration
+NATIVE="$ROOT/.tools/command-line-tools/sdk/default/openharmony/native"
+SDK="$SWIFT_TARGET_SDK"
+OUT="$ROOT/.tools/swift-probe/native-autoconfiguration${SWIFT_BUILD_SUFFIX}"
+mkdir -p "$OUT/cache"
+python3 "$ROOT/scripts/generate-google-oauth-registration" --output "$OUT/LocalGoogleOAuth.swift"
+COMMON=(-target "$SWIFT_TARGET" -sdk "$NATIVE/sysroot"
+ -resource-dir "$SDK/lib/swift" -I "$SDK/lib/swift/ohos" -I "$SDK/lib/swift/musl/SwiftMusl"
+ -I "$SDK/lib/swift/musl/${SWIFT_CPU}" -I "$ROOT/port/swift-autoconfiguration/CAutoconfigCrypto"
+ -module-cache-path "$OUT/cache" -parse-as-library -swift-version 6 -O -whole-module-optimization)
+mapfile -d '' SOURCES < <(find "$ROOT/.tools/swift-probe/autoconfiguration/package/Sources/Autoconfiguration" -name '*.swift' ! -name LocalGoogleOAuth.swift -print0 | sort -z)
+SOURCES+=("$OUT/LocalGoogleOAuth.swift")
+"$ROOT/.tools/swift/usr/bin/swiftc" "${COMMON[@]}" -module-name Autoconfiguration \
+ -emit-object -emit-module -emit-module-path "$OUT/Autoconfiguration.swiftmodule" \
+ "${SOURCES[@]}" -o "$OUT/Autoconfiguration.o"
+"$NATIVE/llvm/bin/clang" -target "$SWIFT_CLANG_TARGET" --sysroot="$NATIVE/sysroot" -fPIC -O2 \
+ -I "$SDK/include" -c port/swift-autoconfiguration/CAutoconfigCrypto/crypto.c -o "$OUT/crypto.o"
+"$NATIVE/llvm/bin/clang" -target "$SWIFT_CLANG_TARGET" --sysroot="$NATIVE/sysroot" \
+ -shared "$OUT/Autoconfiguration.o" "$OUT/crypto.o" "$SDK/lib/swift/musl/${SWIFT_CPU}/swiftrt.o" \
+ -L "$SDK/lib/swift/musl" -L "$SDK/lib/swift/musl/${SWIFT_CPU}" -L "$SDK/lib/swift/ohos" -L "$SDK/lib" \
+ -lFoundationXML -lFoundationNetworking -lFoundation -lFoundationEssentials -lFoundationInternationalization -l_FoundationICU \
+ -lswiftCore -lswift_Concurrency -lswiftMusl -lswiftSynchronization -lswift_StringProcessing -lswift_RegexParser \
+ -lswiftDispatch -ldispatch -lBlocksRuntime -lfts -lxml2 -lcrypto -Wl,--no-undefined \
+ -Wl,-soname,libThunderbirdAutoconfiguration.so -Wl,-rpath,'$ORIGIN' -o "$OUT/libThunderbirdAutoconfiguration.so"
+printf 'PASS: original Autoconfiguration compiles and links for %s; device execution not yet checked.\n' "$SWIFT_TARGET"

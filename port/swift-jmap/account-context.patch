@@ -1,0 +1,205 @@
+--- a/Core/Sources/JMAP/JMAPClient.swift
++++ b/Core/Sources/JMAP/JMAPClient.swift
+@@ -18,8 +18,8 @@
+     /// Convenience
+     /// - Parameter server: ``Server`` configuration for JMAP service provider
+     /// - Returns: `JMAPClient` with an authenticated ``Session`` already started
+-    public static func session(_ server: Server) async throws -> Self {
+-        let client: Self = Self(server)
++    public static func session(_ server: Server, urlSession: URLSession = .shared, sessionURL: URL? = nil, accountID: String? = nil) async throws -> Self {
++        let client: Self = Self(server, urlSession: urlSession, sessionURL: sessionURL, accountID: accountID)
+         try await client.session()  // Start session
+         return client
+     }
+@@ -29,11 +29,11 @@
+ 
+     public func thread(for email: Email) async throws -> [Email] {
+         if let session {
+-            guard let id: String = session.accounts.keys.first else {
+-                throw JMAPError.method(.accountNotFound)
+-            }
+-            guard
+-                let response: MethodGetResponse = try await URLSession.shared.jmapAPI(
++            guard let id: String = selectedAccountID(in: session) else {
++                throw JMAPError.method(.accountNotFound)
++            }
++            guard
++                let response: MethodGetResponse = try await urlSession.jmapAPI(
+                     [
+                         Thread.GetMethod(
+                             id,
+@@ -60,11 +60,11 @@
+ 
+     public func emails(in mailbox: Mailbox) async throws -> [Email] {
+         if let session {
+-            guard let id: String = session.accounts.keys.first else {
+-                throw JMAPError.method(.accountNotFound)
+-            }
+-            guard
+-                let response: MethodQueryResponse = try await URLSession.shared.jmapAPI(
++            guard let id: String = selectedAccountID(in: session) else {
++                throw JMAPError.method(.accountNotFound)
++            }
++            guard
++                let response: MethodQueryResponse = try await urlSession.jmapAPI(
+                     [
+                         Email.QueryMethod(id, filter: .inMailbox(mailbox.id))
+                     ], url: session.apiURL, authorization: server.authorization!
+@@ -81,11 +81,11 @@
+ 
+     public func emails(_ ids: [String]) async throws -> [Email] {
+         if let session {
+-            guard let id: String = session.accounts.keys.first else {
+-                throw JMAPError.method(.accountNotFound)
+-            }
+-            guard
+-                let response: MethodGetResponse = try await URLSession.shared.jmapAPI(
++            guard let id: String = selectedAccountID(in: session) else {
++                throw JMAPError.method(.accountNotFound)
++            }
++            guard
++                let response: MethodGetResponse = try await urlSession.jmapAPI(
+                     [
+                         Email.GetMethod(id, ids: ids)
+                     ], url: session.apiURL, authorization: server.authorization!
+@@ -102,11 +102,11 @@
+ 
+     /// Create a new mailbox.
+     @discardableResult public func create(mailbox: Mailbox) async throws -> MethodSetResponse? {
+-        guard let session, let accountID: String = session.accounts.keys.first else {
++        guard let session, let accountID: String = selectedAccountID(in: session) else {
+             throw JMAPError.method(.accountNotFound)
+         }
+         logger?.info("Creating \"\(mailbox.name)\" mailbox…")
+-        return try await URLSession.shared.jmapAPI(
++        return try await urlSession.jmapAPI(
+             [
+                 Mailbox.SetMethod(
+                     accountID,
+@@ -124,11 +124,11 @@
+ 
+     /// Update an existing mailbox.
+     @discardableResult public func update(mailbox: Mailbox) async throws -> MethodSetResponse? {
+-        guard let session, let accountID: String = session.accounts.keys.first else {
++        guard let session, let accountID: String = selectedAccountID(in: session) else {
+             throw JMAPError.method(.accountNotFound)
+         }
+         logger?.info("Updating \"\(mailbox.name)\" mailbox…")
+-        return try await URLSession.shared.jmapAPI(
++        return try await urlSession.jmapAPI(
+             [
+                 Mailbox.SetMethod(
+                     accountID,
+@@ -146,11 +146,11 @@
+ 
+     /// Destroy an existing mailbox.
+     @discardableResult public func destroy(mailbox: Mailbox) async throws -> MethodSetResponse? {
+-        guard let session, let accountID: String = session.accounts.keys.first else {
++        guard let session, let accountID: String = selectedAccountID(in: session) else {
+             throw JMAPError.method(.accountNotFound)
+         }
+         logger?.info("Destroying \"\(mailbox.name)\" mailbox…")
+-        return try await URLSession.shared.jmapAPI(
++        return try await urlSession.jmapAPI(
+             [
+                 Mailbox.SetMethod(
+                     accountID,
+@@ -165,11 +165,11 @@
+ 
+     public func mailboxes() async throws -> [Mailbox] {
+         if let session {
+-            guard let id: String = session.accounts.keys.first else {
+-                throw JMAPError.method(.accountNotFound)
+-            }
+-            guard
+-                let response: MethodGetResponse = try await URLSession.shared.jmapAPI(
++            guard let id: String = selectedAccountID(in: session) else {
++                throw JMAPError.method(.accountNotFound)
++            }
++            guard
++                let response: MethodGetResponse = try await urlSession.jmapAPI(
+                     [
+                         Mailbox.GetMethod(id)
+                     ], url: session.apiURL, authorization: server.authorization!
+@@ -185,17 +185,30 @@
+     }
+ 
+     @discardableResult public func session() async throws -> Session {
+-        let session: Session = try await URLSession.shared.jmapSession(server: server)
++        let session: Session = try await urlSession.jmapSession(server: server, sessionURL: sessionURL)
+         self.session = session
+         return session
+     }
+ 
+     required public init(
+         _ server: Server,
+-        logger: Logger? = Logger(subsystem: "net.thunderbird", category: "JMAP")
++        logger: Logger? = Logger(subsystem: "net.thunderbird", category: "JMAP"),
++        urlSession: URLSession = .shared, sessionURL: URL? = nil, accountID: String? = nil
+     ) {
+         self.server = server
+         self.logger = logger
++        self.urlSession = urlSession
++        self.sessionURL = sessionURL
++        self.accountID = accountID
++    }
++
++    private let urlSession: URLSession
++    private let sessionURL: URL?
++    private let accountID: String?
++
++    private func selectedAccountID(in session: Session) -> String? {
++        if let accountID { return session.accounts[accountID] == nil ? nil : accountID }
++        return session.primaryAccounts[.mail] ?? session.accounts.keys.first
+     }
+ 
+     private let logger: Logger?
+--- a/Core/Sources/JMAP/URLSession.swift
++++ b/Core/Sources/JMAP/URLSession.swift
+@@ -92,8 +92,17 @@
+     /// Get JMAP session object from a service provider.
+     /// - Parameter server: ``Server`` configuration for JMAP service provider
+     /// - Returns: ``Session`` object containing available account(s), capabilities and service URLs
+-    public func jmapSession(server: Server) async throws -> Session {
+-        try await jmapSession(host: server.host, port: server.port, authorization: server.authorization ?? .empty)
++    public func jmapSession(server: Server, sessionURL: URL? = nil) async throws -> Session {
++        if let sessionURL {
++            var request = try URLRequest.jmapSession(server: server)
++            request.url = sessionURL
++            let response = try await data(for: request)
++            if (response.1 as? HTTPURLResponse)?.statusCode == 401 {
++                throw URLError(.userAuthenticationRequired)
++            }
++            return try JSONDecoder().decode(Session.self, from: response.0)
++        }
++        return try await jmapSession(host: server.host, port: server.port, authorization: server.authorization ?? .empty)
+     }
+ 
+     /// Get JMAP session object from a service provider.
+--- a/Core/Sources/JMAP/Session.swift
++++ b/Core/Sources/JMAP/Session.swift
+@@ -6,6 +6,7 @@
+ 
+ /// Sessions include details about the data and capabilities the server can provide to the client, part of [JMAP core.](https://jmap.io/spec/rfc8620/#section-2)
+ public struct Session: CustomStringConvertible, Decodable, Equatable, Sendable {
++    public let state: String
+     public let username: String
+     public let accounts: [String: Account]
+     public let primaryAccounts: [Capability.Key: String]
+@@ -60,6 +61,7 @@
+     // MARK: Decodable
+     public init(from decoder: any Decoder) throws {
+         let container: KeyedDecodingContainer<Key> = try decoder.container(keyedBy: Key.self)
++        state = try container.decode(String.self, forKey: .state)
+         username = try container.decode(String.self, forKey: .username)
+         accounts = try container.decode([String: Account].self, forKey: .accounts)
+         let primaryAccountsDictionary: [String: String] = try container.decode([String: String].self, forKey: .primaryAccounts)
+@@ -83,7 +85,7 @@
+     }
+ 
+     private enum Key: CodingKey {
+-        case username, accounts, primaryAccounts, capabilities, eventSourceUrl, uploadUrl, downloadUrl, apiUrl
++        case state, username, accounts, primaryAccounts, capabilities, eventSourceUrl, uploadUrl, downloadUrl, apiUrl
+     }
+ 
+     // MARK: Equatable

@@ -1,0 +1,132 @@
+{
+  "version": "0.1.11",
+  "versionCode": 100011,
+  "status": "installed-and-verified",
+  "host": {
+    "tests": 289,
+    "pass": 289,
+    "fail": 0,
+    "skipped": 0
+  },
+  "focusedSwift": {
+    "tests": 6,
+    "pass": 6
+  },
+  "native": {
+    "imapCount": {
+      "tests": 1,
+      "pass": 1,
+      "durationMs": 4183,
+      "sessions": 13,
+      "boundedUidFlagsFetches": 8,
+      "countStatuses": 12,
+      "uidNextFallbackStatuses": 1,
+      "bodyOrHeaderFetches": 0,
+      "protocolViolations": 0,
+      "scope": "Silent baselines and unchanged cursors; full count beyond the 50-message window; rejected/missing/invalid/disconnected/stalled optional count preserves arrivals; two-second count deadline."
+    },
+    "unreadBadge": {
+      "tests": 1,
+      "pass": 1,
+      "durationMs": 12524,
+      "persistedEnabledTotal": 145,
+      "mutedExcludedTotal": 900,
+      "osCounts": [
+        145,
+        8,
+        0
+      ],
+      "mailServiceCalls": 0,
+      "scope": "Persistence before and after close/reopen, publication preserves total, muting clears account contributions; notification lease acquisition, competing-owner rejection, wrong-owner release and reacquisition."
+    },
+    "initialBadgeGate": {
+      "pass": false,
+      "issue": "Stale revision guard rejected persisted count because a pooled reader could not observe an uncommitted increment. Fixed and rebuilt before final passing gate."
+    }
+  },
+  "emulator": {
+    "status": "stopped",
+    "nativeProcessAbsenceVerified": true,
+    "isolatedTestAppCleanupRequested": true,
+    "screenProfileRestored": true,
+    "os": "HarmonyOS 6.0.2(22)"
+  },
+  "privacy": {
+    "syntheticOnly": true,
+    "realAccountsAccessed": false,
+    "productionLaunched": false,
+    "realMessagesSent": false
+  },
+  "toolchain": {
+    "commandLineTools": "26.0.0.821",
+    "hvigor": "6.26.4",
+    "buildNode": "24.14.1",
+    "compileSdk": "26.0.0.105",
+    "targetApi": 22,
+    "minimumApi": 22,
+    "swiftNativeSdk": "6.0.2.130 (API 22)",
+    "buildCache": ".tools/hvigor-home-26"
+  },
+  "builds": {
+    "x86": {
+      "compileSdkVersion": "26.0.0.105",
+      "targetAPIVersion": 60002022,
+      "minAPIVersion": 60002022,
+      "hapSha256": "8eef70d2ab2f9593bd77787b402edf6d38089ff8bb35d2a45017f33817da83a8",
+      "swiftCoreSha256": "823c72e0b5d88a0a280084dd8862546e0f54bf7a1788bbb305fff7338f13e541"
+    },
+    "arm": {
+      "compileSdkVersion": "26.0.0.105",
+      "targetAPIVersion": 60002022,
+      "minAPIVersion": 60002022,
+      "hapSha256": "bc7e7c45e2ab63c959dbf92d32a6e4f325f9a03ad7eee211330267db3e6c3cd2",
+      "swiftCoreSha256": "02b34c346e0ed365cd74749d17c0099cd6a30ac797b465b31c9f0be54a5b1602"
+    },
+    "isolated": {
+      "compileSdkVersion": "26.0.0.105",
+      "targetAPIVersion": 60002022,
+      "minAPIVersion": 60002022,
+      "hapSha256": "df29d566a64c6a37cc72ba1f8ade40273a3a0d719232ed1005f99314b688a79b",
+      "swiftCoreSha256": "823c72e0b5d88a0a280084dd8862546e0f54bf7a1788bbb305fff7338f13e541"
+    }
+  },
+  "installations": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "target": "PURA_X_WIFI_TARGET_REDACTED",
+      "versionCode": 100011,
+      "versionName": "0.1.11",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "bc7e7c45e2ab63c959dbf92d32a6e4f325f9a03ad7eee211330267db3e6c3cd2"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "target": "MATEPAD_SERIAL_REDACTED",
+      "versionCode": 100011,
+      "versionName": "0.1.11",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "bc7e7c45e2ab63c959dbf92d32a6e4f325f9a03ad7eee211330267db3e6c3cd2"
+    }
+  ],
+  "evidence": {
+    "hostLogSha256": "9455a2782ba484a457e6656628f5ee491037e44d3c69f8d8919d750a89c531db",
+    "swiftLogSha256": "6acbd8dd0854d4db942b4f662cfedbd972b0c1064c4de2298c18ef5a79884ac6",
+    "nativeImapLogSha256": "e5334bc8df5b86f8d39d25cccb4406dd57363f34442aff89c7b1324bf9e2f97e",
+    "nativeBadgeLogSha256": "87c9bc18d0783d48ceb58f0fa74a3f89f93cddfb8f91f9eb4065eded15ecfc19",
+    "pooledReaderOldGuardProofSha256": "52a34b5ce4327046b8b03cb258db4c5f206946f72ed4610946244e1bb673376e",
+    "pooledReaderOldLeaseProofSha256": "083b5819425b25a849866cfec9f0526d634f8fea7529a1c9f3c32672fd60bac1",
+    "pooledReaderFixedLeaseProofSha256": "2c2898c251b35dc34f2027e2a138699251046a3c8b9842efb52bda57dbf55b8f",
+    "signedBuildLogSha256": "796086a507e8b0abac1233baf125a9d612d2b57395f820fddda4afc8de6324e1"
+  },
+  "limits": [
+    "Counts are last successfully checked full Inbox totals plus local projections. Another mail client can make cached flags disagree temporarily; the next successful check reconciles the count.",
+    "When any enabled account has no trustworthy total, the badge clears until a successful check; a partial retained message window is never advertised as a total.",
+    "HarmonyOS displays counts above 99 as 99+. Native verification uses getBadgeNumber; no physical launcher or mailbox was opened.",
+    "The database lease issue is reproduced with synthetic data; the cause of any particular live-provider failure remains unconfirmed.",
+    "CLI26 preserves target/minimum22. It does not grant newer OS background capabilities, shorten scheduling limits or add a private relay."
+  ]
+}

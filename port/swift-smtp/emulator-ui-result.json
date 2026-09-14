@@ -1,0 +1,29 @@
+{
+  "date": "2026-09-13",
+  "emulator": "ThunderbirdPhone",
+  "os": "HarmonyOS 6.0.2(22)",
+  "architecture": "x86_64",
+  "testsPassed": 1,
+  "coverage": [
+    "HTML displayed by default",
+    "Script execution absent and no remote image requests",
+    "Restored draft",
+    "Outgoing server sheet",
+    "Synthetic composer send",
+    "Composer closes after acceptance",
+    "Next composition is empty"
+  ],
+  "coreSha256": "10ba82de4f2b7d53ffefd072d017e5f7f544122db790389d2a3028570de993b9",
+  "testHapSha256": "5e1d4c25f5af7a86828a77931eadde550649ccbd2bfca4965b12f82895e17449",
+  "uiHapSha256": "6328f389422df880e71d32eb3d55c598b7fa3cf3e87c0d7174241c68c784d8e3",
+  "emulatorStopped": true,
+  "evidence": {
+    ".tools/emulator-mail-ui-session.log": "4762982e214d59e71515ca30ea197bba197d1e75e9d6f4a033263d137d042c36",
+    ".tools/emulator-mail-features-stats.json": "ff8d6053cc2bbe10d67b2e7a0fc635d91e35c47317846811e45b6f5a060d003b",
+    "docs/screenshots/emulator-html.png": "1969d286206deccc3669df08cc01dd88a21eb7a0992bcb2bda6b4554283c3f3c",
+    "docs/screenshots/emulator-compose.png": "b7fc7871a9add5fd7ec4cf1dafb25729969cb93f969aec1630a3474f26433748"
+  },
+  "scope": "UI flow against local synthetic mail servers only; no full protocol or Swift runtime test suite.",
+  "durationMs": 19433,
+  "visualReview": "Settled HTML reader and composer screenshots reviewed; compact single-line header, unboxed body and no overlapping navigation."
+}

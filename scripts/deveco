@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+export PATH="$ROOT/.tools/runtime/node_modules/node/bin:$ROOT/.tools/deveco/node_modules/.bin:$PATH"
+export DEVECO_CLI_DATA_DIR="$ROOT/.tools/data"
+export DEVECO_CLI_DISABLE_UPDATE=1
+export DEVECO_CLI_DISABLE_TELEMETRY=1
+export HVIGOR_USER_HOME="$ROOT/.tools/hvigor-home-26"
+if [[ -d "$ROOT/.tools/deveco-26/command-line-tools" ]]; then
+  export DEVECO_CLI_CLT_PATH="$ROOT/.tools/deveco-26/command-line-tools"
+fi
+cd "${THUNDERBIRD_PROJECT_DIR:-$ROOT/harmony}"
+exec devecocli "$@"

@@ -1,0 +1,46 @@
+--- a/Sources/IMAP/IMAPCommand.swift
++++ b/Sources/IMAP/IMAPCommand.swift
+@@ -13,12 +13,14 @@
+     associatedtype Handler: IMAPCommandHandler where Handler.Result == Result
+     var name: String { get }
+     var timeout: Int64 { get }  // Seconds
++    func makeHandler(tag: String, promise: EventLoopPromise<Result>) -> Handler
+     func tagged(_ tag: String) -> TaggedCommand  // NIOIMAP command
+ }
+ 
+ extension IMAPCommand {
+ 
+     // MARK: IMAPCommand
++    func makeHandler(tag: String, promise: EventLoopPromise<Result>) -> Handler { Handler(tag: tag, promise: promise) }
+     var timeout: Int64 { .timeout }
+     var description: String { "\(name) command" }
+ }
+--- a/Sources/IMAP/IMAPClient.swift
++++ b/Sources/IMAP/IMAPClient.swift
+@@ -104,6 +104,17 @@
+         }
+     }
+ 
++    /// Authenticate with a browser-issued token over the existing verified TLS channel.
++    public func authenticateXOAUTH2(username: String, accessToken: String) async throws {
++        guard capabilities.contains(where: { $0.rawValue.uppercased() == "AUTH=XOAUTH2" }) else {
++            throw IMAPError.commandNotSupported("XOAUTH2 is not advertised")
++        }
++        let initial = capabilities.contains(where: { $0.rawValue.uppercased() == "SASL-IR" })
++        try await execute(command: XOAuth2Command(username: username, accessToken: accessToken, initialResponse: initial))
++        // Authentication can change capabilities; discard the pre-authentication set.
++        try await refreshCapabilities()
++    }
++
+     /// Log out from connected IMAP ``Server``; leave active NIO channel connection intact.
+     public func logout() async throws {
+         logger?.info("Logging out…")
+@@ -295,7 +306,7 @@
+         }
+         let promise: EventLoopPromise<T.Result> = channel.eventLoop.makePromise(of: T.Result.self)
+         let tag: String = UUID().uuidString(1)  // Hold onto specific auto-generated tag
+-        let handler: T.Handler = T.Handler(tag: tag, promise: promise)
++        let handler: T.Handler = command.makeHandler(tag: tag, promise: promise)
+         let seconds: Int64 = max(min(command.timeout, commandTimeout), 1)
+         let task: Scheduled = group.next().scheduleTask(in: .seconds(seconds)) {
+             let error: IMAPError = .timedOut(seconds: seconds)

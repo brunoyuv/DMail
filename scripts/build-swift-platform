@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT/scripts/swift-target-env"
+cd "$ROOT"
+./scripts/build-swift-runtime
+./scripts/prepare-swift-foundation
+./scripts/build-swift-fts
+NATIVE="$ROOT/.tools/command-line-tools/sdk/default/openharmony/native"
+RUNTIME="$SWIFT_TARGET_SDK/lib/swift"
+SOURCE="$ROOT/.tools/swift-runtime-source"
+CMAKE="$ROOT/.tools/swift-build-tools/bin/cmake"
+SWIFTC="$ROOT/.tools/swift/usr/bin/swiftc"
+# Builtin Clang headers belong to the matching Swift compiler; system headers
+# still come exclusively from the Huawei sysroot.
+[[ -e "$RUNTIME/clang" ]] || ln -s ../../../swift/usr/lib/clang/17 "$RUNTIME/clang"
+mkdir -p .tools/swift-ohos-musl${SWIFT_BUILD_SUFFIX} "$RUNTIME/musl/SwiftMusl"
+cp "$SOURCE/stdlib/public/Platform/SwiftMusl.h" "$RUNTIME/musl/SwiftMusl/SwiftMusl.h"
+ln -sfn ../../../../include/fts.h "$RUNTIME/musl/SwiftMusl/fts.h"
+cp port/swift-runtime/SwiftMusl.modulemap "$RUNTIME/musl/SwiftMusl/module.modulemap"
+for name in Musl tgmath; do
+  "$SOURCE/utils/gyb" --line-directive '' "$SOURCE/stdlib/public/Platform/$name.swift.gyb" -o ".tools/swift-ohos-musl${SWIFT_BUILD_SUFFIX}/$name.swift"
+done
+SWIFT_FLAGS=(-target ${SWIFT_TARGET} -sdk "$NATIVE/sysroot"
+  -resource-dir "$RUNTIME" -I "$RUNTIME/musl/SwiftMusl"
+  -module-cache-path "$ROOT/.tools/swift-probe/native-musl-cache${SWIFT_BUILD_SUFFIX}")
+"$SWIFTC" "${SWIFT_FLAGS[@]}" -Xfrontend -disable-implicit-string-processing-module-import \
+  -parse-as-library -O -module-name Musl -module-link-name swiftMusl \
+  -emit-object -emit-module -emit-module-path .tools/swift-ohos-musl${SWIFT_BUILD_SUFFIX}/Musl.swiftmodule \
+  "$SOURCE/stdlib/public/Platform/Platform.swift" \
+  "$SOURCE/stdlib/public/Platform/TiocConstants.swift" \
+  "$SOURCE/stdlib/public/Platform/POSIXError.swift" \
+  .tools/swift-ohos-musl${SWIFT_BUILD_SUFFIX}/Musl.swift .tools/swift-ohos-musl${SWIFT_BUILD_SUFFIX}/tgmath.swift \
+  -whole-module-optimization -o .tools/swift-ohos-musl${SWIFT_BUILD_SUFFIX}/Musl.o
+"$NATIVE/llvm/bin/clang" -target ${SWIFT_CLANG_TARGET} --sysroot="$NATIVE/sysroot" \
+  -shared .tools/swift-ohos-musl${SWIFT_BUILD_SUFFIX}/Musl.o "$RUNTIME/musl/${SWIFT_CPU}/swiftrt.o" \
+  -L "$RUNTIME/musl/${SWIFT_CPU}" -lswiftCore -Wl,--no-undefined \
+  -Wl,-soname,libswiftMusl.so -o "$RUNTIME/musl/${SWIFT_CPU}/libswiftMusl.so"
+mkdir -p "$RUNTIME/musl/Musl.swiftmodule"
+cp .tools/swift-ohos-musl${SWIFT_BUILD_SUFFIX}/Musl.swiftmodule "$RUNTIME/musl/Musl.swiftmodule/${SWIFT_TARGET}.swiftmodule"
+# Copy only source/header files; preserve the Swift runtime's own CMake files.
+python3 - <<'PY'
+from pathlib import Path
+import shutil
+source = Path('.tools/swift-string-processing-source/Sources')
+dest = Path('.tools/swift-runtime-source/Runtimes/Supplemental/StringProcessing')
+for name in ('_RegexParser', '_StringProcessing', 'RegexBuilder', '_CUnicode'):
+    target = dest / ('_StringProcessing/_CUnicode' if name == '_CUnicode' else name)
+    for file in (source / name).rglob('*'):
+        if file.is_file() and file.suffix in ('.swift', '.c', '.h', '.inc'):
+            out = target / file.relative_to(source / name)
+            if not out.exists() or out.read_bytes() != file.read_bytes():
+                out.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(file, out)
+PY
+CMAKE_FLAGS=(-G Ninja -DCMAKE_MAKE_PROGRAM="$NATIVE/build-tools/cmake/bin/ninja"
+  -DCMAKE_TOOLCHAIN_FILE="$NATIVE/build/cmake/ohos.toolchain.cmake"
+  -DOHOS_ARCH="$HARMONY_CPU" -DCMAKE_Swift_COMPILER="$SWIFTC"
+  -DCMAKE_Swift_COMPILER_TARGET=${SWIFT_TARGET} -DCMAKE_Swift_COMPILER_WORKS=TRUE
+  -DCMAKE_Swift_FLAGS="-sdk $NATIVE/sysroot -resource-dir $RUNTIME -I $RUNTIME/musl/SwiftMusl -module-cache-path $ROOT/.tools/swift-probe/platform-cache${SWIFT_BUILD_SUFFIX}"
+  -DCMAKE_INSTALL_PREFIX="$SWIFT_TARGET_SDK"
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON)
+"$CMAKE" -S "$SOURCE/Runtimes/Supplemental/StringProcessing" -B .tools/swift-ohos-stringprocessing${SWIFT_BUILD_SUFFIX} \
+  "${CMAKE_FLAGS[@]}" -DSwiftCore_DIR="$SWIFT_TARGET_SDK/lib/cmake/SwiftCore"
+"$CMAKE" --build .tools/swift-ohos-stringprocessing${SWIFT_BUILD_SUFFIX} -j "${SWIFT_RUNTIME_JOBS:-4}"
+# The experimental upstream standalone build does not yet define install rules.
+for module in _RegexParser _StringProcessing RegexBuilder; do
+  mkdir -p "$RUNTIME/musl/$module.swiftmodule"
+  cp ".tools/swift-ohos-stringprocessing${SWIFT_BUILD_SUFFIX}/$module/$module.swiftmodule" \
+    "$RUNTIME/musl/$module.swiftmodule/${SWIFT_TARGET}.swiftmodule"
+  cp ".tools/swift-ohos-stringprocessing${SWIFT_BUILD_SUFFIX}/$module/libswift$module.so" "$RUNTIME/musl/${SWIFT_CPU}/"
+done
+./scripts/build-swift-synchronization
+"$CMAKE" -S .tools/swift-foundation-icu-source -B .tools/swift-ohos-icu${SWIFT_BUILD_SUFFIX} "${CMAKE_FLAGS[@]}"
+"$CMAKE" --build .tools/swift-ohos-icu${SWIFT_BUILD_SUFFIX} -j "${SWIFT_RUNTIME_JOBS:-4}"
+"$CMAKE" --install .tools/swift-ohos-icu${SWIFT_BUILD_SUFFIX}

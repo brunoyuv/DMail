@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Build the native ARM dependency graph without starting any device or emulator.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+export THUNDERBIRD_SWIFT_ARCH=aarch64
+./scripts/build-swift-foundation-compat
+./scripts/build-native-tls
+./scripts/build-native-curl
+./scripts/build-swift-networking
+./scripts/test-swift-runtime build
+./scripts/test-swift-concurrency build
+./scripts/test-swift-platform build
+./scripts/verify-arm-sdk > .tools/swift-probe/arm-sdk-elf.json

@@ -1,0 +1,32 @@
+#!/usr/bin/env python3
+"""Fetch the pinned source archives for native FoundationNetworking dependencies."""
+import hashlib
+import json
+from pathlib import Path
+import subprocess
+import tarfile
+
+root = Path(__file__).resolve().parent.parent
+manifest = json.loads((root / 'port/swift-runtime/network-dependencies.json').read_text())
+downloads = root / '.tools/network-downloads'
+downloads.mkdir(parents=True, exist_ok=True)
+for dep in manifest['dependencies']:
+    archive = downloads / dep['archive']
+    if not archive.exists():
+        partial = archive.with_suffix('.part')
+        subprocess.run(['curl', '--fail', '--location', '--retry', '2', '--output', str(partial), dep['url']], check=True)
+        partial.rename(archive)
+    if hashlib.file_digest(archive.open('rb'), 'sha256').hexdigest() != dep['sha256']:
+        raise SystemExit(f'Checksum mismatch: {archive}')
+    destination = root / '.tools' / dep['directory']
+    marker = 'Configure' if dep['name'] == 'openssl' else 'CMakeLists.txt'
+    if not (destination / marker).exists():
+        destination.mkdir(parents=True, exist_ok=True)
+        with tarfile.open(archive) as bundle:
+            for member in bundle.getmembers():
+                parts = Path(member.name).parts
+                if len(parts) < 2:
+                    continue
+                member.name = str(Path(*parts[1:]))
+                bundle.extract(member, destination, filter='data')
+    print(f"Verified {dep['name']} {dep['version']}")

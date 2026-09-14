@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# Isolated synthetic IMAP only; never launch or inspect production mail.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+: "${HDC_TARGET:?Set the authorized MatePad or bounded emulator target}"
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+NODE="$ROOT/.tools/runtime/node_modules/node/bin/node"
+APP="$ROOT/.tools/imap-test-app-aarch64"; PRODUCTION="$ROOT/.tools/device-app"
+ABI=arm64-v8a; CPU=aarch64; SIGNATURE=signed; PREFIX=matepad
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 ]]; then
+  [[ "$HDC_TARGET" == 127.0.0.1:5555 ]]
+  APP="$ROOT/.tools/imap-test-app"; PRODUCTION="$ROOT/harmony"
+  ABI=x86_64; CPU=x86_64; SIGNATURE=unsigned; PREFIX=emulator
+else
+  [[ "$HDC_TARGET" == "${DMAIL_AUTHORIZED_MATEPAD_SERIAL:?Set the separately verified authorized MatePad serial}" ]]
+fi
+run_hdc() { timeout --foreground --kill-after=3s 30s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == "$CPU" ]]
+if [[ "$PREFIX" == matepad ]]; then
+  [[ "$(run_hdc -t "$HDC_TARGET" shell param get const.product.model | tr -d '[:space:]')" == MRO-W00 ]]
+fi
+python3 - "$PRODUCTION" "$APP" "$ABI" "$SIGNATURE" <<'PY'
+from pathlib import Path
+import sys,zipfile
+production,test,abi,signature=sys.argv[1:]
+with zipfile.ZipFile(Path(test)/f'entry/build/default/outputs/default/entry-default-{signature}.hap') as app:
+    core=app.read(f'libs/{abi}/libThunderbirdCore.so')
+    assert core==(Path(production)/f'entry/libs/{abi}/libThunderbirdCore.so').read_bytes()
+    if signature=='signed':
+        with zipfile.ZipFile(Path(production)/'entry/build/default/outputs/default/entry-default-signed.hap') as shipping:
+            assert core==shipping.read(f'libs/{abi}/libThunderbirdCore.so')
+assert (Path(test)/f'entry/build/default/outputs/ohosTest/entry-ohosTest-{signature}.hap').is_file()
+PY
+if run_hdc fport ls | grep -Eq 'tcp:976[0-6] '; then echo 'IMAP fixture ports are in use.' >&2; exit 1; fi
+FIXTURE_PID=''; FORWARDS=(); INSTALLED=false
+cleanup() {
+  local result=$?
+  trap - EXIT
+  curl --max-time 3 --fail --silent http://127.0.0.1:9760/stats > ".tools/${PREFIX}-unread-compatibility-stats.json" || true
+  if "$INSTALLED"; then run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true; fi
+  for port in "${FORWARDS[@]}"; do run_hdc -t "$HDC_TARGET" fport rm "tcp:$port" "tcp:$port" >/dev/null 2>&1 || true; done
+  if [[ -n "$FIXTURE_PID" ]]; then kill "$FIXTURE_PID" 2>/dev/null || true; wait "$FIXTURE_PID" 2>/dev/null || true; fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+THUNDERBIRD_IMAP_OAUTH=0 "$NODE" port/swift-imap/fixture.cjs .tools/imap-test-certs > ".tools/${PREFIX}-unread-compatibility-fixture.log" 2>&1 & FIXTURE_PID=$!
+READY=false
+for ((i=0;i<30;i++)); do
+  if curl --max-time 1 --fail --silent http://127.0.0.1:9760/health >/dev/null; then READY=true; break; fi
+  sleep 0.1
+done
+"$READY"
+for port in 9760 9761; do
+  run_hdc -t "$HDC_TARGET" rport "tcp:$port" "tcp:$port" | grep -q 'Forwardport result:OK'; FORWARDS+=("$port")
+done
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-${SIGNATURE}.hap"
+INSTALLED=true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-${SIGNATURE}.hap"
+timeout --foreground --kill-after=10s 110s "$HDC" -t "$HDC_TARGET" shell aa test -b org.thunderbird.harmony.imaptest -m entry_test \
+  -s unittest /ets/testrunner/UnreadCompatibilityRunner -s timeout 90000 | tee ".tools/${PREFIX}-unread-compatibility-tests.log"
+grep -q 'Tests run: 3, Failure: 0, Error: 0, Pass: 3, Ignore: 0' ".tools/${PREFIX}-unread-compatibility-tests.log"
+curl --max-time 3 --fail --silent http://127.0.0.1:9760/stats > ".tools/${PREFIX}-unread-compatibility-stats.json"
+"$NODE" - "$PREFIX" <<'JS'
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const prefix=process.argv[2]; assert.ok(['matepad','emulator'].includes(prefix));
+const stats=JSON.parse(fs.readFileSync(`.tools/${prefix}-unread-compatibility-stats.json`));
+assert.deepEqual(stats.violations,[]); assert.equal(stats.sessions.length,22); assert.equal(stats.active,0);
+for(const session of stats.sessions){
+  assert.ok(session.closed); assert.ok(!session.violation,session.violation);
+  assert.equal(session.stores.length,1); assert.ok(!session.commands.includes('STATUS')); assert.ok(!session.commands.includes('LIST'));
+  const store=session.stores[0]; assert.equal(store.uid,42); assert.equal(store.flag,'\\Seen');
+  assert.ok(store.before.includes('\\Answered') && store.after.includes('\\Answered'));
+  assert.ok(store.before.includes('CustomLabel') && store.after.includes('CustomLabel'));
+  assert.equal(session.flagFetches,session.mode==='flag-lost'?1:2);
+}
+for(const mode of ['flag-no-next','flag-no-next-after','flag-unsolicited','flag-compat']){
+  const sessions=stats.sessions.filter(session=>session.mode===mode); assert.equal(sessions.length,4);
+  assert.deepEqual(sessions.map(session=>session.stores[0].enabled),[true,false,true,false]);
+  for(const session of sessions){
+    const store=session.stores[0]; assert.equal(store.after.includes('\\Seen'),store.enabled);
+    assert.equal(store.before.includes('\\Seen'),!store.enabled);
+  }
+}
+for(const mode of ['flag-missing-flags','flag-missing-target','flag-duplicate-target','flag-epoch-changed','flag-ignored','flag-lost']){
+  assert.equal(stats.sessions.filter(session=>session.mode===mode).length,1);
+}
+console.log('PASS: 16 repeated flag changes across optional UIDNEXT and unsolicited FETCH variants; 6 incomplete/ambiguous/changed/lost results rejected; no bodies, STATUS, retries or unrelated-flag changes.');
+JS

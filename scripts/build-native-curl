@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT/scripts/swift-target-env"
+"$ROOT/scripts/prepare-native-network"
+NATIVE="$ROOT/.tools/command-line-tools/sdk/default/openharmony/native"
+SDK="$SWIFT_TARGET_SDK"
+CMAKE="$ROOT/.tools/swift-build-tools/bin/cmake"
+[[ -f "$SDK/lib/libssl.so" ]] || { echo 'Run scripts/build-native-tls first.' >&2; exit 1; }
+"$CMAKE" -S "$ROOT/.tools/curl-source" -B "$ROOT/.tools/swift-ohos-curl${SWIFT_BUILD_SUFFIX}" -G Ninja \
+  -DCMAKE_MAKE_PROGRAM="$NATIVE/build-tools/cmake/bin/ninja" \
+  -DCMAKE_TOOLCHAIN_FILE="$NATIVE/build/cmake/ohos.toolchain.cmake" -DOHOS_ARCH="$HARMONY_CPU" \
+  -DCMAKE_INSTALL_PREFIX="$SDK" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON \
+  -DBUILD_CURL_EXE=OFF -DBUILD_TESTING=OFF -DBUILD_EXAMPLES=OFF \
+  -DCURL_USE_OPENSSL=ON -DOPENSSL_INCLUDE_DIR="$SDK/include" \
+  -DOPENSSL_SSL_LIBRARY="$SDK/lib/libssl.so" -DOPENSSL_CRYPTO_LIBRARY="$SDK/lib/libcrypto.so" \
+  -DCURL_ZLIB=OFF -DCURL_BROTLI=OFF -DCURL_ZSTD=OFF -DCURL_USE_LIBPSL=OFF \
+  -DUSE_NGHTTP2=OFF -DUSE_LIBIDN2=OFF -DCURL_USE_LIBSSH2=OFF \
+  -DCURL_DISABLE_LDAP=ON -DCURL_DISABLE_LDAPS=ON -DENABLE_THREADED_RESOLVER=ON \
+  -DCURL_CA_BUNDLE=none -DCURL_CA_PATH=none
+# A runtime trust-store adapter must supply native trust anchors before any
+# external HTTPS connection; no certificate-verification bypass is enabled.
+"$CMAKE" --build "$ROOT/.tools/swift-ohos-curl${SWIFT_BUILD_SUFFIX}" -j "${SWIFT_RUNTIME_JOBS:-4}"
+"$CMAKE" --install "$ROOT/.tools/swift-ohos-curl${SWIFT_BUILD_SUFFIX}"

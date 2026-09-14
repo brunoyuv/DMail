@@ -1,0 +1,880 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "D-Mail for HarmonyOS"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "A simple, native mail experience"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "D-Mail"
+    },
+    {
+      "name": "new_message",
+      "value": "New message"
+    },
+    {
+      "name": "no_subject",
+      "value": "(No subject)"
+    },
+    {
+      "name": "sample_mailbox",
+      "value": "Sample mailbox · On this device"
+    },
+    {
+      "name": "show_all",
+      "value": "Show all"
+    },
+    {
+      "name": "unread",
+      "value": "Unread"
+    },
+    {
+      "name": "filter_unread",
+      "value": "Filter unread messages"
+    },
+    {
+      "name": "search_mail",
+      "value": "Search mail"
+    },
+    {
+      "name": "save_failed",
+      "value": "Changes could not be saved."
+    },
+    {
+      "name": "retry",
+      "value": "Retry"
+    },
+    {
+      "name": "message_moved",
+      "value": "Message moved"
+    },
+    {
+      "name": "undo",
+      "value": "Undo"
+    },
+    {
+      "name": "message",
+      "value": "Message"
+    },
+    {
+      "name": "reply",
+      "value": "Reply"
+    },
+    {
+      "name": "move_inbox",
+      "value": "Move to inbox"
+    },
+    {
+      "name": "archive",
+      "value": "Archive"
+    },
+    {
+      "name": "draft_only",
+      "value": "Draft preview · Sending is not connected yet"
+    },
+    {
+      "name": "to",
+      "value": "To"
+    },
+    {
+      "name": "subject",
+      "value": "Subject"
+    },
+    {
+      "name": "write_message",
+      "value": "Write your message…"
+    },
+    {
+      "name": "message_body",
+      "value": "Message body"
+    },
+    {
+      "name": "saving",
+      "value": "Saving…"
+    },
+    {
+      "name": "saved_local",
+      "value": "Saved on this device"
+    },
+    {
+      "name": "account_pending",
+      "value": "This mailbox contains sample mail. Open Accounts to connect your email service."
+    },
+    {
+      "name": "mailboxes",
+      "value": "Mailboxes"
+    },
+    {
+      "name": "no_results",
+      "value": "No matching messages"
+    },
+    {
+      "name": "all_clear",
+      "value": "All clear"
+    },
+    {
+      "name": "try_search",
+      "value": "Try a different name or keyword."
+    },
+    {
+      "name": "empty_folder",
+      "value": "There are no messages in this view."
+    },
+    {
+      "name": "load_failed",
+      "value": "Couldn’t open your mailbox"
+    },
+    {
+      "name": "data_preserved",
+      "value": "Your saved data has been kept. Try opening it again."
+    },
+    {
+      "name": "compose",
+      "value": "Compose"
+    },
+    {
+      "name": "inbox",
+      "value": "Inbox"
+    },
+    {
+      "name": "starred",
+      "value": "Starred"
+    },
+    {
+      "name": "drafts",
+      "value": "Drafts"
+    },
+    {
+      "name": "star",
+      "value": "Star"
+    },
+    {
+      "name": "unstar",
+      "value": "Unstar"
+    },
+    {
+      "name": "mark_read",
+      "value": "Mark read"
+    },
+    {
+      "name": "mark_unread",
+      "value": "Mark unread"
+    },
+    {
+      "name": "done",
+      "value": "Done"
+    },
+    {
+      "name": "accounts",
+      "value": "Accounts"
+    },
+    {
+      "name": "add_account",
+      "value": "Add an account"
+    },
+    {
+      "name": "jmap_setup_help",
+      "value": "Use the JMAP session address and access token provided by your email service. Your token is saved in the system credential store."
+    },
+    {
+      "name": "server_address",
+      "value": "Server address (https://…)"
+    },
+    {
+      "name": "access_token",
+      "value": "Access token"
+    },
+    {
+      "name": "connect_account",
+      "value": "Connect"
+    },
+    {
+      "name": "disconnect",
+      "value": "Disconnect"
+    },
+    {
+      "name": "cancel",
+      "value": "Cancel"
+    },
+    {
+      "name": "disconnect_detail",
+      "value": "Remove this account, its saved token and cached mail from this device? Mail on the server will stay unchanged."
+    },
+    {
+      "name": "connected_features",
+      "value": "Read, send, reply, forward, mark and archive mail."
+    },
+    {
+      "name": "account_storage_error",
+      "value": "Could not save or open account data. Try again."
+    },
+    {
+      "name": "account_auth_error",
+      "value": "Unlock your device and check the account token. You may need to reconnect."
+    },
+    {
+      "name": "account_endpoint_error",
+      "value": "Use a secure session address from your provider. This version requires the API to use the same server origin."
+    },
+    {
+      "name": "account_network_error",
+      "value": "Could not load mail. Check the server address and connection, then try again."
+    },
+    {
+      "name": "mailbox_changed",
+      "value": "This mailbox changed while loading. Refresh to load its current contents."
+    },
+    {
+      "name": "message_removed",
+      "value": "This message is no longer available."
+    },
+    {
+      "name": "refresh",
+      "value": "Refresh"
+    },
+    {
+      "name": "load_more",
+      "value": "Load more"
+    },
+    {
+      "name": "partial_body",
+      "value": "This message is incomplete or contains text decoding errors."
+    },
+    {
+      "name": "no_plain_body",
+      "value": "The message body could not be decoded. Try opening the message again."
+    },
+    {
+      "name": "change_forbidden",
+      "value": "Your account does not have permission to change this message. Refresh to check its current status."
+    },
+    {
+      "name": "change_unconfirmed",
+      "value": "Could not confirm the change. Refresh this message before trying again."
+    },
+    {
+      "name": "message_archived",
+      "value": "Message archived"
+    },
+    {
+      "name": "archive_undone",
+      "value": "Archive undone"
+    },
+    {
+      "name": "move_conflict",
+      "value": "This message changed elsewhere. Refresh to see its current folders."
+    },
+    {
+      "name": "saved_copy",
+      "value": "Saved copy"
+    },
+    {
+      "name": "cache_save_error",
+      "value": "Mail loaded, but the offline copy could not be saved."
+    },
+    {
+      "name": "cache_read_error",
+      "value": "The saved mail could not be opened. Reconnect and refresh."
+    },
+    {
+      "name": "body_not_saved",
+      "value": "No saved body is available for this message. Retry when connected to download it."
+    },
+    {
+      "name": "invalid_recipient",
+      "value": "Enter a valid email address."
+    },
+    {
+      "name": "imap_setup_help",
+      "value": "Use your email address for this account’s identity. Enter the login name required by your server separately. The connection uses TLS."
+    },
+    {
+      "name": "imap_server",
+      "value": "IMAP server (imap.example.com)"
+    },
+    {
+      "name": "imap_port",
+      "value": "TLS port (993)"
+    },
+    {
+      "name": "imap_username",
+      "value": "Login name"
+    },
+    {
+      "name": "imap_password",
+      "value": "Password or app password"
+    },
+    {
+      "name": "imap_connected_features",
+      "value": "Read, send, reply, forward and mark mail. Archiving is not available for IMAP yet."
+    },
+    {
+      "name": "imap_email_address",
+      "value": "Email address"
+    },
+    {
+      "name": "imap_email_invalid",
+      "value": "Enter a valid email address."
+    },
+    {
+      "name": "search_loaded_mail",
+      "value": "Search loaded messages"
+    },
+    {
+      "name": "settings",
+      "value": "Settings"
+    },
+    {
+      "name": "app_language",
+      "value": "App language"
+    },
+    {
+      "name": "language_system",
+      "value": "Follow system"
+    },
+    {
+      "name": "language_help",
+      "value": "Choose the language for D-Mail. Email content stays in its original language."
+    },
+    {
+      "name": "language_save_error",
+      "value": "Could not save the language setting. Try again."
+    },
+    {
+      "name": "draft_load_error",
+      "value": "Draft or outgoing settings could not be loaded. Reopen this screen to retry."
+    },
+    {
+      "name": "smtp_saved",
+      "value": "Outgoing settings saved"
+    },
+    {
+      "name": "smtp_settings_error",
+      "value": "Check the outgoing server, port, login and password."
+    },
+    {
+      "name": "sent_save_error",
+      "value": "Message sent, but its local status could not be saved. Do not send it again."
+    },
+    {
+      "name": "smtp_auth_error",
+      "value": "Outgoing login failed. Check the SMTP login name and password."
+    },
+    {
+      "name": "send_invalid",
+      "value": "Check the recipient addresses and message size. Use email addresses separated by commas, without display names."
+    },
+    {
+      "name": "smtp_tls_error",
+      "value": "Check the outgoing server, port and TLS settings."
+    },
+    {
+      "name": "smtp_rejected",
+      "value": "The outgoing server rejected the message or a recipient. Your draft is saved."
+    },
+    {
+      "name": "smtp_network_error",
+      "value": "Could not send. Check the connection and outgoing settings. Your draft is saved."
+    },
+    {
+      "name": "keep_draft",
+      "value": "Keep this draft?"
+    },
+    {
+      "name": "keep_draft_detail",
+      "value": "You can finish it later."
+    },
+    {
+      "name": "save_draft",
+      "value": "Save draft"
+    },
+    {
+      "name": "discard",
+      "value": "Discard"
+    },
+    {
+      "name": "discard_error",
+      "value": "Could not discard the draft."
+    },
+    {
+      "name": "outgoing_server",
+      "value": "Outgoing server"
+    },
+    {
+      "name": "smtp_setup_help",
+      "value": "Use the SMTP settings supplied by your email provider. The login name can differ from your email address."
+    },
+    {
+      "name": "smtp_server",
+      "value": "SMTP server"
+    },
+    {
+      "name": "port",
+      "value": "Port"
+    },
+    {
+      "name": "smtp_username",
+      "value": "SMTP login name"
+    },
+    {
+      "name": "smtp_password",
+      "value": "SMTP password"
+    },
+    {
+      "name": "save",
+      "value": "Save"
+    },
+    {
+      "name": "more",
+      "value": "More"
+    },
+    {
+      "name": "send",
+      "value": "Send"
+    },
+    {
+      "name": "delivery_uncertain",
+      "value": "Delivery is uncertain. Check before retrying; the message may already have arrived."
+    },
+    {
+      "name": "allow_retry",
+      "value": "Allow manual retry"
+    },
+    {
+      "name": "send_again",
+      "value": "Send again?"
+    },
+    {
+      "name": "send_again_detail",
+      "value": "The previous message may already have been delivered."
+    },
+    {
+      "name": "enable_retry",
+      "value": "Enable retry"
+    },
+    {
+      "name": "draft_save_error",
+      "value": "Draft could not be saved. Keep this screen open and try again."
+    },
+    {
+      "name": "to_field",
+      "value": "To:"
+    },
+    {
+      "name": "cc_field",
+      "value": "Cc:"
+    },
+    {
+      "name": "bcc_field",
+      "value": "Bcc:"
+    },
+    {
+      "name": "from_field",
+      "value": "From:"
+    },
+    {
+      "name": "address_summary",
+      "value": "Cc/Bcc, From:"
+    },
+    {
+      "name": "add_message",
+      "value": "Add a message"
+    },
+    {
+      "name": "remote_pictures_hidden",
+      "value": "Remote pictures are hidden."
+    },
+    {
+      "name": "load_pictures",
+      "value": "Load pictures"
+    },
+    {
+      "name": "refresh_pictures",
+      "value": "Refresh pictures"
+    },
+    {
+      "name": "pictures_loading",
+      "value": "Loading pictures…"
+    },
+    {
+      "name": "unfinished_draft",
+      "value": "Unfinished draft"
+    },
+    {
+      "name": "unfinished_draft_detail",
+      "value": "Finish or discard your existing draft before replying or forwarding."
+    },
+    {
+      "name": "continue_draft",
+      "value": "Continue draft"
+    },
+    {
+      "name": "forward_large",
+      "value": "This message is too large to forward in this version."
+    },
+    {
+      "name": "response_error",
+      "value": "Could not prepare the message. Check the sender address or try again."
+    },
+    {
+      "name": "reply_forward",
+      "value": "Reply or forward"
+    },
+    {
+      "name": "reply_all",
+      "value": "Reply all"
+    },
+    {
+      "name": "forward",
+      "value": "Forward"
+    },
+    {
+      "name": "sent",
+      "value": "Sent"
+    },
+    {
+      "name": "forward_attachments",
+      "value": "Attachments are not included."
+    },
+    {
+      "name": "forward_partial",
+      "value": "Only the downloaded portion of this message is included."
+    },
+    {
+      "name": "forward_encoding",
+      "value": "Some original text could not be decoded."
+    },
+    {
+      "name": "trash",
+      "value": "Trash"
+    },
+    {
+      "name": "junk",
+      "value": "Junk"
+    },
+    {
+      "name": "attachments",
+      "value": "Attachments"
+    },
+    {
+      "name": "download_size",
+      "value": "download"
+    },
+    {
+      "name": "save_attachment",
+      "value": "Save attachment"
+    },
+    {
+      "name": "attachment_too_large",
+      "value": "This attachment exceeds the current 4 MB download limit."
+    },
+    {
+      "name": "attachment_download_error",
+      "value": "Could not download the attachment. Try again when connected."
+    },
+    {
+      "name": "attachment_open_error",
+      "value": "Could not open the attachment. Use Save to choose a location."
+    },
+    {
+      "name": "discovery_find",
+      "value": "Find server settings"
+    },
+    {
+      "name": "discovery_not_found",
+      "value": "Could not find server settings. Check your connection or enter them manually."
+    },
+    {
+      "name": "discovery_incoming",
+      "value": "Incoming mail"
+    },
+    {
+      "name": "discovery_outgoing",
+      "value": "Outgoing mail"
+    },
+    {
+      "name": "discovery_apply",
+      "value": "Use password settings"
+    },
+    {
+      "name": "discovery_source_provider",
+      "value": "Settings supplied by your email provider"
+    },
+    {
+      "name": "discovery_source_ispdb",
+      "value": "Settings from the Thunderbird provider directory"
+    },
+    {
+      "name": "discovery_auth_unavailable",
+      "value": "This server requires authentication that is not available yet. Browser sign-in is not connected."
+    },
+    {
+      "name": "discovery_starttls_unavailable",
+      "value": "IMAP STARTTLS is not available yet. Choose an SSL/TLS option if your provider offers one."
+    },
+    {
+      "name": "discovery_server_unavailable",
+      "value": "This server option is not supported yet."
+    },
+    {
+      "name": "discovery_same_password",
+      "value": "Use the incoming mail password for sending"
+    },
+    {
+      "name": "discovery_smtp_edit",
+      "value": "You can change outgoing settings in the composer. If the password switch is off, enter the outgoing password there before sending."
+    },
+    {
+      "name": "oauth_google",
+      "value": "Sign in with Google"
+    },
+    {
+      "name": "oauth_microsoft",
+      "value": "Sign in with Outlook.com"
+    },
+    {
+      "name": "oauth_waiting",
+      "value": "Finish signing in in your browser, then return here."
+    },
+    {
+      "name": "oauth_signin_error",
+      "value": "Sign-in did not finish. Check the email and login name, allow mail access in your browser, then try again."
+    },
+    {
+      "name": "oauth_error_listener",
+      "value": "Could not prepare the browser return connection. Try signing in again."
+    },
+    {
+      "name": "oauth_error_request",
+      "value": "Could not prepare the provider sign-in request."
+    },
+    {
+      "name": "oauth_error_browser",
+      "value": "Could not open your browser for sign-in."
+    },
+    {
+      "name": "oauth_error_callback",
+      "value": "The app did not receive a valid browser return before sign-in expired. Please try again."
+    },
+    {
+      "name": "oauth_error_token",
+      "value": "Browser sign-in returned, but the app could not obtain access from the provider."
+    },
+    {
+      "name": "oauth_error_mail",
+      "value": "Browser sign-in succeeded, but the mail server connection failed. Check the login name."
+    },
+    {
+      "name": "oauth_error_storage",
+      "value": "Sign-in and the mail connection succeeded, but saving the account failed."
+    },
+    {
+      "name": "show_message_details",
+      "value": "Show message details"
+    },
+    {
+      "name": "hide_message_details",
+      "value": "Hide message details"
+    },
+    {
+      "name": "cc_bcc_fields",
+      "value": "Cc/Bcc"
+    },
+    {
+      "name": "show_address_fields",
+      "value": "Show Cc, Bcc and sender"
+    },
+    {
+      "name": "hide_address_fields",
+      "value": "Hide address fields"
+    },
+    {
+      "name": "switch_account",
+      "value": "Switch account"
+    },
+    {
+      "name": "account_selection_error",
+      "value": "The last visited account could not be saved."
+    },
+    {
+      "name": "show_quoted_text",
+      "value": "Show quoted text"
+    },
+    {
+      "name": "hide_quoted_text",
+      "value": "Hide quoted text"
+    },
+    {
+      "name": "send_queued",
+      "value": "Sending in the background"
+    },
+    {
+      "name": "send_in_progress",
+      "value": "A message is sending in the background. You can keep browsing."
+    },
+    {
+      "name": "sent_copy_failed",
+      "value": "Message sent. Its Sent-folder copy could not be saved on the server; a local copy is available."
+    },
+    {
+      "name": "sent_copy_unconfirmed",
+      "value": "Message sent. The server has not confirmed its Sent-folder copy; a local copy is available."
+    },
+    {
+      "name": "changes_pending",
+      "value": "Updating mail…"
+    },
+    {
+      "name": "sent_on_device",
+      "value": "Sent on this device"
+    },
+    {
+      "name": "new_mail_notification_title",
+      "value": "New mail"
+    },
+    {
+      "name": "new_mail_notification_text",
+      "value": "Open inbox"
+    },
+    {
+      "name": "mail_notifications",
+      "value": "Notifications"
+    },
+    {
+      "name": "new_mail_alerts",
+      "value": "New mail alerts"
+    },
+    {
+      "name": "notification_foreground_interval",
+      "value": "Fallback interval while open"
+    },
+    {
+      "name": "notification_background_interval",
+      "value": "Background checking interval"
+    },
+    {
+      "name": "notification_minutes_5",
+      "value": "5 minutes"
+    },
+    {
+      "name": "notification_minutes_15",
+      "value": "15 minutes"
+    },
+    {
+      "name": "notification_minutes_30",
+      "value": "30 minutes"
+    },
+    {
+      "name": "notification_minutes_60",
+      "value": "1 hour"
+    },
+    {
+      "name": "notification_minutes_120",
+      "value": "2 hours"
+    },
+    {
+      "name": "notification_minutes_240",
+      "value": "4 hours"
+    },
+    {
+      "name": "notification_minutes_360",
+      "value": "6 hours"
+    },
+    {
+      "name": "notification_minutes_720",
+      "value": "12 hours"
+    },
+    {
+      "name": "notification_foreground_help",
+      "value": "While the app is open, supported servers announce new mail immediately. Other servers use the fallback interval."
+    },
+    {
+      "name": "notification_background_help",
+      "value": "The system may delay background checks. After the first unlock following a restart, checks can also run while the device is locked."
+    },
+    {
+      "name": "notification_baseline_help",
+      "value": "The first check sets a baseline. Existing unread messages do not trigger alerts. Notifications show no message details."
+    },
+    {
+      "name": "notification_settings_error",
+      "value": "Notification settings could not be applied. Check notification permission in system Settings and try again."
+    },
+    {
+      "name": "composition_settings",
+      "value": "Composing"
+    },
+    {
+      "name": "sender_name",
+      "value": "Sender name"
+    },
+    {
+      "name": "sender_name_placeholder",
+      "value": "Name shown to recipients"
+    },
+    {
+      "name": "signature",
+      "value": "Signature"
+    },
+    {
+      "name": "signature_placeholder",
+      "value": "Add a signature"
+    },
+    {
+      "name": "composition_help",
+      "value": "Saved automatically for this account. Used in new messages, replies and forwards; existing drafts keep their content."
+    },
+    {
+      "name": "composition_save_error",
+      "value": "The sender name or signature could not be loaded or saved. Try again."
+    },
+    {
+      "name": "dismiss_notification",
+      "value": "Dismiss notification"
+    },
+    {
+      "name": "notification_inbox_offer",
+      "value": "Get banners for new mail"
+    },
+    {
+      "name": "notification_enable",
+      "value": "Enable"
+    },
+    {
+      "name": "notification_system_settings",
+      "value": "System notification settings"
+    },
+    {
+      "name": "notification_system_blocked",
+      "value": "Notifications are blocked in system Settings. Allow notifications, banners and badges there."
+    },
+    {
+      "name": "notification_banner_blocked",
+      "value": "New-mail banners are off in system Settings."
+    },
+    {
+      "name": "notification_badge_blocked",
+      "value": "App icon badges are off in system Settings."
+    },
+    {
+      "name": "notification_test",
+      "value": "Send test notification"
+    },
+    {
+      "name": "notification_test_sent",
+      "value": "Test notification sent. If no banner appears, enable banners in system notification settings."
+    },
+    {
+      "name": "reconnect_account",
+      "value": "Reconnect"
+    },
+    {
+      "name": "gmail_app_password_help",
+      "value": "Gmail browser sign-in is currently unavailable. For Gmail, use a Google app password when adding your account. Enable 2-Step Verification in your Google Account to create one; some accounts do not offer app passwords."
+    }
+  ]
+}

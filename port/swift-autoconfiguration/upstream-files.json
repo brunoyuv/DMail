@@ -1,0 +1,32 @@
+{
+  "repository": "https://github.com/thunderbird/thunderbird-ios",
+  "revision": "61c78d9ebe39ac5b61f31fce371bdfe8c001f7bf",
+  "files": {
+    "Core/Sources/Autoconfiguration/ClientConfig.swift": "f240952483429a621db89f1ccf481f4d3507c88fdd847713e7daf853d3761742",
+    "Core/Sources/Autoconfiguration/EmailProvider.swift": "0d384d94247951e965cca54719c6c57a18052f69a50acd354208007ecf9283f3",
+    "Core/Sources/Autoconfiguration/XMLToJSONParser.swift": "7d6765c2cd272d1920e26a3284d084ee6a35b6a1a3de43afcd9a0709122b4e5f",
+    "Core/Sources/Autoconfiguration/URL.swift": "536ea2dba10def561b6f14474dd3fd0025453c05d5dde9bc03ec08643a1a9b5e",
+    "Core/Sources/Autoconfiguration/String.swift": "3912bbf395d761f5b9b94fc0eaa26d5cb0f0a4e43b0e6e8eb2820586f464f05e",
+    "Core/Sources/Autoconfiguration/Source.swift": "21cfcf8fa07050f0408b5cdabab6dccc4e5caf273a9d84414141bbfa7d75ef83",
+    "Core/Sources/Autoconfiguration/Service.swift": "a1d401b37ae9c96730151223dedb61fc20f0ee778ca5ea3facaf7e31ef195444",
+    "Core/Sources/Autoconfiguration/WebMail.swift": "7fa671e4312690bc8135fd8c2d11176133e2e2657790998455b53c07a6e4ceec",
+    "Core/Sources/Autoconfiguration/OAuth2.swift": "02373053f775390652390a6462778660d2d22e05c1c9fe2d1846c4f2f5692ced",
+    "Core/Sources/Autoconfiguration/URLRequest.swift": "80b91f1e599f2ad3978a69122bb785fc3719eb09ac29484192c9f901de535a54",
+    "Core/Sources/Autoconfiguration/TokenResponse.swift": "13152d27eee2e80e64959c97cbb979b2eb0a581313b4c864953b1a83974775ba",
+    "Core/Sources/Autoconfiguration/DomainParser.swift": "6a14927383edccaaeebe2a8df707f50c52ceaf07cc3caa6ceabe95cddb106d19",
+    "Core/Sources/Autoconfiguration/SuffixListParser.swift": "9e14d5c42937fa3d3998c06e435a5eb5e1701cd0310ad672dae964019b0eb3e6",
+    "Core/Tests/AutoconfigurationTests/OAuth2Tests.swift": "2089180fa91970497f0e299249a1c25a978774c1ff94f29aa110a29cf605fd7d",
+    "Core/Tests/AutoconfigurationTests/XMLToJSONParserTests.swift": "d77c920a2b7b000453fd451fc53a0b0410a80a186f63b6445a6c27f01b5157f9",
+    "Core/Tests/AutoconfigurationTests/URLTests.swift": "2ff5a35c4782fb823b06649df4de49b88e012f3410294157dbc052e576079cf1",
+    "Core/Tests/AutoconfigurationTests/EmailAddressTests.swift": "82d1acc5aab8fc8a2a158a24aec664c1b29d08fe42bd681d2614893e99f3a5cd",
+    "Core/Tests/AutoconfigurationTests/DomainParserTests.swift": "e6d08e1be69553afb6c13bbed890525c49fe4803344f2301c9b5b618744da47f",
+    "Core/Tests/AutoconfigurationTests/SuffixListParserTests.swift": "4083d075ee514b05721206c6c6b5211eb9327fd9109f84e3478deec5eda36cfb"
+  },
+  "excluded": {
+    "URLSession.swift": "Network acquisition, MX fallback and suffix download pending bounded transport integration.",
+    "DNSResolver.swift": "AsyncDNSResolver dependency requires HarmonyOS DNS adapter.",
+    "SRVResolver.swift": "Apple dnssd dependency requires HarmonyOS DNS adapter.",
+    "SRVRecord.swift": "Depends on the DNS adapter.",
+    "Bundle.swift": "Apple Info.plist URL schemes replaced by HarmonyOS ability routing when browser OAuth is connected."
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "date": "2026-09-13",
+  "hostTestsPassed": 59,
+  "swiftReplyTestsPassed": 4,
+  "emulator": {
+    "name": "ThunderbirdPhone",
+    "os": "HarmonyOS 6.0.2(22)",
+    "architecture": "x86_64",
+    "testsPassed": 1,
+    "durationMs": 32422,
+    "stopped": true,
+    "uiHapSha256": "e543836e4b6dd203b47aba6e9c1d253615cee878380c9a05ffc2f6f1c84742e5",
+    "testHapSha256": "2c3734608ae9f20113444b9cc3bbc576c75c15089de097042dc59b17240104a0",
+    "coreSha256": "044858f5fe75a17c12f9569c6b90db794175cbf96b9e673bb7d95936a81a09dd"
+  },
+  "arm": {
+    "hapSha256": "752cc896454f818ecd870074e9260707e6875e78b30b4e99cb4bc44466b304ab",
+    "coreSha256": "98f5a66691ed6f6492f0d4891cc237e93253f1885ef322fed92ed319f58b6e87",
+    "sourceAndLibraryParityVerified": true,
+    "installedOn": "Pura X PURA_X_SERIAL_REDACTED",
+    "replyExecutionVerified": false
+  },
+  "coverage": [
+    "Reader Reply button without Refresh; native Cancel and Send capsule buttons",
+    "HTML shown by default with zero remote requests",
+    "Restored draft and synthetic new-message send",
+    "Existing unfinished draft preserved when starting a reply",
+    "Reply All uses Reply-To, excludes self, deduplicates and preserves multiple To/Cc addresses",
+    "Original Swift SMTP emits In-Reply-To and folded References",
+    "Two synthetic submissions accepted; composers close; fixture sessions cleaned up"
+  ],
+  "visualReview": "Reader has one native Reply icon with edge margin; composer Cancel and Send have native backgrounds and balanced spacing, with compact rows and quoted body.",
+  "scope": "Local synthetic servers only. No live-provider mail sent; no physical-device UI or reply execution test. Sent-folder upload and Answered flag remain pending.",
+  "evidence": {
+    ".tools/reply-emulator-session.log": "f7d62b8f32b7f693f0ecd15a095b4eed4c3aaf1b261d3555c3ce69d65bc1f161",
+    ".tools/reply-fixture-stats.json": "a6c980c62afbecf876d0671dc920ee0c9def4831b96bc61b65704ad931741d87",
+    ".tools/reply-host-tests.log": "2f4182e8dbb4acb5ee5038c6f2ef7afe18a6c8215baacd922427fb23d2b4d8e5",
+    ".tools/reply-swift-tests.log": "c5c7be86b2d3988ebcf6f7196fd2fc38b3ab0e99f414a57fd47c756a66b5074a",
+    ".tools/reply-device-install.log": "a7c7f01aad5659daa03375cd6248b146f21db716dcdd99f52b45cbe785f4a370",
+    ".tools/reply-arm-verification.log": "f4a964bce36ef864a37e605ab5354774723a77c7af5aece71324a4ac8552f117",
+    "docs/screenshots/reader-actions.png": "0f171187cc3a3fdd95b6a4eed2b60695a25faf2568f23cd597ebaaf9377547bf",
+    "docs/screenshots/reply.png": "f5295a9670daeb1751190ffd5855b1010637e928ae334d5862f2cc5955fa5139",
+    "docs/screenshots/composer-buttons.png": "77a66608c2759566fbca98c4b9d5022100bffb81106eab7e7d754d0da21ac6b1"
+  },
+  "sourceHashes": {
+    "harmony/entry/src/main/ets/pages/ConnectedMail.ets": "1cf0170f773a21af07ad5ea0adf6f66715566ed21ac4101e4ee9adafa681b18f",
+    "harmony/entry/src/main/ets/pages/ComposeMail.ets": "f282afbfb38a3f31f0c525e405a9c8ca16ba6b71323f8ebd3cc7d68e577c87e9",
+    "harmony/entry/src/main/ets/mail/smtp/Reply.ts": "0d16112b76a8d63b2f0772eba7df021251be2fb6fab564424ef291e0e84f7564",
+    "port/swift-smtp/harmonyos.patch": "430b954d73ea494157511b1cd0c177f0d0000fd97d2ffbdfe5c45b9d943c1324",
+    "port/swift-smtp/MessageSafety.swift": "2c91c9c05de24164aa176c781575b642cb000bcc6335e2ec62fb3a775984d935",
+    "port/swift-imap/ReplyHeaders.swift": "7ff4a0268113ac5572ec8c312e13395dd9950dd6be4136efea273fd1bca7961d",
+    "port/swift-imap/reply-headers.patch": "92804fdd7e79a1e0cc7f980e47a2c66e759b24ab0b6a5222d6db9581dd0977ca",
+    "port/swift-imap/ImapModels.swift": "136b692b3c3823fd7d5735236114a76783ec235aaf8a8d1cfe11b4e085c77719",
+    "port/swift-bridge/JmapReaderBridge.swift": "5d2ed761364846fdcad94594d73b64176dc256250c9385ec5dc3ae3f6c2d8eb2"
+  }
+}

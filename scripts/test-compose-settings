@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+# One compact native UI check. This runner cannot target production or a device.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+[[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 && "${HDC_TARGET:-}" == 127.0.0.1:5555 ]]
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app"
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == x86_64 ]]
+for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+  [[ -f "$APP/entry/build/default/outputs/$hap" ]] || { echo 'Build both isolated compose/settings HAPs first.' >&2; exit 1; }
+done
+OUT="$ROOT/.tools/emulator-compose-settings"
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  find "$OUT" -maxdepth 1 -type f -exec mv -t "$PREVIOUS" {} +
+fi
+INSTALLED=false
+cleanup() {
+  local result=$?
+  trap - EXIT
+  for name in sent composer; do
+    run_hdc -t "$HDC_TARGET" file recv "/data/local/tmp/compose-settings-$name.png" "$OUT/$name.png" >/dev/null 2>&1 || true
+  done
+  if "$INSTALLED"; then run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true; fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+INSTALLED=true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+timeout --foreground --kill-after=3s 15s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/SenderIdentityRunner \
+  -s timeout 10000 | tee "$OUT/sender-identity.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/sender-identity.log"
+# Hypium keeps singleton services and subscriptions in the test process. Start
+# the UI runner in a fresh isolated process after the native preflight ends.
+run_hdc -t "$HDC_TARGET" shell aa force-stop org.thunderbird.harmony.imaptest
+for name in sent composer; do run_hdc -t "$HDC_TARGET" shell rm -f "/data/local/tmp/compose-settings-$name.png"; done
+timeout --foreground --kill-after=5s 60s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/ComposeSettingsRunner \
+  -s timeout 55000 | tee "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"
+grep -q 'COMPOSE_SETTINGS_RESULT: Sent title, Settings autosave, local recipient choice, sender identity and signature-once draft reopen passed; zero mail service calls and no send' "$OUT/test.log"
+for name in sent composer; do run_hdc -t "$HDC_TARGET" file recv "/data/local/tmp/compose-settings-$name.png" "$OUT/$name.png" >/dev/null; done
+python3 - "$OUT" <<'PY'
+from pathlib import Path
+import hashlib,json,sys
+out=Path(sys.argv[1]); screens={}
+for name in ['sent','composer']:
+    data=(out/f'{name}.png').read_bytes(); assert data.startswith(b'\x89PNG\r\n\x1a\n')
+    screens[name]=hashlib.sha256(data).hexdigest()
+(out/'result.json').write_text(json.dumps({'tests':1,'passed':1,'senderIdentity':{'tests':1,'passed':1},'screenshots':screens,
+    'scope':'Cached synthetic Sent title, Settings sender/signature autosave, local recipient selection, draft reopen preserves exactly one signature; zero mail service calls, no SMTP send'},indent=2)+'\n')
+print('PASS: native Sent title, local recipient selection, saved sender/signature and draft reopen.')
+PY

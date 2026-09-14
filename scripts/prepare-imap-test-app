@@ -1,0 +1,224 @@
+#!/usr/bin/env python3
+"""Stage an isolated Internet-permitted HAP; never co-load duplicate Swift cores."""
+from pathlib import Path
+import json, shutil, hashlib, base64, datetime, os, subprocess
+from cryptography import x509
+from cryptography.hazmat.primitives import serialization
+root = Path(__file__).resolve().parent.parent
+cpu=os.environ.get('THUNDERBIRD_SWIFT_ARCH', 'x86_64')
+assert cpu in ['x86_64', 'aarch64']
+suffix='' if cpu=='x86_64' else '-aarch64'
+abi='x86_64' if cpu=='x86_64' else 'arm64-v8a'
+app=root/('.tools/imap-test-app'+suffix)
+production=root/('harmony' if cpu=='x86_64' else '.tools/device-app')
+# Hvigor retains removed imported libraries in native intermediates. Discard this
+# generated build when migrating from the earlier standalone IMAP diagnostic.
+old_build=app/'entry/build'
+if old_build.exists() and any(old_build.rglob('libThunderbirdIMAP.so')):
+    shutil.rmtree(old_build)
+def write(name, text):
+    p = app/name; p.parent.mkdir(parents=True, exist_ok=True); p.write_text(text)
+def data(name, value): write(name, json.dumps(value, indent=2)+'\n')
+def copy(source, name):
+    p = app/name; p.parent.mkdir(parents=True, exist_ok=True); shutil.copy2(root/source, p)
+for name in ['build-profile.json5','hvigorfile.ts','hvigor/hvigor-config.json5','oh-package.json5','entry/hvigorfile.ts']:
+    if name == 'build-profile.json5' and (app/name).exists():
+        # Keep local signing while adopting the canonical compile/target/minimum
+        # SDKs. Retaining the whole old profile silently kept older SDK builds.
+        subprocess.run([str(root/'.tools/runtime/node_modules/node/bin/node'), '-e', r"""
+const fs = require('fs');
+const root = process.argv[1], output = process.argv[2];
+const json5 = require(root + '/.tools/deveco/node_modules/json5/lib/index.js');
+const source = json5.parse(fs.readFileSync(root + '/harmony/build-profile.json5', 'utf8'));
+const current = json5.parse(fs.readFileSync(output, 'utf8'));
+for (const product of current.app.products) {
+  const canonical = source.app.products.find(value => value.name === product.name);
+  if (!canonical) throw new Error('No canonical SDK configuration for staged product');
+  for (const field of ['compileSdkVersion', 'targetSdkVersion', 'compatibleSdkVersion']) {
+    if (canonical[field] === undefined) delete product[field];
+    else product[field] = canonical[field];
+  }
+}
+fs.writeFileSync(output, JSON.stringify(current, null, 2) + '\n', { mode: 0o600 });
+fs.chmodSync(output, 0o600);
+""", str(root), str(app/name)], check=True)
+        continue
+    copy('harmony/'+name, name)
+data('AppScope/app.json5', {'app': {'bundleName':'org.thunderbird.harmony.imaptest','vendor':'D-Mail tests',
+    'versionCode':1,'versionName':'0.1.0','icon':'$media:app_icon','label':'$string:app_name'}})
+copy('harmony/AppScope/resources/base/media/app_icon.svg','AppScope/resources/base/media/app_icon.svg')
+data('AppScope/resources/base/element/string.json', {'string':[{'name':'app_name','value':'D-Mail IMAP tests'}]})
+data('entry/oh-package.json5', {'name':'entry','version':'0.1.0','dependencies':{'libimaptest.so':'file:./src/main/cpp/types/libimaptest',
+    'libthunderbird.so':'file:./src/main/cpp/types/libthunderbird'}})
+for name in ['index.d.ts','oh-package.json5']:
+    copy('harmony/entry/src/main/cpp/types/libthunderbird/'+name,'entry/src/main/cpp/types/libthunderbird/'+name)
+copy('harmony/entry/src/main/cpp/napi_init.cpp','entry/src/main/cpp/napi_thunderbird.cpp')
+data('entry/src/main/cpp/types/libimaptest/oh-package.json5', {'name':'libimaptest.so','version':'0.1.0','types':'./index.d.ts'})
+write('entry/src/main/cpp/types/libimaptest/index.d.ts','export const request: (mode: string) => Promise<number>;\n')
+data('entry/build-profile.json5', {'apiType':'stageMode','buildOption':{'externalNativeOptions':{'path':'./src/main/cpp/CMakeLists.txt','abiFilters':[abi]},
+    'nativeLib':{'collectAllLibs':True,'debugSymbol':{'strip':False}}},'targets':[{'name':'default'},{'name':'ohosTest'}]})
+for source, name, kind, ability in [('main','entry','entry','EntryAbility'),('ohosTest','entry_test','feature','IMAPTestAbility')]:
+    module={'name':name,'type':kind,'deviceTypes':['phone','tablet'],'deliveryWithInstall':True,'installationFree':False,
+        'requestPermissions':[{'name':'ohos.permission.INTERNET'}],
+        'abilities':[{'name':ability,'srcEntry':f'./ets/abilities/{ability}.ets','exported':source=='main',
+            'startWindowIcon':'$media:app_icon','startWindowBackground':'$color:start_window_background'}]}
+    if source=='main':
+        module['mainElement']=ability
+        module['pages']='$profile:preview_test_pages'
+        # Exercise the actual WorkScheduler extension registration in this
+        # isolated bundle; the normal EntryAbility lifecycle stays synthetic.
+        production_module=json.loads((root/'harmony/entry/src/main/module.json5').read_text())['module']
+        module['extensionAbilities']=production_module.get('extensionAbilities', [])
+    if source=='ohosTest': module['pages']='$profile:test_pages'
+    data(f'entry/src/{source}/module.json5', {'module':module})
+    write(f'entry/src/{source}/ets/abilities/{ability}.ets', f"import {{ UIAbility }} from '@kit.AbilityKit';\nexport default class {ability} extends UIAbility {{}}\n")
+for folder in ['base','dark']:
+    copy('harmony/entry/src/main/resources/'+folder+'/element/color.json','entry/src/main/resources/'+folder+'/element/color.json')
+for folder in ['base','zh_CN']:
+    copy('harmony/entry/src/main/resources/'+folder+'/element/string.json','entry/src/main/resources/'+folder+'/element/string.json')
+shutil.copytree(root/'harmony/entry/src/main/ets/pages',app/'entry/src/main/ets/pages',dirs_exist_ok=True)
+for folder in ['mail','data','settings']:
+    shutil.copytree(root/'harmony/entry/src/main/ets'/folder,app/'entry/src/main/ets'/folder,dirs_exist_ok=True)
+shutil.copytree(root/'harmony/entry/src/main/ets/model',app/'entry/src/main/ets/model',dirs_exist_ok=True)
+# Native UI fixtures run in the isolated main HAP. Harmony's aa-test feature
+# context remaps named resources but cannot resolve its compiled 0x02 IDs on
+# this device; the main HAP uses the same numeric resource path as production.
+copy('port/swift-imap/PreviewTestAbility.ets','entry/src/main/ets/abilities/EntryAbility.ets')
+copy('harmony/entry/src/main/ets/abilities/MailCheckAbility.ets','entry/src/main/ets/abilities/MailCheckAbility.ets')
+copy('port/swift-imap/NavigationFixture.ets','entry/src/main/ets/pages/NavigationFixture.ets')
+copy('port/swift-imap/NavigationClient.ets','entry/src/main/ets/support/NavigationClient.ets')
+copy('port/swift-imap/TestLoadingFixture.ets','entry/src/main/ets/pages/TestLoadingFixture.ets')
+copy('port/swift-smtp/HtmlThemeFixture.ets','entry/src/main/ets/pages/HtmlThemeFixture.ets')
+data('entry/src/main/resources/base/profile/preview_test_pages.json',{'src':['pages/TestLoadingFixture','pages/NavigationFixture','pages/HtmlThemeFixture']})
+copy('port/swift-imap/MailboxFixture.ets','entry/src/ohosTest/ets/pages/MailboxFixture.ets')
+copy('port/swift-imap/NavigationFixture.ets','entry/src/ohosTest/ets/pages/NavigationFixture.ets')
+copy('port/swift-imap/NavigationClient.ets','entry/src/ohosTest/ets/support/NavigationClient.ets')
+copy('port/swift-imap/NavigationTestSession.ets','entry/src/ohosTest/ets/support/NavigationTestSession.ets')
+copy('port/swift-imap/Navigation.test.ets','entry/src/ohosTest/ets/test/Navigation.test.ets')
+copy('port/swift-imap/ConversationNavigation.test.ets','entry/src/ohosTest/ets/test/ConversationNavigation.test.ets')
+copy('port/swift-imap/PreviewLayout.test.ets','entry/src/ohosTest/ets/test/PreviewLayout.test.ets')
+copy('port/swift-imap/UnreadFilter.test.ets','entry/src/ohosTest/ets/test/UnreadFilter.test.ets')
+copy('port/swift-imap/InboxCheck.test.ets','entry/src/ohosTest/ets/test/InboxCheck.test.ets')
+copy('port/swift-imap/InboxWatch.test.ets','entry/src/ohosTest/ets/test/InboxWatch.test.ets')
+copy('port/swift-imap/SwipeActions.test.ets','entry/src/ohosTest/ets/test/SwipeActions.test.ets')
+copy('port/swift-imap/ComposeSettings.test.ets','entry/src/ohosTest/ets/test/ComposeSettings.test.ets')
+copy('port/swift-imap/NotificationPlatform.test.ets','entry/src/ohosTest/ets/test/NotificationPlatform.test.ets')
+copy('port/swift-imap/NotificationPlatformRunner.ets','entry/src/ohosTest/ets/testrunner/NotificationPlatformRunner.ets')
+copy('port/swift-imap/UnreadBadge.test.ets','entry/src/ohosTest/ets/test/UnreadBadge.test.ets')
+copy('port/swift-imap/UnreadBadgeRunner.ets','entry/src/ohosTest/ets/testrunner/UnreadBadgeRunner.ets')
+copy('port/swift-imap/InboxAutomaticUI.test.ets','entry/src/ohosTest/ets/test/InboxAutomaticUI.test.ets')
+copy('port/swift-imap/InboxAutomaticUIRunner.ets','entry/src/ohosTest/ets/testrunner/InboxAutomaticUIRunner.ets')
+copy('port/swift-imap/ReaderRecovery.test.ets','entry/src/ohosTest/ets/test/ReaderRecovery.test.ets')
+copy('port/swift-imap/ReaderRecoveryRunner.ets','entry/src/ohosTest/ets/testrunner/ReaderRecoveryRunner.ets')
+copy('port/swift-imap/UnreadCompatibility.test.ets','entry/src/ohosTest/ets/test/UnreadCompatibility.test.ets')
+copy('harmony/entry/src/ohosTest/ets/test/LastAccount.test.ets','entry/src/ohosTest/ets/test/LastAccount.test.ets')
+copy('harmony/entry/src/ohosTest/ets/support/MailOperationsAssertions.ets','entry/src/ohosTest/ets/support/MailOperationsAssertions.ets')
+copy('port/swift-imap/MailboxGestures.test.ets','entry/src/ohosTest/ets/test/MailboxGestures.test.ets')
+copy('port/swift-imap/AccountCore.test.ets','entry/src/ohosTest/ets/test/AccountCore.test.ets')
+copy('port/swift-imap/AccountFixture.ets','entry/src/ohosTest/ets/pages/AccountFixture.ets')
+copy('port/swift-imap/IMAPTestAbility.ets','entry/src/ohosTest/ets/abilities/IMAPTestAbility.ets')
+copy('port/swift-imap/TestLoadingFixture.ets','entry/src/ohosTest/ets/pages/TestLoadingFixture.ets')
+data('entry/src/ohosTest/resources/base/profile/test_pages.json',{'src':['pages/AccountFixture','pages/MailboxFixture','pages/NavigationFixture','pages/MailFeaturesFixture','pages/HtmlConsentFixture','pages/HtmlThemeFixture','pages/TestLoadingFixture','pages/DiscoveryFixture']})
+certificate=x509.load_pem_x509_certificate((root/'.tools/imap-test-certs/server.crt').read_bytes())
+spki=certificate.public_key().public_bytes(serialization.Encoding.DER,serialization.PublicFormat.SubjectPublicKeyInfo)
+pin=base64.b64encode(hashlib.sha256(spki).digest()).decode()
+data('entry/src/main/resources/base/profile/network_config.json',{'network-security-config':{
+    'base-config':{'cleartextTrafficPermitted':False},'domain-config':[{
+        'domains':[{'name':'localhost','include-subdomains':False}],
+        'trust-anchors':[{'certificates':'/data/storage/el2/base/files/native-network-ca'}],
+        'pin-set':{'expiration':str(datetime.date.today()+datetime.timedelta(days=7)),
+                   'pin':[{'digest-algorithm':'sha256','digest':pin}]}}]},
+    'trust-global-user-ca':False,'trust-current-user-ca':False})
+copy('.tools/imap-test-certs/root.crt','entry/src/main/resources/rawfile/root.crt')
+runner=(root/'port/network-tests/NetworkTestRunner.ets').read_text().replace('NetworkTestRunner','IMAPTestRunner').replace('../test/Network.test','../test/IMAP.test')
+fixtures=sorted((root/'upstream/thunderbird-ios/Core/Tests/AccountTests/Resources').glob('*.eml'))
+for fixture in fixtures: copy(str(fixture.relative_to(root)),'entry/src/main/resources/rawfile/mime/'+fixture.name)
+runner=runner.replace('    const tests = await import', '''    const fixtureFolder = `${context.filesDir}/mime-fixtures`;
+    if (!fs.accessSync(fixtureFolder)) { fs.mkdirSync(fixtureFolder, true); }
+    for (const name of '''+json.dumps([p.name for p in fixtures])+''') {
+      const bytes = await context.createModuleContext('entry').resourceManager.getRawFileContent(`mime/${name}`);
+      const target = fs.openSync(`${fixtureFolder}/${name}`, fs.OpenMode.CREATE | fs.OpenMode.WRITE_ONLY | fs.OpenMode.TRUNC);
+      try { fs.writeSync(target.fd, bytes.buffer); } finally { fs.closeSync(target); }
+    }
+    const tests = await import''')
+write('entry/src/ohosTest/ets/testrunner/IMAPTestRunner.ets',runner)
+write('entry/src/ohosTest/ets/testrunner/MailboxGesturesRunner.ets', runner.replace('IMAPTestRunner','MailboxGesturesRunner').replace('../test/IMAP.test','../test/MailboxGestures.test'))
+write('entry/src/ohosTest/ets/test/CombinedNavigation.test.ets', "import ui from './Navigation.test';\nimport conversation from './ConversationNavigation.test';\nimport storage from './LastAccount.test';\nexport default function tests(): void { ui(); conversation(); storage(); }\n")
+write('entry/src/ohosTest/ets/testrunner/NavigationRunner.ets', runner.replace('IMAPTestRunner','NavigationRunner').replace('../test/IMAP.test','../test/CombinedNavigation.test'))
+write('entry/src/ohosTest/ets/testrunner/ConversationNavigationRunner.ets', runner.replace('IMAPTestRunner','ConversationNavigationRunner').replace('../test/IMAP.test','../test/ConversationNavigation.test'))
+write('entry/src/ohosTest/ets/testrunner/PreviewLayoutRunner.ets', runner.replace('IMAPTestRunner','PreviewLayoutRunner').replace('../test/IMAP.test','../test/PreviewLayout.test'))
+write('entry/src/ohosTest/ets/testrunner/UnreadFilterRunner.ets', runner.replace('IMAPTestRunner','UnreadFilterRunner').replace('../test/IMAP.test','../test/UnreadFilter.test'))
+write('entry/src/ohosTest/ets/testrunner/SwipeActionsRunner.ets', runner.replace('IMAPTestRunner','SwipeActionsRunner').replace('../test/IMAP.test','../test/SwipeActions.test'))
+write('entry/src/ohosTest/ets/test/SwipeActionsEmulator.test.ets', "import swipe from './SwipeActions.test';\nexport default function tests(): void { swipe(true); }\n")
+write('entry/src/ohosTest/ets/testrunner/SwipeActionsEmulatorRunner.ets', runner.replace('IMAPTestRunner','SwipeActionsEmulatorRunner').replace('../test/IMAP.test','../test/SwipeActionsEmulator.test'))
+write('entry/src/ohosTest/ets/testrunner/ComposeSettingsRunner.ets', runner.replace('IMAPTestRunner','ComposeSettingsRunner').replace('../test/IMAP.test','../test/ComposeSettings.test').replace('    const context =', "    await abilityDelegatorRegistry.getAbilityDelegator().print('COMPOSE_SETTINGS_STAGE: runner setup started\\n');\n    const context ="))
+write('entry/src/ohosTest/ets/testrunner/UnreadCompatibilityRunner.ets', runner.replace('IMAPTestRunner','UnreadCompatibilityRunner').replace('../test/IMAP.test','../test/UnreadCompatibility.test'))
+write('entry/src/ohosTest/ets/testrunner/InboxCheckRunner.ets', runner.replace('IMAPTestRunner','InboxCheckRunner').replace('../test/IMAP.test','../test/InboxCheck.test'))
+write('entry/src/ohosTest/ets/testrunner/InboxWatchRunner.ets', runner.replace('IMAPTestRunner','InboxWatchRunner').replace('../test/IMAP.test','../test/InboxWatch.test'))
+write('entry/src/ohosTest/ets/test/CombinedMail.test.ets', "import smtp from './SMTP.test';\nimport ui from './MailFeatures.test';\nimport reader from './ReaderCore.test';\nexport default function tests(): void { smtp(); reader(); ui(); }\n")
+write('entry/src/ohosTest/ets/testrunner/CombinedMailRunner.ets', runner.replace('IMAPTestRunner','CombinedMailRunner').replace('../test/IMAP.test','../test/CombinedMail.test'))
+copy('port/swift-jmap/ReaderCore.test.ets','entry/src/ohosTest/ets/test/ReaderCore.test.ets')
+copy('port/swift-smtp/SMTP.test.ets','entry/src/ohosTest/ets/test/SMTP.test.ets')
+copy('port/swift-smtp/SenderIdentity.test.ets','entry/src/ohosTest/ets/test/SenderIdentity.test.ets')
+write('entry/src/ohosTest/ets/testrunner/SenderIdentityRunner.ets', runner.replace('IMAPTestRunner','SenderIdentityRunner').replace('../test/IMAP.test','../test/SenderIdentity.test'))
+copy('port/swift-smtp/SentCopy.test.ets','entry/src/ohosTest/ets/test/SentCopy.test.ets')
+write('entry/src/ohosTest/ets/testrunner/SentCopyRunner.ets', runner.replace('IMAPTestRunner','SentCopyRunner').replace('../test/IMAP.test','../test/SentCopy.test'))
+copy('port/mail-corpus/Corpus.test.ets','entry/src/ohosTest/ets/test/Corpus.test.ets')
+copy('port/mail-corpus/Attachments.test.ets','entry/src/ohosTest/ets/test/Attachments.test.ets')
+copy('port/mail-corpus/Layout.test.ets','entry/src/ohosTest/ets/test/Layout.test.ets')
+write('entry/src/ohosTest/ets/testrunner/CorpusRunner.ets', runner.replace('IMAPTestRunner','CorpusRunner').replace('../test/IMAP.test','../test/Corpus.test'))
+write('entry/src/ohosTest/ets/testrunner/AttachmentsRunner.ets', runner.replace('IMAPTestRunner','AttachmentsRunner').replace('../test/IMAP.test','../test/Attachments.test'))
+write('entry/src/ohosTest/ets/testrunner/LayoutRunner.ets', runner.replace('IMAPTestRunner','LayoutRunner').replace('../test/IMAP.test','../test/Layout.test'))
+copy('port/swift-autoconfiguration/Discovery.test.ets','entry/src/ohosTest/ets/test/Discovery.test.ets')
+copy('port/swift-autoconfiguration/BrowserOAuth.test.ets','entry/src/ohosTest/ets/test/BrowserOAuth.test.ets')
+copy('port/swift-autoconfiguration/LoopbackOAuth.test.ets','entry/src/ohosTest/ets/test/LoopbackOAuth.test.ets')
+copy('port/swift-autoconfiguration/OAuthStorage.test.ets','entry/src/ohosTest/ets/test/OAuthStorage.test.ets')
+copy('port/swift-autoconfiguration/OAuthAccount.test.ets','entry/src/ohosTest/ets/test/OAuthAccount.test.ets')
+write('entry/src/ohosTest/ets/test/CombinedOAuthStorage.test.ets', "import storage from './OAuthStorage.test';\nimport accounts from './OAuthAccount.test';\nexport default function tests(): void { storage(); accounts(); }\n")
+write('entry/src/ohosTest/ets/testrunner/OAuthStorageRunner.ets', runner.replace('IMAPTestRunner','OAuthStorageRunner').replace('../test/IMAP.test','../test/CombinedOAuthStorage.test'))
+write('entry/src/ohosTest/ets/test/CombinedOAuth.test.ets', "import bridge from './BrowserOAuth.test';\nimport loopback from './LoopbackOAuth.test';\nexport default function tests(): void { bridge(); loopback(); }\n")
+write('entry/src/ohosTest/ets/testrunner/BrowserOAuthRunner.ets', runner.replace('IMAPTestRunner','BrowserOAuthRunner').replace('../test/IMAP.test','../test/CombinedOAuth.test'))
+copy('port/swift-autoconfiguration/DiscoveryFixture.ets','entry/src/ohosTest/ets/pages/DiscoveryFixture.ets')
+write('entry/src/ohosTest/ets/testrunner/DiscoveryRunner.ets', runner.replace('IMAPTestRunner','DiscoveryRunner').replace('../test/IMAP.test','../test/Discovery.test'))
+copy('port/swift-smtp/MailFeatures.test.ets','entry/src/ohosTest/ets/test/MailFeatures.test.ets')
+copy('port/swift-smtp/MailFeaturesFixture.ets','entry/src/ohosTest/ets/pages/MailFeaturesFixture.ets')
+copy('port/swift-smtp/HtmlConsentFixture.ets','entry/src/ohosTest/ets/pages/HtmlConsentFixture.ets')
+copy('port/swift-smtp/HtmlThemeFixture.ets','entry/src/ohosTest/ets/pages/HtmlThemeFixture.ets')
+copy('port/swift-smtp/HtmlTheme.test.ets','entry/src/ohosTest/ets/test/HtmlTheme.test.ets')
+write('entry/src/ohosTest/ets/testrunner/HtmlThemeRunner.ets', runner.replace('IMAPTestRunner','HtmlThemeRunner').replace('../test/IMAP.test','../test/HtmlTheme.test'))
+write('entry/src/ohosTest/ets/testrunner/SMTPTestRunner.ets', runner.replace('IMAPTestRunner','SMTPTestRunner').replace('../test/IMAP.test','../test/SMTP.test'))
+write('entry/src/ohosTest/ets/testrunner/MailFeaturesRunner.ets', runner.replace('IMAPTestRunner','MailFeaturesRunner').replace('../test/IMAP.test','../test/MailFeatures.test'))
+copy('port/swift-imap/IMAP.test.ets','entry/src/ohosTest/ets/test/IMAP.test.ets')
+copy('port/swift-imap/OAuthImap.test.ets','entry/src/ohosTest/ets/test/OAuthImap.test.ets')
+copy('port/swift-smtp/OAuthSmtp.test.ets','entry/src/ohosTest/ets/test/OAuthSmtp.test.ets')
+write('entry/src/ohosTest/ets/test/MailOAuth.test.ets', "import imap from './OAuthImap.test';\nimport smtp from './OAuthSmtp.test';\nexport default function tests(): void { imap(); smtp(); }\n")
+write('entry/src/ohosTest/ets/testrunner/MailOAuthRunner.ets', runner.replace('IMAPTestRunner','MailOAuthRunner').replace('../test/IMAP.test','../test/MailOAuth.test'))
+write('entry/src/ohosTest/ets/testrunner/OAuthImapRunner.ets', runner.replace('IMAPTestRunner','OAuthImapRunner').replace('../test/IMAP.test','../test/OAuthImap.test'))
+copy('port/swift-imap/napi_imap.cpp','entry/src/main/cpp/napi_imap.cpp')
+# Clear only the generated test-app library directory, including the earlier
+# standalone diagnostic. Both protocols must resolve through the shipping core.
+libraries=app/f'entry/libs/{abi}'
+if libraries.exists(): shutil.rmtree(libraries)
+for p in (production/f'entry/libs/{abi}').iterdir():
+    if '.so' in p.name: copy(str(p.relative_to(root)), f'entry/libs/{abi}/'+p.name)
+copy(f'.tools/swift-probe/native-imap{suffix}/libIMAPProbe.so',f'entry/libs/{abi}/libIMAPProbe.so')
+write('entry/src/main/cpp/CMakeLists.txt','''cmake_minimum_required(VERSION 3.5.0)
+project(imap_test)
+set(CMAKE_CXX_STANDARD 17)
+add_library(IMAPProbe SHARED IMPORTED)
+set_target_properties(IMAPProbe PROPERTIES IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/../../../libs/${OHOS_ARCH}/libIMAPProbe.so")
+add_library(imaptest SHARED napi_imap.cpp)
+target_link_libraries(imaptest PUBLIC IMAPProbe libace_napi.z.so libhilog_ndk.z.so)
+target_link_options(imaptest PRIVATE "-Wl,--no-undefined")
+add_library(ThunderbirdCore SHARED IMPORTED)
+set_target_properties(ThunderbirdCore PROPERTIES IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/../../../libs/${OHOS_ARCH}/libThunderbirdCore.so")
+add_library(thunderbird SHARED napi_thunderbird.cpp)
+target_link_libraries(thunderbird PUBLIC ThunderbirdCore libace_napi.z.so)
+target_link_options(thunderbird PRIVATE "-Wl,--no-undefined")
+''')
+print('Prepared IMAP test app:', app)
+
+copy('port/swift-imap/MailboxLoading.test.ets','entry/src/ohosTest/ets/test/MailboxLoading.test.ets')
+write('entry/src/ohosTest/ets/testrunner/MailboxLoadingRunner.ets', runner.replace('IMAPTestRunner','MailboxLoadingRunner').replace('../test/IMAP.test','../test/MailboxLoading.test'))
+copy('port/swift-imap/Encoding.test.ets','entry/src/ohosTest/ets/test/Encoding.test.ets')
+write('entry/src/ohosTest/ets/testrunner/EncodingRunner.ets', runner.replace('IMAPTestRunner','EncodingRunner').replace('../test/IMAP.test','../test/Encoding.test'))

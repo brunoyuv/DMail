@@ -1,0 +1,55 @@
+{
+  "date": "2026-09-13",
+  "device": {
+    "model": "Huawei MatePad 12.2-inch (MRO-W00)",
+    "userReportedOS": "HarmonyOS 6.1.0",
+    "hdcOS": "OpenHarmony-6.1.1.120",
+    "api": 24,
+    "architecture": "aarch64"
+  },
+  "scope": "Synthetic local mail only; no actual provider submission",
+  "tests": {
+    "host": 53,
+    "smtp": 12,
+    "jmapReader": 6,
+    "imap": 25,
+    "htmlComposerUI": 1
+  },
+  "coreSha256": "ff1ef69ca27f38a61efaaf2cf93893c53e8d5efd504155b75d55beddd8bdaf7d",
+  "preparedProductionHapSha256": "f4a45cc826caf745b4912e12960ba670be9f8008531f9219f13dd0b1332b838c",
+  "preparedProductionHapInstalled": true,
+  "uiEvidenceNote": "MatePad UI passed before the final composer header/background adjustments. The final production UI passed the emulator test separately. Protocol tests use the identical ARM Swift core.",
+  "logs": {
+    ".tools/matepad-mail-test-session.log": "3104c628c198a783824af9fdd5c206dcf4423f93564e50e549ba287f8ca9710b",
+    ".tools/matepad-mail-core-stats.json": "949ec3c221562a5a720c37d84bfd8ba840476f8ebd2da9ecaf191bbec7f2ee2e",
+    ".tools/matepad-imap-session.log": "8b2f635630c278ee8380d7312b9468d3042cef41d4cb7fc37632c6bd8130f559",
+    ".tools/matepad-ui-test-session.log": "6c22116fd63af81a927d0ca9a774dc40c1ed9d29ebb87d37fb664bc0662d55c9",
+    ".tools/smtp-html-host-tests.log": "4340a6ead80fd3cf2171d411444a8907bb92708afa9cc385455c04820ecc321d",
+    ".tools/matepad-production-install.log": "a7c7f01aad5659daa03375cd6248b146f21db716dcdd99f52b45cbe785f4a370"
+  },
+  "sources": {
+    "port/swift-smtp/upstream-files.json": "07ade10c4fc34a0fe36343d09563155c0023bf25c4c64e29f69d4f0c0e7f4bc1",
+    "port/swift-smtp/fixture.cjs": "d0f4c7568e35dd98fc1d69bfd15e6f5158650e900f05bcc2b1029b999b793f93",
+    "port/swift-smtp/harmonyos.patch": "a6813a5c5f078155b56535622a4d0200257bf9b7b24225c73ae7fe12490f63f6",
+    "port/swift-smtp/SMTP.test.ets": "ff57be4b6f3cfd5f3ba68bd5c7eeae35c61e6cbe75021db5c244fce8978c12d7",
+    "port/swift-smtp/README.md": "381baf9d6d39a03028576c2c53b1c127b29fb95902c3127a6bad3962625a307b",
+    "port/swift-smtp/MessageSafety.swift": "5ded5ab40fc53e42039f50d285b21ddf671a091851487161d4ac0703a75b0481",
+    "port/swift-smtp/MailFeaturesFixture.ets": "2995d52e61ecee78e04de00ea5cd600adc0faa679e86217146121b0fd279fb98",
+    "port/swift-smtp/MailFeatures.test.ets": "af061458d92c7671cc8433d71dd46c4953aa0f77c93e5ceedbe0a485ce5258f3",
+    "port/swift-smtp/TlsHandler.swift": "2d29a259cb47d1c78174954aa572f8d667fddfdb9b5513a1c5180dde0d83fa87",
+    "port/swift-smtp/vendor/LineBasedFrameDecoder.swift": "cac9e4fb702a01b53f868d29b7d27147b6bdd87d3b1eaab2f8c57e2669eab571",
+    "port/swift-smtp/vendor/source.json": "08052711a88b54d905229920cb848ea86413644b3553d9fe94dbcb04843ea97f",
+    "harmony/entry/src/main/ets/pages/Index.ets": "ed96d23b25954f220d2c7eb78a7be2d2ca0ba35e21e7b4fb1233a3c361ba6d56",
+    "harmony/entry/src/main/ets/pages/HtmlMail.ets": "27ac7457851dbd4641170cb7fe1a57ff990d4b0f1d5b2fcb749f74cffcceb193",
+    "harmony/entry/src/main/ets/pages/ConnectedMail.ets": "4857b140b440bff52b2ca0daf70613c92991ac761ec72e82db830426823e8fba",
+    "harmony/entry/src/main/ets/pages/ComposeMail.ets": "1873a8d8a4699adb85d53fc8166ee82e4dd4d1fa2d42d240a70fdd6a5dc1fed0",
+    "harmony/entry/src/main/ets/mail/smtp/NativeSmtpClient.ets": "52fd22328544f92a769cae7b3968f776411206987483d1bee4f3d542d566e863"
+  },
+  "limitations": [
+    "No IMAP Sent-folder upload",
+    "No attachments",
+    "OAuth deferred",
+    "Live-provider SMTP delivery unverified"
+  ],
+  "productionLaunchedAfterInstall": false
+}

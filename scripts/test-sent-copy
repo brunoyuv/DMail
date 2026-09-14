@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+# Only the isolated synthetic fixture on the authorized MatePad or emulator.
+# Never launch, inspect or collect logs from production mail.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+: "${HDC_TARGET:?Set HDC_TARGET to the authorized MatePad or bounded emulator}"
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+NODE="$ROOT/.tools/runtime/node_modules/node/bin/node"
+APP="$ROOT/.tools/imap-test-app-aarch64"
+PRODUCTION="$ROOT/.tools/device-app"
+ABI=arm64-v8a; CPU=aarch64; SIGNATURE=signed; PREFIX=matepad
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 ]]; then
+  [[ "$HDC_TARGET" == 127.0.0.1:5555 ]]
+  APP="$ROOT/.tools/imap-test-app"; PRODUCTION="$ROOT/harmony"
+  ABI=x86_64; CPU=x86_64; SIGNATURE=unsigned; PREFIX=emulator
+else
+  [[ "$HDC_TARGET" == "${DMAIL_AUTHORIZED_MATEPAD_SERIAL:?Set the separately verified authorized MatePad serial}" ]]
+fi
+run_hdc() { timeout --foreground --kill-after=3s 30s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == "$CPU" ]]
+if [[ "$PREFIX" == matepad ]]; then
+  [[ "$(run_hdc -t "$HDC_TARGET" shell param get const.product.model | tr -d '[:space:]')" == MRO-W00 ]]
+fi
+for hap in "default/entry-default-${SIGNATURE}.hap" "ohosTest/entry-ohosTest-${SIGNATURE}.hap"; do
+  [[ -f "$APP/entry/build/default/outputs/$hap" ]] || { echo 'Build both isolated test HAPs first.' >&2; exit 1; }
+done
+python3 - "$PRODUCTION" "$APP" "$ABI" "$SIGNATURE" <<'PY'
+from pathlib import Path
+import sys, zipfile
+production, test, abi, signature = sys.argv[1:]
+with zipfile.ZipFile(Path(test)/f'entry/build/default/outputs/default/entry-default-{signature}.hap') as app:
+    core = app.read(f'libs/{abi}/libThunderbirdCore.so')
+    assert core == (Path(production)/f'entry/libs/{abi}/libThunderbirdCore.so').read_bytes()
+    if signature == 'signed':
+        with zipfile.ZipFile(Path(production)/'entry/build/default/outputs/default/entry-default-signed.hap') as shipping:
+            assert core == shipping.read(f'libs/{abi}/libThunderbirdCore.so')
+PY
+if run_hdc fport ls | grep -Eq 'tcp:(9661|977[0-3]) '; then echo 'Sent fixture ports are in use.' >&2; exit 1; fi
+FIXTURE_PID=''; FORWARDS=(); INSTALLED=false
+cleanup() {
+  local result=$?
+  trap - EXIT
+  curl --max-time 3 --fail --silent http://127.0.0.1:9770/stats > ".tools/${PREFIX}-sent-copy-stats.json" || true
+  if [[ "$PREFIX" == emulator ]]; then
+    run_hdc -t "$HDC_TARGET" shell hilog -x > ".tools/${PREFIX}-sent-copy-hilog.log" 2>&1 || true
+  fi
+  if "$INSTALLED"; then run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true; fi
+  for port in "${FORWARDS[@]}"; do run_hdc -t "$HDC_TARGET" fport rm "tcp:$port" "tcp:$port" >/dev/null 2>&1 || true; done
+  if [[ -n "$FIXTURE_PID" ]]; then kill "$FIXTURE_PID" 2>/dev/null || true; wait "$FIXTURE_PID" 2>/dev/null || true; fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+THUNDERBIRD_SMTP_OAUTH=0 "$NODE" port/swift-smtp/fixture.cjs .tools/imap-test-certs > ".tools/${PREFIX}-sent-copy-fixture.log" 2>&1 & FIXTURE_PID=$!
+READY=false
+for ((i=0;i<30;i++)); do if curl --max-time 1 --fail --silent http://127.0.0.1:9770/health >/dev/null; then READY=true; break; fi; sleep 0.1; done
+"$READY"
+for port in 9770 9771 9773; do
+  run_hdc -t "$HDC_TARGET" rport "tcp:$port" "tcp:$port" | grep -q 'Forwardport result:OK'; FORWARDS+=("$port")
+done
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-${SIGNATURE}.hap"
+INSTALLED=true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-${SIGNATURE}.hap"
+timeout --foreground --kill-after=10s 110s "$HDC" -t "$HDC_TARGET" shell aa test -b org.thunderbird.harmony.imaptest -m entry_test \
+  -s unittest /ets/testrunner/SentCopyRunner -s timeout 90000 | tee ".tools/${PREFIX}-sent-copy-tests.log"
+grep -q 'Tests run: 6, Failure: 0, Error: 0, Pass: 6, Ignore: 0' ".tools/${PREFIX}-sent-copy-tests.log"
+curl --max-time 3 --fail --silent http://127.0.0.1:9770/stats > ".tools/${PREFIX}-sent-copy-stats.json"
+"$NODE" - "$PREFIX" <<'JS'
+const assert = require('node:assert/strict'), fs = require('node:fs');
+const prefix = process.argv[2]; assert.ok(['matepad', 'emulator'].includes(prefix));
+const stats = JSON.parse(fs.readFileSync(`.tools/${prefix}-sent-copy-stats.json`));
+assert.deepEqual(stats.violations, []);
+assert.equal(stats.sessions.length, 8); assert.equal(stats.sentCopies.length, 10);
+for (const mode of ['sent-success', 'sent-reject', 'sent-drop', 'sent-missing', 'sent-ambiguous', 'sent-conventional-ambiguous', 'sent-conventional', 'sent-nested']) {
+  const sent = stats.sessions.filter(s => s.mode === mode), copies = stats.sentCopies.filter(s => s.mode === mode && !s.statusCalls);
+  assert.equal(sent.length, 1); assert.equal(sent[0].messages.length, 1); assert.equal(copies.length, 1);
+  assert.ok(sent[0].closed && copies[0].closed);
+  const delivered = sent[0].messages[0]; assert.ok(!delivered.includes('hidden@example.test'));
+  const expected = ['sent-missing', 'sent-ambiguous', 'sent-conventional-ambiguous'].includes(mode) ? 0 : 1;
+  assert.equal(copies[0].appendAttempts, expected); assert.equal(copies[0].messages.length, expected);
+  if (expected) {
+    const privateCopy = copies[0].messages[0];
+    assert.ok(privateCopy.includes('Bcc: hidden@example.test\r\n'));
+    assert.equal(privateCopy.match(/^Message-ID: (.+)$/m)[1], delivered.match(/^Message-ID: (.+)$/m)[1]);
+    assert.equal(privateCopy.replace('Bcc: hidden@example.test\r\n', '').trimEnd(), delivered.trimEnd());
+    assert.ok(privateCopy.includes('In-Reply-To: <parent@example.test>\r\n'));
+  }
+}
+for (const mode of ['sent-conventional', 'sent-nested']) {
+  const reads = stats.sentCopies.filter(s => s.mode === mode && s.statusCalls);
+  assert.equal(reads.length, 1); assert.equal(reads[0].statusCalls, 2); assert.equal(reads[0].appendAttempts, 0); assert.ok(reads[0].closed);
+}
+console.log('PASS: one SMTP submission, private Sent copy with matching MIME/thread identity, existing conventional Sent and matching mailbox role, explicit/lost APPEND failure, no ambiguous folder selection or retry.');
+JS

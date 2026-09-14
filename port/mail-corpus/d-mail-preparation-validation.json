@@ -1,0 +1,27 @@
+{
+  "date": "2026-09-14",
+  "scope": "D-Mail source publication preparation and default Gmail app-password setup; no device installation or GitHub push",
+  "hostTests": {
+    "passed": 291,
+    "failed": 0,
+    "cleanSourceSnapshotPassed": true
+  },
+  "hap": {
+    "path": "harmony/entry/build/default/outputs/default/entry-default-unsigned.hap",
+    "sha256": "8188ab59341d6e1208585cd53387c33f6978c9375bd34c864cc95775a52b218c",
+    "architecture": "x86_64",
+    "signed": false,
+    "nativeCoreSha256": "823c72e0b5d88a0a280084dd8862546e0f54bf7a1788bbb305fff7338f13e541",
+    "nativeCoreChanged": false
+  },
+  "nativeUI": {
+    "passed": 1,
+    "failed": 0,
+    "durationSeconds": 23.537,
+    "scope": "Default Google sign-in/reconnect absent, app-password guidance visible, Microsoft sign-in and password field present; existing synthetic account and offline bodies preserved; exactly two in-memory body requests, no provider/browser access"
+  },
+  "emulatorStopped": true,
+  "emulatorNativeProcessAbsent": true,
+  "productionLaunched": false,
+  "installedOnPhysicalDevices": false
+}

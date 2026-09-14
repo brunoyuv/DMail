@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# Shipping UI over synthetic cached mail; no production app or network access.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+: "${HDC_TARGET:?Set HDC_TARGET to the authorized MatePad serial}"
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app-aarch64"
+[[ "$HDC_TARGET" == "${DMAIL_AUTHORIZED_MATEPAD_SERIAL:?Set the separately verified authorized MatePad serial}" ]]
+run_hdc() { timeout --foreground --kill-after=3s 30s "$HDC" "$@"; }
+OUT="$ROOT/.tools/matepad-preview-layout"
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == aarch64 ]]
+[[ "$(run_hdc -t "$HDC_TARGET" shell param get const.product.model | tr -d '[:space:]')" == MRO-W00 ]]
+for hap in default/entry-default-signed.hap ohosTest/entry-ohosTest-signed.hap; do
+  [[ -f "$APP/entry/build/default/outputs/$hap" ]] || { echo 'Build signed test HAPs first.' >&2; exit 1; }
+done
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  find "$OUT" -maxdepth 1 -type f -exec mv -t "$PREVIOUS" {} +
+fi
+INSTALLED=false
+cleanup() {
+  local result=$?
+  trap - EXIT
+  for orientation in landscape portrait; do
+    for kind in inbox reader composer; do
+      run_hdc -t "$HDC_TARGET" file recv "/data/local/tmp/preview-layout-$orientation-$kind.png" "$OUT/$orientation-$kind.png" >/dev/null 2>&1 || true
+    done
+  done
+  if "$INSTALLED"; then run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true; fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-signed.hap"
+INSTALLED=true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-signed.hap"
+for orientation in landscape portrait; do
+  for kind in inbox reader composer; do
+    run_hdc -t "$HDC_TARGET" shell rm -f "/data/local/tmp/preview-layout-$orientation-$kind.png"
+  done
+done
+timeout --foreground --kill-after=5s 60s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/PreviewLayoutRunner \
+  -s timeout 50000 | tee "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"
+for orientation in landscape portrait; do
+  for kind in inbox reader composer; do
+    run_hdc -t "$HDC_TARGET" file recv "/data/local/tmp/preview-layout-$orientation-$kind.png" "$OUT/$orientation-$kind.png" >/dev/null
+  done
+done
+python3 - "$OUT" <<'PY'
+from pathlib import Path
+import hashlib,json,re,struct,sys
+from PIL import Image
+out=Path(sys.argv[1]); log=(out/'test.log').read_text()
+def records(kind):
+    return [json.loads(raw) for raw in re.findall(r'PREVIEW_LAYOUT_'+kind+r': (\{[^\r\n]+\})',log)]
+screens={record['name']:record for record in records('SCREEN')}
+for orientation in ['landscape','portrait']:
+    for kind in ['inbox','reader','composer']:
+        name=f'{orientation}-{kind}'; info=screens[name]; data=(out/f'{name}.png').read_bytes()
+        dimensions=struct.unpack('>II',data[16:24])
+        assert dimensions==(info['width'],info['height']),(name,dimensions,info)
+        assert (dimensions[0]>dimensions[1])==(orientation=='landscape'),(name,'orientation did not change')
+        info['sha256']=hashlib.sha256(data).hexdigest()
+titles=records('TITLE'); splits=records('SPLIT'); rows=records('ROWS')
+assert len(titles)==len(splits)==len(rows)==2
+for row in rows:
+    marker=row['marker']
+    picture=Image.open(out/f"{row['orientation']}-inbox.png").convert('RGB')
+    crop=picture.crop(tuple(round(marker[k]) for k in ['left','top','right','bottom']))
+    pixels=list(crop.getdata())
+    blue=sum(r<60 and 60<g<140 and b>200 for r,g,b in pixels)/max(1,len(pixels))
+    assert blue>.7,(row['orientation'],'unread marker is not visibly blue',blue)
+    row['blueFraction']=round(blue,4)
+(out/'result.json').write_text(json.dumps({'tests':1,'scope':'Native inbox title and 44 vp actions on one row, retained tablet inbox beside HTML reader, composer, both app-window orientations, synthetic encrypted cache only with zero service calls','screenshots':screens,'titleBounds':titles,'splitBounds':splits,'rowBounds':rows},indent=2)+'\n')
+print('PASS: native inbox title/actions, split HTML reader, and composer in both tablet orientations.')
+PY

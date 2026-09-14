@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# All builds must be prepared before this bounded synthetic-only batch starts.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+[[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 && "${HDC_TARGET:-}" == 127.0.0.1:5555 ]]
+"$ROOT/scripts/test-inbox-watch"
+"$ROOT/scripts/test-inbox-check"
+"$ROOT/scripts/test-notification-platform"

@@ -1,0 +1,42 @@
+{
+  "tests": 12,
+  "nativeCoreSHA256": "cf0eea3ed709defbff885bb60a2f3bd3e99fa9fb9f1bb7a7ffd75799940efc2e",
+  "scope": "Synthetic native bridge and real HarmonyOS localhost socket callbacks, cancellation and timeout; no live token exchange",
+  "date": "2026-09-14",
+  "hostTestsPassed": 41,
+  "hostTestScope": "Discovery/model, OAuth session/token including personal Microsoft authority, and URLSession transport",
+  "armCompileAndLinkPassed": true,
+  "emulatorProcessExitVerified": true,
+  "accountSetupEnabled": true,
+  "remaining": [
+    "User-owned live Google/Microsoft browser sign-in and background behavior verification",
+    "User-owned Google OAuth test-user configuration; app password remains available"
+  ],
+  "evidence": {
+    ".tools/oauth-personal-host-tests.log": "512531fb06f0d098342dd093c794d1dc7e027563842399224ba4ffc5099f7a89",
+    ".tools/oauth-native-test/test.log": "c1aba21cfc188e9708f15b3b0a0ecf1d8a8fd69d9f2e3f511a35f08d7dda54d7",
+    ".tools/oauth-storage-native-test/test.log": "d873df121847414fe73f6607d4e30288261c36ef904ea7e1d22ce9d6b37e0183",
+    ".tools/oauth-round-emulator-session.log": "d2089152bef4bb42a16dc6f04301949dce2b000230ff640677fae96591918284",
+    ".tools/oauth-cover-ui-session.log": "84f041d524cc1feb2eca62ca32db54c2c3b6080aa7300dd41134d3b4ce1252cc",
+    ".tools/oauth-matepad-ui-session.log": "40fcec76eef9b125fd435484db31c9bc3396f178d37d951f56ae0b27a1688b5f",
+    ".tools/oauth-device-build.log": "5f90fa3f2770d21876d0a19344b8475b7c7f147399f9d413ef67be405faa9bb2",
+    ".tools/device-app-signed-verification.json": "ee1664f0f4e934d68f7d3e14686da58b982fab6ca541b355b4f6544dbf4b3165",
+    ".tools/oauth-device-install.json": "b1322c2b2bb5f0845b98bdb7afaf39b74797a396276a59764bebdc65dd6176b5"
+  },
+  "microsoftRedirectURI": "http://127.0.0.1:49152/oauth2redirect",
+  "microsoftRedirectSavedBy": "User, verified in Azure native platform list",
+  "storageAccountTestsPassed": 9,
+  "uiTestsPerProfile": 5,
+  "uiProfiles": [
+    "pura-main",
+    "pura-cover",
+    "matepad-landscape"
+  ],
+  "microsoftAuthority": "consumers",
+  "realMailboxAccessAutomated": false,
+  "installedDevices": [
+    "Pura X VDE-AL00",
+    "MatePad MRO-W00"
+  ],
+  "productionAppLaunched": false
+}

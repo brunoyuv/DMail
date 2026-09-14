@@ -1,0 +1,16 @@
+{
+  "verified": "2026-09-13",
+  "emulator": "HarmonyOS 6.0.2 x86_64",
+  "target": "x86_64-unknown-linux-ohos",
+  "upstreamRevision": "61c78d9ebe39ac5b61f31fce371bdfe8c001f7bf",
+  "sourcePatches": [],
+  "sourceFiles": {
+    "EmailAddress.swift": "72dd0173ee8633b8bffd5a08f13add33d231bca210f788ee7a9d175b4579dfb7",
+    "String.swift": "91d6ec45460ff875726c5f978b089fe230c860d6930d89b43a0a1e11a1538187"
+  },
+  "successMarker": "THUNDERBIRD_NATIVE_EMAIL_ADDRESS_OK",
+  "verificationCommand": "./scripts/test-native-email device",
+  "hapIntegration": false,
+  "armDeviceVerified": false,
+  "foundationNetworkingBuilt": false
+}

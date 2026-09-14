@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+source "$ROOT/scripts/swift-target-env"
+./scripts/prepare-swift-probe
+./scripts/prepare-mime "$ROOT/.tools/swift-probe/native-mime-source"
+NATIVE="$ROOT/.tools/command-line-tools/sdk/default/openharmony/native"
+SDK="$SWIFT_TARGET_SDK"
+OUT="$ROOT/.tools/swift-probe/native-mime${SWIFT_BUILD_SUFFIX}"
+mkdir -p "$OUT"
+mapfile -d '' SOURCES < <(find "$ROOT/.tools/swift-probe/native-mime-source/Sources/MIME" -name '*.swift' -print0 | sort -z)
+.tools/swift/usr/bin/swiftc -target ${SWIFT_TARGET} -sdk "$NATIVE/sysroot" \
+  -resource-dir "$SDK/lib/swift" -I "$SDK/lib/swift/ohos" \
+  -I "$SDK/lib/swift/musl/SwiftMusl" -I "$SDK/lib/swift/musl/${SWIFT_CPU}" \
+  -module-cache-path "$OUT/cache" -parse-as-library -O \
+  -module-name MIME -module-link-name ThunderbirdCore -emit-object -emit-module \
+  -emit-module-path "$OUT/MIME.swiftmodule" -whole-module-optimization \
+  "${SOURCES[@]}" -o "$OUT/MIME.o"

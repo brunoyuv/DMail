@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+case "${1:-build}" in
+  build) ./scripts/prepare-native-app ;;
+  --prepared-core) [[ -f harmony/entry/libs/x86_64/libThunderbirdCore.so ]] ;;
+  *) echo 'Usage: scripts/build-network-test-app [--prepared-core]' >&2; exit 2 ;;
+esac
+./scripts/prepare-network-test-app
+NATIVE="$ROOT/.tools/command-line-tools/sdk/default/openharmony/native"
+SDK="$ROOT/.tools/swift-ohos-sdk"
+OUT="$ROOT/.tools/network-test-app/entry/libs/x86_64"
+mkdir -p "$OUT"
+.tools/swift/usr/bin/swiftc -target x86_64-unknown-linux-ohos -sdk "$NATIVE/sysroot" \
+  -resource-dir "$SDK/lib/swift" -I "$SDK/lib/swift/ohos" -I "$SDK/lib/swift/musl/SwiftMusl" \
+  -I "$SDK/lib/swift/musl/x86_64" -module-cache-path "$ROOT/.tools/swift-probe/network-test-cache" \
+  -I "$ROOT/.tools/swift-probe/native-jmap" -I "$ROOT/.tools/swift-probe/native-email" -I "$ROOT/port/swift-platform" \
+  -parse-as-library -swift-version 6 -O -whole-module-optimization -module-name NetworkProbe -emit-object \
+  port/network-tests/NetworkProbe.swift port/swift-jmap/JmapProbe.swift \
+  -o "$ROOT/.tools/swift-probe/network-probe.o"
+"$NATIVE/llvm/bin/clang" -target x86_64-linux-ohos --sysroot="$NATIVE/sysroot" \
+  -shared .tools/swift-probe/network-probe.o "$SDK/lib/swift/musl/x86_64/swiftrt.o" \
+  -L "$SDK/lib/swift/musl" -L "$SDK/lib/swift/musl/x86_64" -L "$SDK/lib/swift/ohos" -L "$SDK/lib" \
+  -L "$ROOT/harmony/entry/libs/x86_64" -lThunderbirdCore \
+  -lFoundationNetworking -lFoundation -lFoundationEssentials -lFoundationInternationalization -l_FoundationICU \
+  -lswiftCore -lswift_Concurrency -lswiftMusl -lswiftSynchronization -lswift_StringProcessing -lswift_RegexParser \
+  -lswiftDispatch -ldispatch -lBlocksRuntime -lfts -lxml2 -Wl,--no-undefined \
+  -Wl,-soname,libNetworkProbe.so -Wl,-rpath,'$ORIGIN' -o "$OUT/libNetworkProbe.so"
+for file in "$ROOT"/harmony/entry/libs/x86_64/lib*; do
+  cp "$file" "$OUT/"
+done
+cp "$SDK/lib/swift/musl/libFoundation.so" "$SDK/lib/swift/musl/libFoundationNetworking.so" "$SDK/lib/libssl.so.3" \
+  "$SDK/lib/libcrypto.so.3" "$SDK/lib/libcurl.so.4" "$OUT/"
+rm -f "$OUT/libThunderbirdJMAP.so" # Replaced by the combined core; avoid duplicate EmailAddress metadata.
+source "$ROOT/scripts/harmony-build-env"
+cd "$ROOT/.tools/network-test-app"
+"$THUNDERBIRD_BUILD_TOOLS/ohpm/bin/ohpm" install --all
+"$THUNDERBIRD_BUILD_TOOLS/bin/hvigorw" assembleHap --mode module -p product=default -p module=entry@default --no-daemon
+"$THUNDERBIRD_BUILD_TOOLS/bin/hvigorw" assembleHap --mode module -p product=default -p module=entry@ohosTest --no-daemon
