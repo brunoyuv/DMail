@@ -19,3 +19,4 @@ node .tools/test/node_modules/typescript/bin/tsc \
   harmony/entry/src/ohosTest/ets/support/PrototypeJmapClient.ts \
   --strict --target ES2021 --module commonjs --rootDir harmony/entry/src --outDir .tools/prototype-test-output
 for suite in tests/*.test.cjs; do node "$suite"; done
+for suite in tests/*.test.py; do python3 "$suite"; done

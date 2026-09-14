@@ -12,6 +12,7 @@ SDK="$SWIFT_TARGET_SDK"
 OUT="$ROOT/.tools/swift-probe/native-email${SWIFT_BUILD_SUFFIX}"
 APP_PROJECT="$ROOT/harmony"
 if [[ "$SWIFT_CPU" == aarch64 ]]; then APP_PROJECT="$ROOT/.tools/device-app"; fi
+if [[ "${DMAIL_PUBLIC_RELEASE:-0}" == 1 ]]; then APP_PROJECT="$ROOT/.tools/release-app${SWIFT_BUILD_SUFFIX}"; fi
 DEST="$APP_PROJECT/entry/libs/$HARMONY_CPU"
 mkdir -p "$DEST"
 .tools/swift/usr/bin/swiftc -target ${SWIFT_TARGET} -sdk "$NATIVE/sysroot" \

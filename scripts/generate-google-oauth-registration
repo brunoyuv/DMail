@@ -10,7 +10,10 @@ source = root/'.tools/oauth/google-desktop.json'
 output = Path(args.output).resolve()
 assert output.is_relative_to(root/'.tools'), 'Generated credentials must stay in ignored .tools'
 text = 'enum LocalGoogleOAuth { static let registration: GoogleDesktopRegistration? = nil }\n'
-if source.exists():
+# Public release packages must not inherit a developer's local registration.
+# Do not even read the private file in this mode. Ordinary device builds retain
+# their existing refresh compatibility and explicit local configuration.
+if os.environ.get('DMAIL_PUBLIC_RELEASE') != '1' and source.exists():
     config = json.loads(source.read_text()).get('installed', {})
     expected = '883149639454-r1c1m28d0tatqkcn2b55qes9aossu5p6.apps.googleusercontent.com'
     assert config.get('client_id') == expected, 'Expected the registered Google Desktop client, not the TV client'

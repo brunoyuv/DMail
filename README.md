@@ -64,6 +64,15 @@ Changing the client ID also changes the binding for saved OAuth accounts; use
 your own registration from the start of a fresh setup. Details and historical
 validation are in [the OAuth notes](docs/browser-oauth.md).
 
+## Release package
+
+The repository is [brunoyuv/DMail](https://github.com/brunoyuv/DMail).
+With the native toolchain prepared and source changes committed, run
+`./scripts/build-release` to create a local ARM64 release-mode package under
+`dist/`. It includes an unsigned HAP, checksums, matching source and license
+notices. Device installation requires signing. See
+[release-package instructions](docs/release-packages.md).
+
 ## Development
 
 Host tests require Node.js 22, npm and Python 3 (including SQLite support):

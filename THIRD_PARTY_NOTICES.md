@@ -62,3 +62,21 @@ are pinned in `port/mail-corpus/manifest.json`; the license is retained in
 are served only by the local test fixture. They are not shipped in the app.
 The wide newsletter and 2.38 MiB PDF message are deterministic synthetic cases
 created in this repository.
+
+## Release-package runtime notices
+
+Release bundles include these notices both alongside the HAP and in its raw
+resources. Swift runtime terms are retained in `port/swift-runtime/LICENSE.txt`;
+libdispatch terms are in `licenses/swift-dispatch.txt`; Foundation ICU wrapper
+terms are in `licenses/swift-foundation-icu.txt`; Swift string-processing terms
+are in `licenses/swift-string-processing.txt`. These texts are copied verbatim
+from the pinned local dependency source checkouts. ICU 74.1's accompanying Unicode and third-party notices are in
+`licenses/icu-74.1.txt`, copied from the matching
+[ICU release](https://raw.githubusercontent.com/unicode-org/icu/release-74-1/LICENSE)
+(SHA-256 `17510cf7a58b4879b887ec05a45d72cf1b73544dd9ec7e72f20110ed104229ee`).
+
+The bundled native `libc++_shared.so` comes from the pinned Huawei API 22 native
+SDK. Its LLVM runtime notices, including libc++, are retained verbatim in
+`licenses/openharmony-llvm-NOTICE.txt`. SDK build tools themselves are not
+redistributed. The project source remains MPL-2.0; each runtime component retains
+its own license terms.

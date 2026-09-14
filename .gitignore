@@ -1,4 +1,5 @@
 .tools/
+dist/
 upstream/
 **/node_modules/
 **/oh_modules/

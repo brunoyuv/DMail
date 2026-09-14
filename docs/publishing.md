@@ -1,7 +1,8 @@
 # Publishing D-Mail
 
-The intended GitHub repository name is **D-Mail**. This preparation creates a
-local source commit; it does not create a GitHub repository or push code.
+The repository is [brunoyuv/DMail](https://github.com/brunoyuv/DMail); the app
+display name is **D-Mail**. Local release packages are built with
+`scripts/build-release`; see [release packages](release-packages.md).
 
 ## Name and compatibility
 
@@ -55,20 +56,13 @@ Physical MatePad test runners require both `HDC_TARGET` and
 They also check the model/architecture. Prefer the bounded emulator runners for
 UI work. These variables do not authorize testing against real mail.
 
-## First push
+## Repository remote
 
-1. Run `./scripts/test` and inspect `git status` and the commit contents.
-2. Create an empty repository named `D-Mail` under the intended GitHub owner,
-   choosing its visibility explicitly. Do not initialize another README/license.
-3. Add its verified URL as `origin`, then push `main`:
-
-   ```sh
-   git remote add origin git@github.com:YOUR_OWNER/D-Mail.git
-   git push -u origin main
-   ```
-
-4. Check the first **Host tests** Actions run. It validates synthetic host tests;
-   it does not build a HAP or run native/device tests.
+The configured `origin` is `https://github.com/brunoyuv/DMail.git`, and `main`
+tracks `origin/main`. Run `git remote -v` and inspect the pending commits before
+an explicitly requested push. Local package creation does not push commits,
+upload artifacts or create a GitHub release. The **Host tests** workflow validates
+synthetic host tests; it does not build HAPs or run device tests.
 
 Suggested repository description: “AI-assisted HarmonyOS mail port/rework with
 ArkUI and the original Thunderbird Swift mail core.”
