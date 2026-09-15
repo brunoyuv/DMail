@@ -1,0 +1,176 @@
+--- a/Sources/MIME/Body.swift
++++ b/Sources/MIME/Body.swift
+@@ -38,14 +38,11 @@
+ 
+     /// Read headers and decode body from raw ASCII data.
+     public init(_ description: Data) throws {
+-        guard let description: String = String(data: description, encoding: .ascii) else {
+-            throw MIMEError.dataNotDecoded(description, encoding: .ascii)
+-        }
+-        try self.init(description)
++        try self.init(part: Part(description))
+     }
+ 
+     // MARK: CustomStringConvertible
+-    public var description: String { String(data: rawValue, encoding: .ascii)! }
++    public var description: String { String(decoding: rawValue, as: UTF8.self) }
+ 
+     // MARK: RawRepresentable
+     public var rawValue: Data {
+--- a/Sources/MIME/Part.swift
++++ b/Sources/MIME/Part.swift
+@@ -14,7 +14,9 @@
+     public let contentDisposition: ContentDisposition?
+     public let contentTransferEncoding: ContentTransferEncoding?
+     public let contentID: ContentID?
++    public let contentLocation: String?
+     public let contentType: ContentType
++    public let contentTypeParameters: [String: String]
+ 
+     /// The actual part content, encoded as an ASCII string using the transfer encoding specified in the part header; typically base64 or quoted-printable
+     public let data: Data
+@@ -27,7 +29,17 @@
+         if let contentTransferEncoding {
+             headers.append(try! Header(.contentTransferEncoding, "\(contentTransferEncoding)"))
+         }
+-        headers.append(try! Header(.contentType, "\(contentType)"))
++        var type = contentType.description
++        for key in contentTypeParameters.keys.sorted() where !["boundary", "charset"].contains(key) {
++            guard let value = contentTypeParameters[key],
++                  key.utf8.allSatisfy({ $0 > 32 && $0 < 127 && $0 != 34 && $0 != 59 }),
++                  value.utf8.allSatisfy({ $0 >= 32 && $0 < 127 }) else { continue }
++            let escaped = value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
++            type += "; \(key)=\"\(escaped)\""
++        }
++        headers.append(try! Header(.contentType, type))
++        if let contentID, let header = try? Header(.contentID, contentID.description) { headers.append(header) }
++        if let contentLocation, let header = try? Header(.contentLocation, contentLocation) { headers.append(header) }
+         return headers
+     }
+ 
+@@ -36,18 +48,18 @@
+         get throws {
+             switch contentType {
+             case .multipart(_, let boundary):
+-                guard
+-                    let parts: [String] = String(data: data, encoding: .ascii)?
+-                        .components(separatedBy: "--\(boundary)")
+-                        .dropFirst().dropLast(),
+-                    !parts.isEmpty
+-                else {
+-                    throw MIMEError.dataNotDecoded(data, encoding: .ascii)
+-                }
+-                return try parts.map { try Self($0.trimmed()) }
++                return try splitMultipart(data, boundary: boundary.description).map { try Self($0) }
+             default:
+                 throw MIMEError.contentTypeNotMultipart
+             }
++        }
++    }
++
++    /// Preserve readable siblings when one child part has invalid MIME headers.
++    public var decodedParts: [Result<Self, any Error>] {
++        get throws {
++            guard case .multipart(_, let boundary) = contentType else { throw MIMEError.contentTypeNotMultipart }
++            return try splitMultipart(data, boundary: boundary.description).map { bytes in Result { try Self(bytes) } }
+         }
+     }
+ 
+@@ -64,56 +76,15 @@
+ 
+     /// Read headers and decode body part from raw ASCII blob.
+     public init(_ description: String) throws {
+-        let description: String =
+-            description
+-            .replacingOccurrences(of: crlf, with: "\n")
+-            .replacingOccurrences(of: "\n b", with: " b")  // Handle soft wrap caused by long data boundary
+-            .replacingOccurrences(of: "\n <", with: " <")  // Handle soft wrap caused by long email address label
+-            .replacingOccurrences(of: "\n\t", with: "")
+-        let components: [String] = description.components(separatedBy: "\n")
+-        guard let index: Int = components.firstIndex(of: "") else {
+-            throw MIMEError.dataNotFound
+-        }
+-        var contentDisposition: ContentDisposition?
+-        var contentTransferEncoding: ContentTransferEncoding?
+-        var contentType: ContentType?
+-        var contentID: ContentID?
+-        for component in components[0..<index] {
+-            let header: [String] = component.components(separatedBy: ": ").map { $0.trimmed() }
+-            guard header.count == 2 else { continue }
+-            switch header[0].lowercased() {  // MIME headers are case-sensitive, but no harm in fuzzy matching
+-            case "content-disposition":
+-                contentDisposition = ContentDisposition(rawValue: header[1])
+-            case "content-transfer-encoding":
+-                contentTransferEncoding = ContentTransferEncoding(rawValue: header[1])
+-            case "content-type":
+-                contentType = ContentType(rawValue: header[1])
+-            case "content-id":
+-                contentID = ContentID(header[1])
+-            default:
+-                continue
+-            }
+-        }
+-        guard let data: Data = components.dropFirst(index).joined(separator: "\n").trimmed().data(using: .ascii),
+-            let contentType
+-        else {
+-            throw MIMEError.dataNotDecoded(description.data(using: .ascii) ?? Data(), encoding: .ascii)
+-        }
+-        self.init(
+-            data: data,
+-            contentDisposition: contentDisposition,
+-            contentTransferEncoding: contentTransferEncoding,
+-            contentID: contentID,
+-            contentType: contentType
+-        )
++        try self.init(Data(description.utf8))
+     }
+ 
+-    /// Read headers and decode body from raw ASCII data.
++    /// Preserve transport bytes until the part's declared charset is decoded.
+     public init(_ description: Data) throws {
+-        guard let description: String = String(data: description, encoding: .ascii) else {
+-            throw MIMEError.dataNotDecoded(description, encoding: .ascii)
+-        }
+-        try self.init(description)
++        let parsed = try parsePart(description)
++        self.init(data: parsed.data, contentDisposition: parsed.disposition,
++                  contentTransferEncoding: parsed.transfer, contentID: parsed.id, contentType: parsed.type, contentLocation: parsed.location,
++                  contentTypeParameters: parsed.parameters)
+     }
+ 
+     public init(
+@@ -121,17 +92,21 @@
+         contentDisposition: ContentDisposition? = nil,
+         contentTransferEncoding: ContentTransferEncoding? = nil,
+         contentID: ContentID? = nil,
+-        contentType: ContentType
++        contentType: ContentType,
++        contentLocation: String? = nil,
++        contentTypeParameters: [String: String] = [:]
+     ) {
+         self.contentDisposition = contentDisposition
+         self.contentTransferEncoding = contentTransferEncoding
+         self.contentID = contentID
++        self.contentLocation = contentLocation
+         self.contentType = contentType
++        self.contentTypeParameters = contentTypeParameters
+         self.data = data
+     }
+ 
+     // MARK: CustomStringConvertible
+-    public var description: String { String(data: rawValue, encoding: .ascii)! }
++    public var description: String { String(decoding: rawValue, as: UTF8.self) }
+ 
+     // MARK: RawRepresentable
+     public var rawValue: Data {
+--- a/Sources/MIME/Header.swift
++++ b/Sources/MIME/Header.swift
+@@ -11,6 +11,8 @@
+         case contentDisposition = "Content-Disposition"
+         case contentTransferEncoding = "Content-Transfer-Encoding"
+         case contentType = "Content-Type"
++        case contentID = "Content-ID"
++        case contentLocation = "Content-Location"
+         case mimeVersion = "MIME-Version"
+ 
+         // MARK: CustomStringConvertible

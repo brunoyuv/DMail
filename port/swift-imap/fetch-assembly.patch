@@ -1,0 +1,29 @@
+--- a/Sources/IMAP/FetchCommand.swift
++++ b/Sources/IMAP/FetchCommand.swift
+@@ -88,7 +88,25 @@
+                 }
+                 streaming = nil
+             case .finish:
+-                messages[sequenceNumber!] = Message(components)
++                guard let number = sequenceNumber else {
++                    promise.fail(IMAPError.unexpectedResponse("Missing FETCH sequence"))
++                    context.close(promise: nil)
++                    return
++                }
++                let incomingUIDs = Set(components.compactMap { component -> UID? in
++                    if case .uid(let uid) = component { return uid }; return nil
++                })
++                let previous = messages[number]
++                // A server may split requested attributes across FETCH records
++                // or append an unsolicited FLAGS-only record. Merge only the
++                // same sequence/UID; never attach one UID's bytes to another.
++                guard incomingUIDs.count <= 1,
++                      previous?.uid == nil || incomingUIDs.isEmpty || incomingUIDs.first == previous?.uid else {
++                    promise.fail(IMAPError.unexpectedResponse("Conflicting FETCH UID"))
++                    context.close(promise: nil)
++                    return
++                }
++                messages[number] = (previous ?? Message()).merging(components)
+                 sequenceNumber = nil
+                 components = []
+             default:

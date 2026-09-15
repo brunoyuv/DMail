@@ -1,0 +1,22 @@
+#!/usr/bin/env python3
+"""Stage verified Thunderbird SMTP sources and the recorded HarmonyOS patch."""
+from pathlib import Path
+import hashlib,json,shutil,subprocess,sys
+root=Path(__file__).resolve().parent.parent
+package=Path(sys.argv[1]);dest=package/'Sources/SMTP';dest.mkdir(parents=True,exist_ok=True)
+manifest=json.loads((root/'port/swift-smtp/upstream-files.json').read_text())
+for name,expected in manifest['files'].items():
+    source=root/'upstream/thunderbird-ios'/name
+    assert hashlib.sha256(source.read_bytes()).hexdigest()==expected,name
+    shutil.copy2(source,dest/source.name)
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)],input=(root/'port/swift-smtp/harmonyos.patch').read_text(),text=True,check=True)
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)],input=(root/'port/swift-smtp/oauth.patch').read_text(),text=True,check=True)
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)],input=(root/'port/swift-smtp/sent-copy.patch').read_text(),text=True,check=True)
+shutil.copy2(root/'port/swift-smtp/MessageData.swift',dest/'MessageData.swift')
+shutil.copy2(root/'port/swift-smtp/XOAuth2.swift',dest/'XOAuth2.swift')
+shutil.copy2(root/'port/swift-smtp/MessageSafety.swift',dest/'MessageSafety.swift')
+shutil.copy2(root/'port/swift-smtp/ComposeBody.swift',dest/'ComposeBody.swift')
+vendor=root/'port/swift-smtp/vendor'
+assert hashlib.sha256((vendor/'LineBasedFrameDecoder.swift').read_bytes()).hexdigest()==json.loads((vendor/'source.json').read_text())['compiledSha256']
+shutil.copy2(root/'port/swift-smtp/vendor/LineBasedFrameDecoder.swift',dest/'LineBasedFrameDecoder.swift')
+shutil.copy2(root/'port/swift-smtp/TlsHandler.swift',dest/'TlsHandler.swift')

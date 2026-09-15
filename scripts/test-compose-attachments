@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+# Synthetic cached attachment metadata only; no system picker, viewer or Send.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+[[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 && "${HDC_TARGET:-}" == 127.0.0.1:5555 ]]
+case "${DMAIL_ATTACHMENTS_SCREEN:-}" in pura-main|matepad-landscape) ;; *) exit 2;; esac
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app"
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == x86_64 ]]
+for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+  [[ -f "$APP/entry/build/default/outputs/$hap" ]] || { echo 'Build both isolated attachment HAPs first.' >&2; exit 1; }
+done
+OUT="$ROOT/.tools/emulator-attachments-$DMAIL_ATTACHMENTS_SCREEN"
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  find "$OUT" -maxdepth 1 -type f -exec mv -t "$PREVIOUS" {} +
+fi
+INSTALLED=false
+cleanup() {
+  local result=$?
+  trap - EXIT
+  if "$INSTALLED"; then
+    for shot in received composer-before composer-after composer-reopened account-menu failure; do
+      run_hdc -t "$HDC_TARGET" file recv "/data/local/tmp/attachments-$shot.png" "$OUT/$shot.png" >/dev/null 2>&1 || true
+    done
+    run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+for shot in received composer-before composer-after composer-reopened account-menu failure; do
+  run_hdc -t "$HDC_TARGET" shell rm -f "/data/local/tmp/attachments-$shot.png"
+done
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+INSTALLED=true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+timeout --foreground --kill-after=5s 75s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/ComposeAttachmentsRunner \
+  -s timeout 70000 | tee "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"
+grep -q 'ATTACHMENTS_RESULT: received PDF card and save control; Unicode draft filenames and sizes; removal persisted across reopen; zero mail service calls, picker, viewer or send' "$OUT/test.log"
+if [[ "$DMAIL_ATTACHMENTS_SCREEN" == matepad-landscape ]]; then
+  grep -q 'ATTACHMENTS_STAGE: tablet split reader preserved' "$OUT/test.log"
+fi
+python3 - "$OUT" "$DMAIL_ATTACHMENTS_SCREEN" <<'PY'
+from pathlib import Path
+import json, sys
+out = Path(sys.argv[1])
+(out / 'result.json').write_text(json.dumps({'tests': 1, 'passed': 1, 'screen': sys.argv[2],
+    'scope': 'Production UI with synthetic cached received PDF metadata and two saved outgoing metadata references. Verifies received card/save control, Unicode names and sizes, draft removal persisted across reopen, and split reader on tablet.',
+    'limits': 'No file picker, attachment viewer, network download, SMTP submission, or real mail. Actual byte import and deletion are covered separately by host file tests.',
+    'screenshots': ['received.png', 'composer-before.png', 'composer-after.png', 'composer-reopened.png']}, indent=2) + '\n')
+print('PASS: native attachment rows and persisted draft removal.')
+PY

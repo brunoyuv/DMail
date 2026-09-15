@@ -1,0 +1,133 @@
+#!/usr/bin/env bash
+# Synthetic mail checks on an authorized device or a bounded emulator session.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+: "${HDC_TARGET:?Set HDC_TARGET to the authorized device serial}"
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app-aarch64"
+PRODUCTION="$ROOT/.tools/device-app"
+ABI=arm64-v8a; CPU=aarch64; SIGNATURE=signed; PREFIX=matepad
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 ]]; then
+  APP="$ROOT/.tools/imap-test-app"; PRODUCTION="$ROOT/harmony"
+  ABI=x86_64; CPU=x86_64; SIGNATURE=unsigned; PREFIX=emulator
+fi
+NODE="$ROOT/.tools/runtime/node_modules/node/bin/node"
+MODE="${1:-all}"
+[[ "$MODE" == all || "$MODE" == ui ]]
+[[ "$($HDC -t "$HDC_TARGET" shell uname -m | tr -d '\r\n')" == "$CPU" ]]
+python3 - "$PRODUCTION" "$APP" "$ABI" "$SIGNATURE" <<'PY'
+from pathlib import Path
+import sys, zipfile
+production, test, abi, signature = sys.argv[1:]
+with zipfile.ZipFile(Path(test)/f'entry/build/default/outputs/default/entry-default-{signature}.hap') as app:
+    core = app.read(f'libs/{abi}/libThunderbirdCore.so')
+    assert core == (Path(production)/f'entry/libs/{abi}/libThunderbirdCore.so').read_bytes()
+    if signature == 'signed':
+        with zipfile.ZipFile(Path(production)/'entry/build/default/outputs/default/entry-default-signed.hap') as shipping:
+            assert core == shipping.read(f'libs/{abi}/libThunderbirdCore.so')
+PY
+if "$HDC" fport ls | grep -Eq 'tcp:(9661|976[1-5]|977[0-2]) '; then echo 'Fixture ports are in use.' >&2; exit 1; fi
+SMTP_PID=''; IMAP_PID=''; FORWARDS=(); INSTALLED=false; UITEST_PREVIOUS=''
+cleanup() {
+  local result=$?
+  trap - EXIT
+  curl --fail --silent http://127.0.0.1:9770/stats > .tools/${PREFIX}-mail-features-stats.json || true
+  curl --fail --silent http://127.0.0.1:9760/stats > .tools/${PREFIX}-imap-fixture-stats.json || true
+  "$HDC" -t "$HDC_TARGET" shell hilog -x > .tools/${PREFIX}-mail-ui-hilog.log 2>&1 || true
+  "$HDC" -t "$HDC_TARGET" shell hilog -x -T Thunderbird > .tools/${PREFIX}-mail-features-hilog.log 2>&1 || true
+  "$HDC" -t "$HDC_TARGET" shell hilog -x -t app -e TB_HTML > .tools/${PREFIX}-html-debug.log 2>&1 || true
+  for kind in inbox html compose reply forward reader-scrolled language-zh language-en swipe; do
+    "$HDC" -t "$HDC_TARGET" file recv "/data/local/tmp/thunderbird-$kind-tablet.png" "$ROOT/.tools/${PREFIX}-$kind.png" >/dev/null 2>&1 || true
+  done
+  if [[ -n "$UITEST_PREVIOUS" ]]; then "$HDC" -t "$HDC_TARGET" shell param set persist.ace.testmode.enabled "$UITEST_PREVIOUS" >/dev/null 2>&1 || true; fi
+  if "$INSTALLED"; then "$HDC" -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true; fi
+  for port in "${FORWARDS[@]}"; do "$HDC" -t "$HDC_TARGET" fport rm "tcp:$port" "tcp:$port" >/dev/null 2>&1 || true; done
+  for pid in "$SMTP_PID" "$IMAP_PID"; do if [[ -n "$pid" ]]; then kill "$pid" 2>/dev/null || true; wait "$pid" 2>/dev/null || true; fi; done
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 ]]; then
+  [[ "$MODE" == ui ]] || { echo 'Emulator checks are limited to UI.' >&2; exit 1; }
+  UITEST_PREVIOUS="$("$HDC" -t "$HDC_TARGET" shell param get persist.ace.testmode.enabled | tr -d '\r\n')"
+  [[ "$UITEST_PREVIOUS" == 1 ]] || UITEST_PREVIOUS=0
+  "$HDC" -t "$HDC_TARGET" shell param set persist.ace.testmode.enabled 0
+fi
+"$NODE" port/swift-smtp/fixture.cjs .tools/imap-test-certs > .tools/smtp-fixture.log 2>&1 & SMTP_PID=$!
+"$NODE" port/swift-imap/fixture.cjs .tools/imap-test-certs > .tools/mail-features-imap-fixture.log 2>&1 & IMAP_PID=$!
+for url in http://127.0.0.1:9770/health http://127.0.0.1:9760/health; do
+  READY=false
+  for ((i=0;i<30;i++)); do if curl --fail --silent "$url" >/dev/null; then READY=true; break; fi; sleep 0.1; done
+  "$READY"
+done
+for port in 9661 9761 9770 9771 9772; do
+  "$HDC" -t "$HDC_TARGET" rport "tcp:$port" "tcp:$port" | grep -q 'Forwardport result:OK'; FORWARDS+=("$port")
+done
+# Remove stale test modules after an interrupted run; never touch the real app.
+"$HDC" -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+"$HDC" -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-${SIGNATURE}.hap"
+INSTALLED=true
+"$HDC" -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-${SIGNATURE}.hap"
+"$HDC" -t "$HDC_TARGET" shell rm -f /data/local/tmp/thunderbird-html-tablet.png /data/local/tmp/thunderbird-compose-tablet.png /data/local/tmp/thunderbird-reply-tablet.png /data/local/tmp/thunderbird-inbox-tablet.png /data/local/tmp/thunderbird-forward-tablet.png /data/local/tmp/thunderbird-reader-scrolled-tablet.png
+if [[ "$MODE" == all ]]; then RUNNER=CombinedMailRunner; EXPECTED=19; else RUNNER=MailFeaturesRunner; EXPECTED=1; fi
+timeout --foreground --kill-after=10s 150s "$HDC" -t "$HDC_TARGET" shell aa test -b org.thunderbird.harmony.imaptest -m entry_test \
+  -s unittest /ets/testrunner/"$RUNNER" -s timeout 120000 | tee .tools/${PREFIX}-mail-ui-tests.log
+grep -q "Tests run: $EXPECTED, Failure: 0, Error: 0, Pass: $EXPECTED, Ignore: 0" .tools/${PREFIX}-mail-ui-tests.log
+curl --fail --silent http://127.0.0.1:9770/stats > .tools/${PREFIX}-mail-features-stats.json
+curl --fail --silent http://127.0.0.1:9760/stats > .tools/${PREFIX}-imap-fixture-stats.json
+"$NODE" - "$MODE" "$PREFIX" <<'JS'
+const assert = require('node:assert/strict');
+const stats = JSON.parse(require('node:fs').readFileSync(`.tools/${process.argv[3]}-mail-features-stats.json`));
+assert.deepEqual(stats.violations, []); assert.deepEqual(stats.nativeReader.violations, []); assert.equal(stats.remoteLoads, 0); assert.ok(stats.imageLoads > 0);
+assert.ok(stats.sessions.every(s => s.closed));
+const imap = JSON.parse(require('node:fs').readFileSync(`.tools/${process.argv[3]}-imap-fixture-stats.json`));
+assert.deepEqual(imap.violations, []);
+assert.ok(imap.sessions.every(s => !s.violation));
+const htmlFetches = imap.sessions.filter(s => s.mode === 'html').flatMap(s => s.accountFetches || []);
+assert.ok(htmlFetches.some(f => f.sections?.includes('1.2')));
+assert.ok(htmlFetches.every(f => !f.full && !f.sections?.includes('3')));
+
+const ui = stats.sessions.filter(s => s.mode === 'ui');
+assert.equal(ui.length, 3); assert.ok(ui.every(s => s.messages.length === 1));
+assert.equal(stats.uiHoldsStarted, 3); assert.equal(stats.uiHoldsReleased, 3); assert.equal(stats.uiHoldTimeouts, 0);
+assert.equal(stats.uiResponsiveVerified, 3);
+assert.ok(ui.every(s => s.acceptanceHeld && s.acceptanceReleased && !s.acceptancePending));
+const reply = ui[1];
+assert.deepEqual(reply.recipients, ['RCPT TO:<support@example.test>', 'RCPT TO:<reader@example.test>', 'RCPT TO:<copy@example.test>']);
+assert.ok(reply.messages[0].includes('In-Reply-To: <92@example.test>\r\n'));
+assert.ok(reply.messages[0].includes('References: <root@example.test>\r\n <older@example.test>\r\n <92@example.test>\r\n'));
+assert.ok(!reply.messages[0].includes('comment@example.test'));
+const forward = ui[2];
+assert.deepEqual(forward.recipients, ['RCPT TO:<forward@example.test>']);
+assert.ok(!forward.messages[0].includes('In-Reply-To:'));
+assert.ok(!forward.messages[0].includes('References:'));
+assert.ok(forward.messages[0].includes('Content-Type: text/html;'));
+const html = Buffer.from(forward.messages[0].split('\r\n\r\n')[1], 'base64').toString('utf8');
+assert.ok(html.includes('Forward note &lt;safe&gt; 日本語'));
+assert.ok(html.includes('<strong>bold</strong>'));
+assert.ok(html.includes('Forwarded message'));
+
+if (process.argv[2] === 'all') {
+  for (const mode of ['success', 'starttls', 'quit-drop', 'concurrent']) {
+    const sessions = stats.sessions.filter(s => s.mode === mode);
+    assert.equal(sessions.length, 1); const session = sessions[0];
+    assert.equal(session.recipients.length, 3); assert.equal(session.messages.length, 1);
+    const wire = session.messages[0];
+    assert.ok(wire.includes('Cc: copy@example.test')); assert.ok(!wire.includes('hidden@example.test'));
+    const words = wire.match(/=\?UTF-8\?B\?[^?]+\?=/g) || [];
+    assert.ok(words.every(word => word.length <= 75));
+    assert.equal(words.map(word => Buffer.from(word.slice(10, -2), 'base64').toString()).join(''), mode === 'success' ? 'Hello 鸿蒙 📬'.repeat(12) : 'Hello 鸿蒙 📬');
+    assert.ok(wire.includes('Message-ID: ')); assert.ok(wire.includes('=?UTF-8?B?'));
+    const [headers, ...body] = wire.split('\r\n\r\n');
+    assert.ok(headers.includes('Content-Transfer-Encoding: base64'));
+    assert.equal(Buffer.from(body.join('\r\n\r\n'), 'base64').toString(), 'First line\r\n.\r\n..dot\r\nLast 鸿蒙 📬');
+  }
+  for (const mode of ['recipient-reject', 'auth-reject']) {
+    assert.equal(stats.sessions.filter(s => s.mode === mode).length, 1);
+    assert.equal(stats.sessions.find(s => s.mode === mode).messages.length, 0);
+  }
+  assert.ok(!stats.sessions.some(s => ['invalid','untrusted'].includes(s.mode)));
+}
+console.log(process.argv[2] === 'all' ? 'PASS: SMTP wire contents, Bcc privacy, single delivery, reader regressions, cleanup and only explicitly loaded HTML pictures.' : 'PASS: composer submission, cleanup and only explicitly loaded HTML pictures.');
+JS

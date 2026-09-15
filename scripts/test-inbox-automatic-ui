@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# One compact automatic-inbox UI gate, restricted to the isolated emulator app.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+[[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 && "${HDC_TARGET:-}" == 127.0.0.1:5555 ]]
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app"
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == x86_64 ]]
+for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+  [[ -f "$APP/entry/build/default/outputs/$hap" ]] || { echo 'Build both isolated automatic-inbox test HAPs first.' >&2; exit 1; }
+done
+OUT="$ROOT/.tools/emulator-inbox-automatic-ui"
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  find "$OUT" -maxdepth 1 -type f -exec mv -t "$PREVIOUS" {} +
+fi
+INSTALLED=false
+cleanup() {
+  local result=$?
+  trap - EXIT
+  # Remove only the isolated synthetic bundle, including interrupted fixture state.
+  if "$INSTALLED"; then run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true; fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+INSTALLED=true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+timeout --foreground --kill-after=5s 50s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/InboxAutomaticUIRunner \
+  -s timeout 45000 | tee "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"
+grep -q 'INBOX_AUTOMATIC_UI_RESULT: automatic rows, event coalescing, account guard and selected cached reader passed; two Inbox pages only, no bodies, mailboxes or Sent requests, alerts remain off' "$OUT/test.log"
+python3 - "$OUT" <<'PY'
+from pathlib import Path
+import json,sys
+out=Path(sys.argv[1])
+(out/'result.json').write_text(json.dumps({'tests':1,'passed':1,
+    'scope':'Synthetic main-HAP automatic Inbox rows without pull; same-turn events coalesce; foreign account ignored; selected reader and cached body retention preserved; exactly two Inbox page requests, zero body/mailboxes/Sent requests, notifications off'},indent=2)+'\n')
+print('PASS: automatic inbox events refresh native rows and preserve the cached reader.')
+PY

@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT/scripts/swift-target-env"
+cd "$ROOT"
+NATIVE="$ROOT/.tools/command-line-tools/sdk/default/openharmony/native"
+SDK="$SWIFT_TARGET_SDK"
+CMAKE="$ROOT/.tools/swift-build-tools/bin/cmake"
+# Give the overlay and its consumers one canonical installed C module map.
+python3 - <<'PY'
+from pathlib import Path
+import shutil, os
+sdk = Path(os.environ['SWIFT_TARGET_SDK'])
+for folder in ('dispatch', 'os'):
+    for source in (sdk / 'include' / folder).glob('*.h'):
+        dest = sdk / 'lib/swift' / folder / source.name
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        if not dest.exists() or source.read_bytes() != dest.read_bytes():
+            shutil.copy2(source, dest)
+source = Path('.tools/swift-dispatch-source/dispatch/generic/module.modulemap')
+dest = sdk / 'lib/swift/dispatch/module.modulemap'
+if not dest.exists() or source.read_bytes() != dest.read_bytes():
+    shutil.copy2(source, dest)
+PY
+# Uses the already prepared/patched libdispatch tree. This separate build adds
+# the Swift overlay without introducing a cycle in the Core runtime bootstrap.
+"$CMAKE" -S .tools/swift-dispatch-source -B .tools/swift-ohos-dispatch-overlay${SWIFT_BUILD_SUFFIX} -G Ninja \
+  -DCMAKE_MAKE_PROGRAM="$NATIVE/build-tools/cmake/bin/ninja" \
+  -DCMAKE_TOOLCHAIN_FILE="$NATIVE/build/cmake/ohos.toolchain.cmake" \
+  -DOHOS_ARCH="$HARMONY_CPU" -DCMAKE_INSTALL_PREFIX="$SDK" \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=OFF \
+  -DINSTALL_PRIVATE_HEADERS=ON -DENABLE_SWIFT=ON \
+  -DCMAKE_C_FLAGS=-Wno-unused-command-line-argument \
+  -DCMAKE_CXX_FLAGS=-Wno-unused-command-line-argument \
+  -DCMAKE_Swift_COMPILER="$ROOT/.tools/swift/usr/bin/swiftc" \
+  -DCMAKE_Swift_COMPILER_TARGET=${SWIFT_TARGET} -DCMAKE_Swift_COMPILER_WORKS=TRUE \
+  -DCMAKE_Swift_FLAGS="-sdk $NATIVE/sysroot -resource-dir $SDK/lib/swift -module-cache-path $ROOT/.tools/swift-probe/dispatch-overlay-cache${SWIFT_BUILD_SUFFIX}" \
+  -DSwiftCore_DIR="$SDK/lib/cmake/SwiftCore" -DSWIFT_SYSTEM_NAME=musl
+"$CMAKE" --build .tools/swift-ohos-dispatch-overlay${SWIFT_BUILD_SUFFIX} -j "${SWIFT_RUNTIME_JOBS:-4}"
+"$CMAKE" --install .tools/swift-ohos-dispatch-overlay${SWIFT_BUILD_SUFFIX}

@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+"""Verify ARM HAP contents and source parity, without claiming device execution."""
+from pathlib import Path
+import hashlib,json,struct,zipfile,argparse
+root=Path(__file__).resolve().parent.parent
+project=root/'.tools/device-app'
+libs=project/'entry/libs/arm64-v8a'
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--signed', action='store_true', help='Inspect the signed artifact (installation validates its signature).')
+args=parser.parse_args()
+variant='signed' if args.signed else 'unsigned'
+hap=project/f'entry/build/default/outputs/default/entry-default-{variant}.hap'
+def sha(data):return hashlib.sha256(data).hexdigest()
+# Every shipping UI and bridge source must come from the production project.
+for file in (root/'harmony/entry/src/main').rglob('*'):
+    if file.is_file():
+        target=project/file.relative_to(root/'harmony')
+        assert target.read_bytes()==file.read_bytes(), target
+record={'target':'aarch64-unknown-linux-ohos','hap':str(hap.relative_to(root)),
+        'hapSha256':sha(hap.read_bytes()),'signedArtifact':args.signed,'deviceExecutionVerified':False,'libraries':{}}
+with zipfile.ZipFile(hap) as z:
+    names=z.namelist()
+    assert any(n.endswith('/modules.abc') for n in names)
+    assert not any(n.endswith(('/libThunderbirdIMAP.so','/libThunderbirdJMAP.so','/libIMAPProbe.so','/libNetworkProbe.so')) for n in names)
+    for n in names:
+        if not n.startswith('libs/'):continue
+        data=z.read(n)
+        if data[:4]!=b'\x7fELF':continue
+        assert '/arm64-v8a/' in n and data[4]==2 and struct.unpack('<H',data[18:20])[0]==183,n
+        record['libraries'][Path(n).name]=sha(data)
+    for file in libs.iterdir():
+        if '.so' in file.name:
+            assert record['libraries'].get(file.name)==sha(file.read_bytes()),file
+    assert 'libthunderbird.so' in record['libraries'] and 'libThunderbirdCore.so' in record['libraries']
+(root/f'.tools/device-app-{variant}-verification.json').write_text(json.dumps(record,indent=2)+'\n')
+print(f'PASS: {variant} HAP contains ARM native libraries and the current production UI/bridge sources; device execution remains unverified.')

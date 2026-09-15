@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+if [[ "${1:-build}" == build ]]; then
+  ./scripts/build
+  mkdir -p harmony/entry/src/ohosTest/resources/rawfile/mime
+  cp upstream/thunderbird-ios/Core/Tests/MIMETests/Resources/*.eml \
+    harmony/entry/src/ohosTest/resources/rawfile/mime/
+  source "$ROOT/scripts/harmony-build-env"
+  cd harmony
+  exec "$THUNDERBIRD_BUILD_TOOLS/bin/hvigorw" assembleHap --mode module \
+    -p product=default -p module=entry@ohosTest --no-daemon
+fi
+[[ "${1:-}" == device ]] || { echo 'Usage: scripts/test-native-app [build|device]' >&2; exit 2; }
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" != 1 ]]; then
+  exec "$ROOT/scripts/with-test-emulator" "$0" device
+fi
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+DEVICE=127.0.0.1:5555
+UITEST_PREVIOUS="$($HDC -t "$DEVICE" shell param get persist.ace.testmode.enabled | tr -d '\r\n')"
+[[ "$UITEST_PREVIOUS" == 1 ]] || UITEST_PREVIOUS=0
+cleanup() {
+  "$HDC" -t "$DEVICE" shell uitest screenCap -p /data/local/tmp/thunderbird-native-app.png >/dev/null 2>&1 || true
+  "$HDC" -t "$DEVICE" file recv /data/local/tmp/thunderbird-native-app.png "$ROOT/.tools/native-app-screen.png" >/dev/null 2>&1 || true
+  "$HDC" -t "$DEVICE" shell uitest dumpLayout -p /data/local/tmp/thunderbird-native-app.json >/dev/null 2>&1 || true
+  "$HDC" -t "$DEVICE" file recv /data/local/tmp/thunderbird-native-app.json "$ROOT/.tools/native-app-layout.json" >/dev/null 2>&1 || true
+  "$HDC" -t "$DEVICE" shell hilog -x > "$ROOT/.tools/native-app-hilog.log" 2>&1 || true
+  "$HDC" -t "$DEVICE" shell param set persist.ace.testmode.enabled "$UITEST_PREVIOUS" >/dev/null 2>&1 || true
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+"$HDC" -t "$DEVICE" shell param set persist.ace.testmode.enabled 1
+"$HDC" -t "$DEVICE" install \
+  harmony/entry/build/default/outputs/default/entry-default-unsigned.hap \
+  harmony/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap
+"$HDC" -t "$DEVICE" shell aa test -b org.thunderbird.harmony.dev -m entry_test \
+  -s unittest /ets/testrunner/NativeCoreTestRunner -s timeout 45000 | tee .tools/native-app-device.log
+grep -q 'Tests run: 4, Failure: 0, Error: 0, Pass: 4, Ignore: 0' .tools/native-app-device.log

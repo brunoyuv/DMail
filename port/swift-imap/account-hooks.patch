@@ -1,0 +1,74 @@
+--- a/Sources/IMAP/IMAPClient.swift
++++ b/Sources/IMAP/IMAPClient.swift
+@@ -44,7 +44,7 @@
+             let tlsContext = try NIOSSLContext(configuration: tlsConfiguration)
+             self.channel =
+                 try await ClientBootstrap
+-                .bootstrap(server: server, context: tlsContext, group: group, timeout: connectionTimeout)
++                .bootstrap(server: server, context: tlsContext, group: group, timeout: connectionTimeout, verifyPeer: additionalPeerVerification)
+                 .connect(host: server.hostname, port: server.port)
+                 .get()
+             logger?.info("Connected to \(self.server)")
+@@ -145,7 +145,13 @@
+     /// List all mailboxes on logged-in IMAP ``Server``.
+     public func list(wildcard: Character = .wildcard) async throws -> [(Mailbox, Mailbox.Status?)] {
+         logger?.info("Listing mailboxes…")
+-        return try await execute(command: ListCommand(wildcard: wildcard))
++        let labels = Set(capabilities.map { $0.rawValue.uppercased() })
++        var options: [ReturnOption] = []
++        if labels.contains("LIST-EXTENDED") { options.append(.subscribed) }
++        if labels.contains("LIST-STATUS") {
++            options.append(.statusOption([.messageCount, .recentCount, .unseenCount]))
++        }
++        return try await execute(command: ListCommand(options: options, wildcard: wildcard))
+     }
+ 
+     /// Select current working mailbox in read/write mode.
+@@ -251,7 +257,8 @@
+         logger: Logger? = Logger(subsystem: "net.thunderbird", category: "IMAP"),
+         tlsConfiguration: TLSConfiguration = .makeClientConfiguration(),
+         connectionTimeout: TimeAmount = .seconds(10),
+-        commandTimeout: Int64 = 30
++        commandTimeout: Int64 = 30,
++        additionalPeerVerification: (@Sendable (NIOSSLCertificate, Channel) -> EventLoopFuture<Void>)? = nil
+     ) {
+         group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+         self.server = server
+@@ -259,6 +266,7 @@
+         self.tlsConfiguration = tlsConfiguration
+         self.connectionTimeout = connectionTimeout
+         self.commandTimeout = max(1, commandTimeout)
++        self.additionalPeerVerification = additionalPeerVerification
+     }
+ 
+     // Run IMAP command through NIO `IMAPClientHandler` in channel and handle results
+@@ -373,6 +381,7 @@
+         logger?.info("Channel reset; ready to connect")
+     }
+ 
++    private let additionalPeerVerification: (@Sendable (NIOSSLCertificate, Channel) -> EventLoopFuture<Void>)?
+     private let tlsConfiguration: TLSConfiguration
+     private let connectionTimeout: TimeAmount
+     private let commandTimeout: Int64
+@@ -392,11 +401,19 @@
+ }
+ 
+ private extension ClientBootstrap {
+-    static func bootstrap(server: Server, context: NIOSSLContext, group: EventLoopGroup, timeout: TimeAmount) -> Self {
++    static func bootstrap(server: Server, context: NIOSSLContext, group: EventLoopGroup, timeout: TimeAmount,
++        verifyPeer: (@Sendable (NIOSSLCertificate, Channel) -> EventLoopFuture<Void>)?) -> Self {
+         Self(group: group).connectTimeout(timeout).channelInitializer { channel in
+             do {
++                // NIOSSL validates IP certificates against the channel address when SNI is absent.
++                let hostname = (try? SocketAddress(ipAddress: server.hostname, port: server.port)) == nil ? server.hostname : nil
++                let tls: NIOSSLClientHandler
++                if let verifyPeer {
++                    tls = try NIOSSLClientHandler._makeSSLClientHandler(context: context, serverHostname: hostname,
++                        additionalPeerCertificateVerificationCallback: verifyPeer)
++                } else { tls = try NIOSSLClientHandler(context: context, serverHostname: hostname) }
+                 try channel.pipeline.syncOperations.addHandlers([
+-                    try NIOSSLClientHandler(context: context, serverHostname: server.hostname),
++                    tls,
+                     IMAPClientHandler(parserOptions: .max)
+                 ])
+                 return channel.eventLoop.makeSucceededFuture(())

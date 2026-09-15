@@ -1,0 +1,918 @@
+{
+  "string": [
+    {"name": "attach_files", "value": "添加附件"},
+    {"name": "adding_attachments", "value": "正在添加附件…"},
+    {"name": "remove_attachment", "value": "移除附件"},
+    {"name": "attach_file_error", "value": "无法添加此文件。最多可选择 10 个文件，总大小不超过 10 MB。"},
+
+    { "name": "link_open_error", "value": "无法打开此链接，请重试。" },
+    {
+      "name": "module_desc",
+      "value": "D-Mail 鸿蒙版"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "简洁的原生邮件体验"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "D-Mail"
+    },
+    {
+      "name": "new_message",
+      "value": "新邮件"
+    },
+    {
+      "name": "no_subject",
+      "value": "（无主题）"
+    },
+    {
+      "name": "sample_mailbox",
+      "value": "示例邮箱 · 仅限此设备"
+    },
+    {
+      "name": "show_all",
+      "value": "全部"
+    },
+    {
+      "name": "unread",
+      "value": "未读"
+    },
+    {
+      "name": "filter_unread",
+      "value": "筛选未读邮件"
+    },
+    {
+      "name": "search_mail",
+      "value": "搜索邮件"
+    },
+    {
+      "name": "save_failed",
+      "value": "无法保存更改"
+    },
+    {
+      "name": "retry",
+      "value": "重试"
+    },
+    {
+      "name": "message_moved",
+      "value": "邮件已移动"
+    },
+    {
+      "name": "undo",
+      "value": "撤销"
+    },
+    {
+      "name": "message",
+      "value": "邮件"
+    },
+    {
+      "name": "reply",
+      "value": "回复"
+    },
+    {
+      "name": "move_inbox",
+      "value": "移至收件箱"
+    },
+    {
+      "name": "archive",
+      "value": "归档"
+    },
+    {
+      "name": "draft_only",
+      "value": "草稿预览 · 暂未连接发送服务"
+    },
+    {
+      "name": "to",
+      "value": "收件人"
+    },
+    {
+      "name": "subject",
+      "value": "主题"
+    },
+    {
+      "name": "write_message",
+      "value": "撰写邮件…"
+    },
+    {
+      "name": "message_body",
+      "value": "邮件正文"
+    },
+    {
+      "name": "saving",
+      "value": "正在保存…"
+    },
+    {
+      "name": "saved_local",
+      "value": "已保存在此设备"
+    },
+    {
+      "name": "account_pending",
+      "value": "此邮箱包含示例邮件。打开“账号”可连接您的邮箱服务。"
+    },
+    {
+      "name": "mailboxes",
+      "value": "邮箱"
+    },
+    {
+      "name": "no_results",
+      "value": "未找到匹配邮件"
+    },
+    {
+      "name": "all_clear",
+      "value": "没有邮件"
+    },
+    {
+      "name": "try_search",
+      "value": "请尝试其他姓名或关键词。"
+    },
+    {
+      "name": "empty_folder",
+      "value": "此视图中没有邮件。"
+    },
+    {
+      "name": "load_failed",
+      "value": "无法打开邮箱"
+    },
+    {
+      "name": "data_preserved",
+      "value": "已保留您的数据。请重试。"
+    },
+    {
+      "name": "compose",
+      "value": "写邮件"
+    },
+    {
+      "name": "inbox",
+      "value": "收件箱"
+    },
+    {
+      "name": "starred",
+      "value": "星标"
+    },
+    {
+      "name": "drafts",
+      "value": "草稿"
+    },
+    {
+      "name": "star",
+      "value": "添加星标"
+    },
+    {
+      "name": "unstar",
+      "value": "取消星标"
+    },
+    {
+      "name": "mark_read",
+      "value": "标为已读"
+    },
+    {
+      "name": "mark_unread",
+      "value": "标为未读"
+    },
+    {
+      "name": "done",
+      "value": "完成"
+    },
+    {
+      "name": "accounts",
+      "value": "账号"
+    },
+    {
+      "name": "add_account",
+      "value": "添加账号"
+    },
+    {
+      "name": "jmap_setup_help",
+      "value": "请输入邮箱服务提供的 JMAP 会话地址和访问令牌。令牌将保存在系统凭据存储中。"
+    },
+    {
+      "name": "server_address",
+      "value": "服务器地址（https://…）"
+    },
+    {
+      "name": "access_token",
+      "value": "访问令牌"
+    },
+    {
+      "name": "connect_account",
+      "value": "连接"
+    },
+    {
+      "name": "disconnect",
+      "value": "断开连接"
+    },
+    {
+      "name": "cancel",
+      "value": "取消"
+    },
+    {
+      "name": "disconnect_detail",
+      "value": "从此设备移除该账号、已保存的令牌和缓存邮件？服务器上的邮件不会更改。"
+    },
+    {
+      "name": "connected_features",
+      "value": "阅读、发送、回复、转发、标记和归档邮件。"
+    },
+    {
+      "name": "account_storage_error",
+      "value": "无法保存或打开账号数据，请重试。"
+    },
+    {
+      "name": "account_auth_error",
+      "value": "请解锁设备并检查账号令牌，可能需要重新连接。"
+    },
+    {
+      "name": "account_endpoint_error",
+      "value": "请使用邮箱服务提供的安全会话地址。此版本要求 API 使用同源地址。"
+    },
+    {
+      "name": "account_network_error",
+      "value": "无法加载邮件。请检查服务器地址和网络连接，然后重试。"
+    },
+    {
+      "name": "mailbox_changed",
+      "value": "加载时邮箱内容发生变化，请刷新。"
+    },
+    {
+      "name": "message_removed",
+      "value": "此邮件已不可用。"
+    },
+    {
+      "name": "refresh",
+      "value": "刷新"
+    },
+    {
+      "name": "load_more",
+      "value": "加载更多"
+    },
+    {
+      "name": "partial_body",
+      "value": "此邮件内容不完整或存在文本解码错误。"
+    },
+    {
+      "name": "no_plain_body",
+      "value": "无法解码邮件正文。请尝试重新打开此邮件。"
+    },
+    {
+      "name": "change_forbidden",
+      "value": "您的账号无权更改此邮件。请刷新以查看当前状态。"
+    },
+    {
+      "name": "change_unconfirmed",
+      "value": "无法确认更改结果。请刷新此邮件后再试。"
+    },
+    {
+      "name": "message_archived",
+      "value": "邮件已归档"
+    },
+    {
+      "name": "archive_undone",
+      "value": "已撤销归档"
+    },
+    {
+      "name": "move_conflict",
+      "value": "此邮件已在其他位置更改。请刷新以查看当前文件夹。"
+    },
+    {
+      "name": "saved_copy",
+      "value": "已保存的副本"
+    },
+    {
+      "name": "cache_save_error",
+      "value": "邮件已加载，但无法保存离线副本。"
+    },
+    {
+      "name": "cache_read_error",
+      "value": "无法打开已保存的邮件。请重新连接并刷新。"
+    },
+    {
+      "name": "message_pending_sync",
+      "value": "此邮件尚未下载。邮箱同步时会自动保存。"
+    },
+    {
+      "name": "body_not_saved",
+      "value": "此邮件没有可用的已保存正文。连接后请重试下载。"
+    },
+    {
+      "name": "invalid_recipient",
+      "value": "请输入有效的电子邮件地址。"
+    },
+    {
+      "name": "imap_setup_help",
+      "value": "电子邮件地址用于账户身份。请单独输入服务器要求的登录名。连接使用 TLS。"
+    },
+    {
+      "name": "imap_server",
+      "value": "IMAP 服务器（imap.example.com）"
+    },
+    {
+      "name": "imap_port",
+      "value": "TLS 端口（993）"
+    },
+    {
+      "name": "imap_username",
+      "value": "登录名"
+    },
+    {
+      "name": "imap_password",
+      "value": "密码或应用专用密码"
+    },
+    {
+      "name": "imap_connected_features",
+      "value": "阅读、发送、回复、转发和标记邮件。IMAP 暂不支持归档。"
+    },
+    {
+      "name": "imap_email_address",
+      "value": "电子邮件地址"
+    },
+    {
+      "name": "imap_email_invalid",
+      "value": "请输入有效的电子邮件地址。"
+    },
+    {
+      "name": "search_loaded_mail",
+      "value": "搜索已加载的邮件"
+    },
+    {
+      "name": "settings",
+      "value": "设置"
+    },
+    {
+      "name": "app_language",
+      "value": "应用语言"
+    },
+    {
+      "name": "language_system",
+      "value": "跟随系统"
+    },
+    {
+      "name": "language_help",
+      "value": "选择 D-Mail 的显示语言。邮件内容保留原文。"
+    },
+    {
+      "name": "language_save_error",
+      "value": "无法保存语言设置，请重试。"
+    },
+    {
+      "name": "draft_load_error",
+      "value": "无法加载草稿或发件设置，请重新打开此页面。"
+    },
+    {
+      "name": "smtp_saved",
+      "value": "发件设置已保存"
+    },
+    {
+      "name": "smtp_settings_error",
+      "value": "请检查发件服务器、端口、登录名和密码。"
+    },
+    {
+      "name": "sent_save_error",
+      "value": "邮件已发送，但无法保存本地状态。请勿再次发送。"
+    },
+    {
+      "name": "smtp_auth_error",
+      "value": "发件登录失败，请检查 SMTP 登录名和密码。"
+    },
+    {
+      "name": "send_invalid",
+      "value": "请检查收件人地址和邮件大小。使用逗号分隔邮箱地址，不包含显示名称。"
+    },
+    {
+      "name": "smtp_tls_error",
+      "value": "请检查发件服务器、端口和 TLS 设置。"
+    },
+    {
+      "name": "smtp_rejected",
+      "value": "发件服务器拒绝了邮件或某位收件人。草稿已保存。"
+    },
+    {
+      "name": "smtp_network_error",
+      "value": "发送失败，请检查网络连接和发件设置。草稿已保存。"
+    },
+    {
+      "name": "keep_draft",
+      "value": "保留此草稿？"
+    },
+    {
+      "name": "keep_draft_detail",
+      "value": "您可以稍后继续编辑。"
+    },
+    {
+      "name": "save_draft",
+      "value": "保存草稿"
+    },
+    {
+      "name": "discard",
+      "value": "舍弃"
+    },
+    {
+      "name": "discard_error",
+      "value": "无法舍弃草稿。"
+    },
+    {
+      "name": "outgoing_server",
+      "value": "发件服务器"
+    },
+    {
+      "name": "smtp_setup_help",
+      "value": "请使用邮件服务商提供的 SMTP 设置。登录名可以与邮箱地址不同。"
+    },
+    {
+      "name": "smtp_server",
+      "value": "SMTP 服务器"
+    },
+    {
+      "name": "port",
+      "value": "端口"
+    },
+    {
+      "name": "smtp_username",
+      "value": "SMTP 登录名"
+    },
+    {
+      "name": "smtp_password",
+      "value": "SMTP 密码"
+    },
+    {
+      "name": "save",
+      "value": "保存"
+    },
+    {
+      "name": "more",
+      "value": "更多"
+    },
+    {
+      "name": "send",
+      "value": "发送"
+    },
+    {
+      "name": "delivery_uncertain",
+      "value": "无法确认发送结果。重试前请先检查，邮件可能已经送达。"
+    },
+    {
+      "name": "allow_retry",
+      "value": "允许手动重试"
+    },
+    {
+      "name": "send_again",
+      "value": "再次发送？"
+    },
+    {
+      "name": "send_again_detail",
+      "value": "上一封邮件可能已经送达。"
+    },
+    {
+      "name": "enable_retry",
+      "value": "启用重试"
+    },
+    {
+      "name": "draft_save_error",
+      "value": "无法保存草稿，请保持此页面打开并重试。"
+    },
+    {
+      "name": "to_field",
+      "value": "收件人："
+    },
+    {
+      "name": "cc_field",
+      "value": "抄送："
+    },
+    {
+      "name": "bcc_field",
+      "value": "密送："
+    },
+    {
+      "name": "from_field",
+      "value": "发件人："
+    },
+    {
+      "name": "address_summary",
+      "value": "抄送/密送，发件人："
+    },
+    {
+      "name": "add_message",
+      "value": "添加留言"
+    },
+    {
+      "name": "remote_pictures_hidden",
+      "value": "远程图片已隐藏。"
+    },
+    {
+      "name": "load_pictures",
+      "value": "加载图片"
+    },
+    {
+      "name": "refresh_pictures",
+      "value": "重试图片"
+    },
+    {
+      "name": "pictures_loading",
+      "value": "正在加载图片…"
+    },
+    {
+      "name": "unfinished_draft",
+      "value": "未完成的草稿"
+    },
+    {
+      "name": "unfinished_draft_detail",
+      "value": "回复或转发前，请先完成或舍弃现有草稿。"
+    },
+    {
+      "name": "continue_draft",
+      "value": "继续编辑"
+    },
+    {
+      "name": "forward_large",
+      "value": "此邮件过大，当前版本无法转发。"
+    },
+    {
+      "name": "response_error",
+      "value": "无法创建邮件，请检查发件人地址或重试。"
+    },
+    {
+      "name": "reply_forward",
+      "value": "回复或转发"
+    },
+    {
+      "name": "reply_all",
+      "value": "回复全部"
+    },
+    {
+      "name": "forward",
+      "value": "转发"
+    },
+    {
+      "name": "sent",
+      "value": "已发送"
+    },
+    {
+      "name": "forward_attachments",
+      "value": "不包含附件。"
+    },
+    {
+      "name": "forward_partial",
+      "value": "仅包含已下载的邮件内容。"
+    },
+    {
+      "name": "forward_encoding",
+      "value": "部分原文无法解码。"
+    },
+    {
+      "name": "trash",
+      "value": "废纸篓"
+    },
+    {
+      "name": "junk",
+      "value": "垃圾邮件"
+    },
+    {
+      "name": "attachments",
+      "value": "附件"
+    },
+    {
+      "name": "download_size",
+      "value": "下载大小"
+    },
+    {
+      "name": "save_attachment",
+      "value": "保存附件"
+    },
+    {
+      "name": "attachment_too_large",
+      "value": "此附件超过当前 4 MB 的下载上限。"
+    },
+    {
+      "name": "attachment_download_error",
+      "value": "无法下载附件。请在联网后重试。"
+    },
+    {
+      "name": "attachment_open_error",
+      "value": "无法打开附件。请使用保存按钮选择保存位置。"
+    },
+    {
+      "name": "discovery_find",
+      "value": "查找服务器设置"
+    },
+    {
+      "name": "discovery_not_found",
+      "value": "未找到服务器设置。请检查网络连接或手动输入。"
+    },
+    {
+      "name": "discovery_incoming",
+      "value": "收件服务器"
+    },
+    {
+      "name": "discovery_outgoing",
+      "value": "发件服务器"
+    },
+    {
+      "name": "discovery_apply",
+      "value": "使用密码登录设置"
+    },
+    {
+      "name": "discovery_source_provider",
+      "value": "设置由您的电子邮件服务提供商提供"
+    },
+    {
+      "name": "discovery_source_ispdb",
+      "value": "设置来自 Thunderbird 邮件服务商目录"
+    },
+    {
+      "name": "discovery_auth_unavailable",
+      "value": "此服务器要求的身份验证方式尚不可用。浏览器登录尚未接入。"
+    },
+    {
+      "name": "discovery_starttls_unavailable",
+      "value": "IMAP STARTTLS 尚不可用。如果服务商提供 SSL/TLS 选项，请选择该选项。"
+    },
+    {
+      "name": "discovery_server_unavailable",
+      "value": "此服务器选项尚不受支持。"
+    },
+    {
+      "name": "discovery_same_password",
+      "value": "发件时使用收件密码"
+    },
+    {
+      "name": "discovery_smtp_edit",
+      "value": "您可以在写邮件界面修改发件设置。如果关闭共用密码，请在发送前于该处输入发件密码。"
+    },
+    {
+      "name": "oauth_google",
+      "value": "使用 Google 登录"
+    },
+    {
+      "name": "oauth_microsoft",
+      "value": "使用 Outlook.com 登录"
+    },
+    {
+      "name": "oauth_waiting",
+      "value": "请在浏览器中完成登录，然后返回这里。"
+    },
+    {
+      "name": "oauth_signin_error",
+      "value": "登录未完成。请检查邮箱地址和登录名，在浏览器中允许邮件访问后重试。"
+    },
+    {
+      "name": "oauth_error_listener",
+      "value": "无法准备浏览器回调连接。请重试登录。"
+    },
+    {
+      "name": "oauth_error_request",
+      "value": "无法准备服务商登录请求。"
+    },
+    {
+      "name": "oauth_error_browser",
+      "value": "无法打开浏览器进行登录。"
+    },
+    {
+      "name": "oauth_error_callback",
+      "value": "登录过期前未收到有效的浏览器回调。请重试。"
+    },
+    {
+      "name": "oauth_error_token",
+      "value": "浏览器登录已返回，但应用无法从服务商获取访问凭据。"
+    },
+    {
+      "name": "oauth_error_mail",
+      "value": "浏览器登录成功，但连接邮件服务器失败。请检查登录名。"
+    },
+    {
+      "name": "oauth_error_storage",
+      "value": "登录和邮件连接成功，但保存账户失败。"
+    },
+    {
+      "name": "show_message_details",
+      "value": "显示邮件详情"
+    },
+    {
+      "name": "hide_message_details",
+      "value": "收起邮件详情"
+    },
+    {
+      "name": "cc_bcc_fields",
+      "value": "抄送/密送"
+    },
+    {
+      "name": "show_address_fields",
+      "value": "显示抄送、密送和发件人"
+    },
+    {
+      "name": "hide_address_fields",
+      "value": "收起地址栏"
+    },
+    {
+      "name": "switch_account",
+      "value": "切换账户"
+    },
+    {
+      "name": "account_selection_error",
+      "value": "无法保存上次访问的账户。"
+    },
+    {
+      "name": "show_quoted_text",
+      "value": "显示引用内容"
+    },
+    {
+      "name": "hide_quoted_text",
+      "value": "隐藏引用内容"
+    },
+    {
+      "name": "send_queued",
+      "value": "正在后台发送"
+    },
+    {
+      "name": "send_in_progress",
+      "value": "邮件正在后台发送，您可以继续浏览。"
+    },
+    {
+      "name": "sent_copy_failed",
+      "value": "邮件已发送，但无法将副本保存到服务器的“已发送”文件夹；本地副本仍可查看。"
+    },
+    {
+      "name": "sent_copy_unconfirmed",
+      "value": "邮件已发送，但服务器尚未确认“已发送”文件夹中的副本；本地副本仍可查看。"
+    },
+    {
+      "name": "changes_pending",
+      "value": "正在更新邮件…"
+    },
+    {
+      "name": "sent_on_device",
+      "value": "此设备上的已发送邮件"
+    },
+    {
+      "name": "new_mail_notification_title",
+      "value": "新邮件"
+    },
+    {
+      "name": "new_mail_notification_text",
+      "value": "打开收件箱"
+    },
+    {
+      "name": "mail_notifications",
+      "value": "通知"
+    },
+    {
+      "name": "new_mail_alerts",
+      "value": "新邮件提醒"
+    },
+    {
+      "name": "notification_foreground_interval",
+      "value": "前台备用检查间隔"
+    },
+    {
+      "name": "notification_background_interval",
+      "value": "后台检查间隔"
+    },
+    {
+      "name": "notification_minutes_5",
+      "value": "5 分钟"
+    },
+    {
+      "name": "notification_minutes_15",
+      "value": "15 分钟"
+    },
+    {
+      "name": "notification_minutes_30",
+      "value": "30 分钟"
+    },
+    {
+      "name": "notification_minutes_60",
+      "value": "1 小时"
+    },
+    {
+      "name": "notification_minutes_120",
+      "value": "2 小时"
+    },
+    {
+      "name": "notification_minutes_240",
+      "value": "4 小时"
+    },
+    {
+      "name": "notification_minutes_360",
+      "value": "6 小时"
+    },
+    {
+      "name": "notification_minutes_720",
+      "value": "12 小时"
+    },
+    {
+      "name": "notification_foreground_help",
+      "value": "应用打开时，支持的服务器会即时通知新邮件。其他服务器使用备用检查间隔。"
+    },
+    {
+      "name": "notification_background_help",
+      "value": "系统可能延迟后台检查。重启后首次解锁后，设备锁定时也可以检查邮件。"
+    },
+    {
+      "name": "notification_baseline_help",
+      "value": "首次检查会建立基准，已有未读邮件不会触发提醒。通知不显示邮件详情。"
+    },
+    {
+      "name": "notification_settings_error",
+      "value": "无法应用通知设置。请检查系统设置中的通知权限，然后重试。"
+    },
+    {
+      "name": "composition_settings",
+      "value": "撰写邮件"
+    },
+    {
+      "name": "sender_name",
+      "value": "发件人名称"
+    },
+    {
+      "name": "sender_name_placeholder",
+      "value": "收件人看到的名称"
+    },
+    {
+      "name": "signature",
+      "value": "签名"
+    },
+    {
+      "name": "signature_placeholder",
+      "value": "添加签名"
+    },
+    {
+      "name": "composition_help",
+      "value": "自动保存到此账户，应用于新邮件、回复和转发；现有草稿内容保持不变。"
+    },
+    {
+      "name": "composition_save_error",
+      "value": "无法读取或保存发件人名称或签名，请重试。"
+    },
+    {
+      "name": "dismiss_notification",
+      "value": "关闭通知"
+    },
+    {
+      "name": "notification_inbox_offer",
+      "value": "接收新邮件横幅通知"
+    },
+    {
+      "name": "notification_enable",
+      "value": "启用"
+    },
+    {
+      "name": "notification_system_settings",
+      "value": "系统通知设置"
+    },
+    {
+      "name": "notification_system_blocked",
+      "value": "系统设置已关闭通知。请在其中允许通知、横幅和角标。"
+    },
+    {
+      "name": "notification_banner_blocked",
+      "value": "系统设置已关闭新邮件横幅。"
+    },
+    {
+      "name": "notification_badge_blocked",
+      "value": "系统设置已关闭应用图标角标。"
+    },
+    {
+      "name": "notification_test",
+      "value": "发送测试通知"
+    },
+    {
+      "name": "notification_test_sent",
+      "value": "测试通知已发送。如果没有出现横幅，请在系统通知设置中启用横幅。"
+    },
+    {
+      "name": "reconnect_account",
+      "value": "重新连接"
+    },
+    {
+      "name": "gmail_app_password_help",
+      "value": "Gmail 浏览器登录目前不可用。添加 Gmail 账号时，请使用 Google 应用专用密码。请先在 Google 账号中开启两步验证，再创建应用专用密码；部分账号不提供此选项。"
+    },
+    {
+      "name": "pictures_failed",
+      "value": "图片尚未保存"
+    },
+    {
+      "name": "picture_error_server",
+      "value": "服务器响应"
+    },
+    {
+      "name": "picture_error_network",
+      "value": "连接失败"
+    },
+    {
+      "name": "picture_error_format",
+      "value": "图片无效或格式不支持"
+    },
+    {
+      "name": "picture_error_size",
+      "value": "图片超过下载大小限制"
+    },
+    {
+      "name": "picture_error_storage",
+      "value": "无法读取已保存的图片"
+    },
+    {
+      "name": "picture_error_blocked",
+      "value": "图片地址或权限受限"
+    }
+  ]
+}

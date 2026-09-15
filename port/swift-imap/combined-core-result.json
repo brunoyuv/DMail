@@ -1,0 +1,456 @@
+{
+  "verified": "2026-09-13",
+  "upstreamRevision": "61c78d9ebe39ac5b61f31fce371bdfe8c001f7bf",
+  "target": "x86_64-unknown-linux-ohos",
+  "sourceFiles": 86,
+  "unchangedSourceFiles": 62,
+  "sources": {
+    "Core/Sources/EmailAddress/EmailAddress.swift": {
+      "compiledSha256": "72dd0173ee8633b8bffd5a08f13add33d231bca210f788ee7a9d175b4579dfb7",
+      "upstreamSha256": "72dd0173ee8633b8bffd5a08f13add33d231bca210f788ee7a9d175b4579dfb7"
+    },
+    "Core/Sources/EmailAddress/String.swift": {
+      "compiledSha256": "91d6ec45460ff875726c5f978b089fe230c860d6930d89b43a0a1e11a1538187",
+      "upstreamSha256": "91d6ec45460ff875726c5f978b089fe230c860d6930d89b43a0a1e11a1538187"
+    },
+    "Core/Sources/MIME/Body.swift": {
+      "compiledSha256": "612d1b5441f33507a0d2db1d8b7a6deef8d25440e8fbcbcd8d4f845776aa3409",
+      "upstreamSha256": "612d1b5441f33507a0d2db1d8b7a6deef8d25440e8fbcbcd8d4f845776aa3409"
+    },
+    "Core/Sources/MIME/Boundary.swift": {
+      "compiledSha256": "e7631f34b56097038a7d6d9afefe55e9cc39e1018cd16f264315f022e6733115",
+      "upstreamSha256": "e7631f34b56097038a7d6d9afefe55e9cc39e1018cd16f264315f022e6733115"
+    },
+    "Core/Sources/MIME/Character.swift": {
+      "compiledSha256": "c67260b2639b88a4a5260de88190244972b0598c24febdd6585c593509fc94ab",
+      "upstreamSha256": "c67260b2639b88a4a5260de88190244972b0598c24febdd6585c593509fc94ab"
+    },
+    "Core/Sources/MIME/CharacterSet.swift": {
+      "compiledSha256": "8eff998bc64f915b4806395d7fa83906ac9af82ed2d0b1ef6ef15ce4b9475d22",
+      "upstreamSha256": "8eff998bc64f915b4806395d7fa83906ac9af82ed2d0b1ef6ef15ce4b9475d22"
+    },
+    "Core/Sources/MIME/ContentDisposition.swift": {
+      "compiledSha256": "700e3f20058e3c19bf0d508166c6bf305a1571d95e1d7dc5f4bb08b2b47f2b95",
+      "upstreamSha256": "700e3f20058e3c19bf0d508166c6bf305a1571d95e1d7dc5f4bb08b2b47f2b95"
+    },
+    "Core/Sources/MIME/ContentID.swift": {
+      "compiledSha256": "abdb47537081a769457bfca2910af521ddbcc2940c747061d669aac4e24f91c7",
+      "upstreamSha256": "abdb47537081a769457bfca2910af521ddbcc2940c747061d669aac4e24f91c7"
+    },
+    "Core/Sources/MIME/ContentTransferEncoding.swift": {
+      "compiledSha256": "8308196ac325386af6cff1d454a4efe3e4fc8957ad22d02a67a1d59690d951c0",
+      "upstreamSha256": "8308196ac325386af6cff1d454a4efe3e4fc8957ad22d02a67a1d59690d951c0"
+    },
+    "Core/Sources/MIME/ContentType.swift": {
+      "compiledSha256": "0f394e3c104598c962f728983e7667c68381bb003fb829f77e0c16485d8cfc92",
+      "upstreamSha256": "0f394e3c104598c962f728983e7667c68381bb003fb829f77e0c16485d8cfc92"
+    },
+    "Core/Sources/MIME/Header.swift": {
+      "compiledSha256": "f2eda55afd23cfc84b432be9a057c85ad02138b28cec3c24a182fd97f7dda5c9",
+      "upstreamSha256": "f2eda55afd23cfc84b432be9a057c85ad02138b28cec3c24a182fd97f7dda5c9"
+    },
+    "Core/Sources/MIME/MIMEError.swift": {
+      "compiledSha256": "657b4a7c855fa57904e2fb49af7b699924d6e51ab8709b74d90e2f2ba8d4f4f5",
+      "upstreamSha256": "657b4a7c855fa57904e2fb49af7b699924d6e51ab8709b74d90e2f2ba8d4f4f5"
+    },
+    "Core/Sources/MIME/Part.swift": {
+      "compiledSha256": "74214d63327e9a6f34d85e981f19ea5ded035dca23b9dfcdb62008ba69f1a076",
+      "upstreamSha256": "74214d63327e9a6f34d85e981f19ea5ded035dca23b9dfcdb62008ba69f1a076"
+    },
+    "Core/Sources/MIME/RFC822DateFormatter.swift": {
+      "compiledSha256": "437ba0b7d6986cd2718191897702a7c5e14bf391dda636ee103ed5d442c6e4dd",
+      "upstreamSha256": "437ba0b7d6986cd2718191897702a7c5e14bf391dda636ee103ed5d442c6e4dd"
+    },
+    "Core/Sources/MIME/String.swift": {
+      "compiledSha256": "65db6588d9942570a048b1ac314e6f0dcdfc4e675092da8a3780ee50553c22e7",
+      "upstreamSha256": "65db6588d9942570a048b1ac314e6f0dcdfc4e675092da8a3780ee50553c22e7"
+    },
+    "Core/Sources/MIME/URL.swift": {
+      "compiledSha256": "63a82ad0c0eb477f611195ad69858f11f26dbc82598c7c17b7e0ce4b60be6c22",
+      "upstreamSha256": "63a82ad0c0eb477f611195ad69858f11f26dbc82598c7c17b7e0ce4b60be6c22"
+    },
+    "Core/Sources/MIME/UUID.swift": {
+      "compiledSha256": "0cfcf0cf69b5c287ba748ca010a31dab96b13724c2918a779ccef019425e73f5",
+      "upstreamSha256": "0cfcf0cf69b5c287ba748ca010a31dab96b13724c2918a779ccef019425e73f5"
+    },
+    "Core/Sources/JMAP/Account.swift": {
+      "compiledSha256": "89d75c56cdd278ede4c80554453bbbf4057db2dd1e4f0596bf7c894c584dc9b3",
+      "upstreamSha256": "89d75c56cdd278ede4c80554453bbbf4057db2dd1e4f0596bf7c894c584dc9b3"
+    },
+    "Core/Sources/JMAP/Authorization.swift": {
+      "compiledSha256": "76c9d99c923d79a943cd13cfa8860191266ae92525ac8abf6af6da0a5314669a",
+      "upstreamSha256": "76c9d99c923d79a943cd13cfa8860191266ae92525ac8abf6af6da0a5314669a"
+    },
+    "Core/Sources/JMAP/Capability.swift": {
+      "compiledSha256": "e53abd1b4abe3235b4af11ffa0aa0b32a67df82a9168f9109e63f965f5ff3c27",
+      "upstreamSha256": "e53abd1b4abe3235b4af11ffa0aa0b32a67df82a9168f9109e63f965f5ff3c27"
+    },
+    "Core/Sources/JMAP/Email.swift": {
+      "compiledSha256": "bc6c8467ee857f87dea39668ab842a55312bb5878a4e309d4fbda34e873c2d43",
+      "upstreamSha256": "b6e9c3f309a3c32280c34cdf1f908187eded6d410b4cc1a3f8ae3f6ad79214c1"
+    },
+    "Core/Sources/JMAP/EmailAddress.swift": {
+      "compiledSha256": "39845c16e36d89ddfee65d50484f7cc38345f23393df4cfb998c414ae860e914",
+      "upstreamSha256": "39845c16e36d89ddfee65d50484f7cc38345f23393df4cfb998c414ae860e914"
+    },
+    "Core/Sources/JMAP/Filter.swift": {
+      "compiledSha256": "de6f53956ffdfd9547bce215f90c0ca6aeacba7cf2497684db59dd7d63db679a",
+      "upstreamSha256": "de6f53956ffdfd9547bce215f90c0ca6aeacba7cf2497684db59dd7d63db679a"
+    },
+    "Core/Sources/JMAP/JMAPClient.swift": {
+      "compiledSha256": "cd944248961b6f5d7c18c8621ca1caeb02a814d2c860ab71f947ae1bdef5dd86",
+      "upstreamSha256": "fefb3d1c856c1bc2fca8f465804baa73f949369de08379f4dd48bb8f8044539b"
+    },
+    "Core/Sources/JMAP/JMAPError.swift": {
+      "compiledSha256": "8669c8493d3e5c3186cfe583ec678751f8f2bf9e3e687412673154f18eba0324",
+      "upstreamSha256": "8669c8493d3e5c3186cfe583ec678751f8f2bf9e3e687412673154f18eba0324"
+    },
+    "Core/Sources/JMAP/JSONDecoder.swift": {
+      "compiledSha256": "faa21fac9b678ca5a33db3cd281537c6d7838b92e29dea1a2ab8ad83b530edb2",
+      "upstreamSha256": "49c569215536fb79d3d6f47113dc1a2cdc7fc9b228c78118ac5dcbf747e34ebd"
+    },
+    "Core/Sources/JMAP/Locale.swift": {
+      "compiledSha256": "c40b88df239091fe334ec486b14e4faf470c8b741eb0d8ae44b217467250176d",
+      "upstreamSha256": "c40b88df239091fe334ec486b14e4faf470c8b741eb0d8ae44b217467250176d"
+    },
+    "Core/Sources/JMAP/Mailbox.swift": {
+      "compiledSha256": "e78b9480affe4d79f3f632632b33a2dae98cc35045d016a0eccc7793927ec668",
+      "upstreamSha256": "28a8f76227ef583d6adc45fd5cdee941e3e38c81c89466a9c6c950055898e451"
+    },
+    "Core/Sources/JMAP/Method.swift": {
+      "compiledSha256": "d25870dccf8ee043b32685cbd7cbef80d155ab4fb8bf3a5f70629ed21c390b39",
+      "upstreamSha256": "428073eb062431edd106283bb4f83404735da1c2dcab87b8f7675a789d1d3a39"
+    },
+    "Core/Sources/JMAP/MethodAction.swift": {
+      "compiledSha256": "494a86d38bf5a9ed7660fa62dc1192f831d1f91dfd09275e0e053609fb505d56",
+      "upstreamSha256": "494a86d38bf5a9ed7660fa62dc1192f831d1f91dfd09275e0e053609fb505d56"
+    },
+    "Core/Sources/JMAP/MethodError.swift": {
+      "compiledSha256": "4975d8f1c58e30f852c4bcb025ff2d87ab5b3419c7a66db1efb6ad5748a1038e",
+      "upstreamSha256": "7af81da559c2f1c12c4573932e7940b8a9267fcd528572dc7bd8ae4d383540e6"
+    },
+    "Core/Sources/JMAP/MethodResponse.swift": {
+      "compiledSha256": "a3fd123f6592bd2ff337003e94e0357808d2c49b077d6a5e08a89ff183d35697",
+      "upstreamSha256": "dfc5b250c59db99f8c6c8b2f01ccdbdf8febfeb0b8e13821f48bf39918491c91"
+    },
+    "Core/Sources/JMAP/RequestError.swift": {
+      "compiledSha256": "0f3f731d80c50e401ebb4a40bc7a46d3881703b35497012b47d1829452ba229e",
+      "upstreamSha256": "0f3f731d80c50e401ebb4a40bc7a46d3881703b35497012b47d1829452ba229e"
+    },
+    "Core/Sources/JMAP/Server.swift": {
+      "compiledSha256": "1b86b929304e5de7850e68e503a0ec9a4933a6e4186139897d3c60583ddc3523",
+      "upstreamSha256": "1b86b929304e5de7850e68e503a0ec9a4933a6e4186139897d3c60583ddc3523"
+    },
+    "Core/Sources/JMAP/Session.swift": {
+      "compiledSha256": "609fb28660a83dd6ad7af5dfb487cdce5a9ec6380572940bcf4a480a71016b13",
+      "upstreamSha256": "84cb6e3e7544efb28e98bb57a222aa89a1758937c7555f597d05e4fcd7036318"
+    },
+    "Core/Sources/JMAP/SetError.swift": {
+      "compiledSha256": "17912855db558299a583c42160da0c39abdb840b141fa666c96e3a8d930f884e",
+      "upstreamSha256": "1e0fa0042fa08ca7e0ffc42a26b653e1b108067fdd940b8f05133917d1c5e4b8"
+    },
+    "Core/Sources/JMAP/Thread.swift": {
+      "compiledSha256": "7079f76526562b42c1c6e85a0105a0cf2e9bbc29668dcdf04aedecb5e3f55d39",
+      "upstreamSha256": "7079f76526562b42c1c6e85a0105a0cf2e9bbc29668dcdf04aedecb5e3f55d39"
+    },
+    "Core/Sources/JMAP/URL.swift": {
+      "compiledSha256": "8bea9562e9b90092e2c844dd684d2ea2882dabaf24ddac0bf8003661cb9149ae",
+      "upstreamSha256": "8bea9562e9b90092e2c844dd684d2ea2882dabaf24ddac0bf8003661cb9149ae"
+    },
+    "Core/Sources/JMAP/URLRequest.swift": {
+      "compiledSha256": "1bafa7d9cf0de3d437fd8ecf88ae5f292a602c9a66ae933b8f527964d67c161b",
+      "upstreamSha256": "8bdfb416cda9cc523a46e150bceeb5f9ab106b1c9c6025054e22cc82db899a10"
+    },
+    "Core/Sources/JMAP/URLSession.swift": {
+      "compiledSha256": "bbfc5cf70948830c852cd726433ed8be5ce3725088c4a8fba578c2dcbe770234",
+      "upstreamSha256": "97bca6b815b875057b00bd44b6878bd1f4bec9f8c7cc3f5dd6e29eb10299ca6f"
+    },
+    "Core/Sources/IMAP/Capability.swift": {
+      "compiledSha256": "76a44be198d0d98a826193cd2e2db034ac8be7f5b5ee2edc2cd9378b58503edb",
+      "upstreamSha256": "76a44be198d0d98a826193cd2e2db034ac8be7f5b5ee2edc2cd9378b58503edb"
+    },
+    "Core/Sources/IMAP/CapabilityCommand.swift": {
+      "compiledSha256": "111267df8ccfe6f77c1fb3f1ac2b51001bf41c34c90b973ba5da679c569b0c3b",
+      "upstreamSha256": "5cea3a3927dd226a645d2250bfe69ddbcc507c65ad081d43ed9c5947d3bc48bd"
+    },
+    "Core/Sources/IMAP/ConnectionSecurity.swift": {
+      "compiledSha256": "a694ef0104d94e0eed88c71820b6074582dfeea906ec07667ece55e1d7936cf5",
+      "upstreamSha256": "a694ef0104d94e0eed88c71820b6074582dfeea906ec07667ece55e1d7936cf5"
+    },
+    "Core/Sources/IMAP/CopyCommand.swift": {
+      "compiledSha256": "8952bef26af1dd6246e8fe37e0972b33ebb8eb667677b5b2e25e87dfc414807b",
+      "upstreamSha256": "8952bef26af1dd6246e8fe37e0972b33ebb8eb667677b5b2e25e87dfc414807b"
+    },
+    "Core/Sources/IMAP/CreateCommand.swift": {
+      "compiledSha256": "1653cb86dd4b96190573a12c575fa06ccacb581498a4a0a9c4b77e1cea6bce37",
+      "upstreamSha256": "1653cb86dd4b96190573a12c575fa06ccacb581498a4a0a9c4b77e1cea6bce37"
+    },
+    "Core/Sources/IMAP/DeleteCommand.swift": {
+      "compiledSha256": "5553b01657fad815edc733f72b38e72eafd99882e7d2fe6f8b966a7a11119955",
+      "upstreamSha256": "5553b01657fad815edc733f72b38e72eafd99882e7d2fe6f8b966a7a11119955"
+    },
+    "Core/Sources/IMAP/EmailAddress.swift": {
+      "compiledSha256": "a7009c5474a94c4e5e8388ad5b4740e11bfd791ea8f3cd1791c436ec8c2fa691",
+      "upstreamSha256": "a7009c5474a94c4e5e8388ad5b4740e11bfd791ea8f3cd1791c436ec8c2fa691"
+    },
+    "Core/Sources/IMAP/Envelope.swift": {
+      "compiledSha256": "1413b1983a47d2596208f9be21f9b847ab27b1c0a9e56492579a5c89f53e6057",
+      "upstreamSha256": "1413b1983a47d2596208f9be21f9b847ab27b1c0a9e56492579a5c89f53e6057"
+    },
+    "Core/Sources/IMAP/ExamineCommand.swift": {
+      "compiledSha256": "437bbe2ca4fb44514df16444edbb55567a658fed9916e380f7c34bba57dc0d9b",
+      "upstreamSha256": "4f6ca7396ef4361c6a8126ae015d7ec42317472660b57e65cccb90b3e8f133bf"
+    },
+    "Core/Sources/IMAP/FetchAttribute.swift": {
+      "compiledSha256": "987240a07a427f1f8e969b933e44113b7dfd57a9ce075e7db1eb8de1611f8571",
+      "upstreamSha256": "987240a07a427f1f8e969b933e44113b7dfd57a9ce075e7db1eb8de1611f8571"
+    },
+    "Core/Sources/IMAP/FetchCommand.swift": {
+      "compiledSha256": "fdf0df1157307f303202c2f294038cd8bbf04f2bf5b89132cd93625ffc51f368",
+      "upstreamSha256": "3f4b8fbb2fea8d6a8607189568380ef1c924d4b9a0406369ae839681c819f553"
+    },
+    "Core/Sources/IMAP/Flag.swift": {
+      "compiledSha256": "0299e797e58b1ad2d84cfcba364123c752cc52e151e5d3dc8b754b6ef9403073",
+      "upstreamSha256": "0299e797e58b1ad2d84cfcba364123c752cc52e151e5d3dc8b754b6ef9403073"
+    },
+    "Core/Sources/IMAP/GmailLabel.swift": {
+      "compiledSha256": "2f300143d5251cf43349b1733728705ce2f5dcd471cd0bda897528863260eb3c",
+      "upstreamSha256": "2f300143d5251cf43349b1733728705ce2f5dcd471cd0bda897528863260eb3c"
+    },
+    "Core/Sources/IMAP/IMAPClient.swift": {
+      "compiledSha256": "0de554d07eb9adaad747cf454af8a1de4f46280f7e2b0b17de40c76c4636a05f",
+      "upstreamSha256": "5107229fb654a45324cf2f5a7e04baac5d625d48f567becb7d751b40208d6375"
+    },
+    "Core/Sources/IMAP/IMAPCommand.swift": {
+      "compiledSha256": "821a85804ae355691aef9fd10b2c4ac6a22af0f32bf4be05ec93c54252fe6da5",
+      "upstreamSha256": "66bd9d857242279847b0d974b17e551c0acd6fa42c6d2893067f92277483da10"
+    },
+    "Core/Sources/IMAP/IMAPError.swift": {
+      "compiledSha256": "b5c600c6c102734dd311655d2f413ec8dc49bae3f17857c30ae45b1d451da448",
+      "upstreamSha256": "b5c600c6c102734dd311655d2f413ec8dc49bae3f17857c30ae45b1d451da448"
+    },
+    "Core/Sources/IMAP/IdleEvent.swift": {
+      "compiledSha256": "08b736661156a659114b75449d70544b104dcd47b04810cade26888c27be9f5e",
+      "upstreamSha256": "08b736661156a659114b75449d70544b104dcd47b04810cade26888c27be9f5e"
+    },
+    "Core/Sources/IMAP/IdleHandler.swift": {
+      "compiledSha256": "f5b451cc7dde6838a2b8147466d692827cbd82cfc82a1cb365a233624d47e822",
+      "upstreamSha256": "188195214d2d75e2f32eb8cce21572f6d5e67d6451c4dff58bb8278205927113"
+    },
+    "Core/Sources/IMAP/InternetMessageDate.swift": {
+      "compiledSha256": "3ea89c2a4374b14b33d62f0256bd07b9fbe71ef62faf45b9631ceb212d01a4d6",
+      "upstreamSha256": "3ea89c2a4374b14b33d62f0256bd07b9fbe71ef62faf45b9631ceb212d01a4d6"
+    },
+    "Core/Sources/IMAP/ListCommand.swift": {
+      "compiledSha256": "096c8b09e4c57b4568ba110c0ba399b885f3fb5539a9a108f263de68069fce27",
+      "upstreamSha256": "c9f7eec44fbc34e3d4dc95a4c737283ef2709ceb629e6cd6b2510ff23c18ab00"
+    },
+    "Core/Sources/IMAP/LoggingHandler.swift": {
+      "compiledSha256": "951a3c193099d690421a7024edbff50d671f8e0c17fc4de0620cd5d8d1116841",
+      "upstreamSha256": "1fab7140d2e4b07d61e9a2f889982b1cd3aa2b274f63d41961f0837d62092f69"
+    },
+    "Core/Sources/IMAP/LoginCommand.swift": {
+      "compiledSha256": "3963e62475997ddabfd40d6762052ebae3dd4adca791c1de8649685f57366a4c",
+      "upstreamSha256": "3963e62475997ddabfd40d6762052ebae3dd4adca791c1de8649685f57366a4c"
+    },
+    "Core/Sources/IMAP/Mailbox.swift": {
+      "compiledSha256": "96e309a9ee3e121b739074c442c34947a2cf482fb2cba87a5034b7a589712c72",
+      "upstreamSha256": "96e309a9ee3e121b739074c442c34947a2cf482fb2cba87a5034b7a589712c72"
+    },
+    "Core/Sources/IMAP/Message.swift": {
+      "compiledSha256": "97298133ca8d4b8964f12e4826945aef40751e3d59a713388447da49e8da76e1",
+      "upstreamSha256": "97298133ca8d4b8964f12e4826945aef40751e3d59a713388447da49e8da76e1"
+    },
+    "Core/Sources/IMAP/MoveCommand.swift": {
+      "compiledSha256": "6cd3df5291f20603bd85b3488f8276d5c428caf5ae90297c91951b9bc2a5b0fd",
+      "upstreamSha256": "6cd3df5291f20603bd85b3488f8276d5c428caf5ae90297c91951b9bc2a5b0fd"
+    },
+    "Core/Sources/IMAP/Namespace.swift": {
+      "compiledSha256": "cfbdac04933e08f7614bbd44881b550c76f3ebf8a2ed76b14d0fe23e07415597",
+      "upstreamSha256": "cfbdac04933e08f7614bbd44881b550c76f3ebf8a2ed76b14d0fe23e07415597"
+    },
+    "Core/Sources/IMAP/NamespaceCommand.swift": {
+      "compiledSha256": "f740f0d1b92ab39efeff6592acb78bb4e60a3eb76049c15aefb84d6a1d9a20b1",
+      "upstreamSha256": "3873042f5f9ded665c840e6faa8c7c6b7cbfb823780ec1c3a5179aa97807b9c4"
+    },
+    "Core/Sources/IMAP/NoopCommand.swift": {
+      "compiledSha256": "9813a59678c596e12bce9dbfec025d9b189392eb0e64e7ccd41d2de632944bb1",
+      "upstreamSha256": "72eefd140b9c08056a9a1a9d17074975c912477323dce6f23162193ae5718b99"
+    },
+    "Core/Sources/IMAP/RenameCommand.swift": {
+      "compiledSha256": "7b8e4e495666cc9d8117660d7ee4d887f3c1a0ecd85571dee3f38014ece7c1fd",
+      "upstreamSha256": "7b8e4e495666cc9d8117660d7ee4d887f3c1a0ecd85571dee3f38014ece7c1fd"
+    },
+    "Core/Sources/IMAP/SelectCommand.swift": {
+      "compiledSha256": "04e9ef2a9c7b92596645d7e5cd1b31d45e3421b2fca32931c0bb018d1bcbc880",
+      "upstreamSha256": "45abe620e7142e1c036c1b864ca69a37b291220929297dd9331789956f66f13f"
+    },
+    "Core/Sources/IMAP/SequenceNumber.swift": {
+      "compiledSha256": "3ee16e0b1cbcd6e02dd0a8dca0594371dd2466759dfb2de300f0edfa46883fd8",
+      "upstreamSha256": "3ee16e0b1cbcd6e02dd0a8dca0594371dd2466759dfb2de300f0edfa46883fd8"
+    },
+    "Core/Sources/IMAP/Server.swift": {
+      "compiledSha256": "32a245f66c8e86700b2e74d350e097218eaf18f8006b1da939fe2736cbe975ec",
+      "upstreamSha256": "32a245f66c8e86700b2e74d350e097218eaf18f8006b1da939fe2736cbe975ec"
+    },
+    "Core/Sources/IMAP/ServerMessageDateFormatter.swift": {
+      "compiledSha256": "d95704aca0d2f243f7ca93b5a34b9c1a999ab0731b5fa3e599e1884971ed11ec",
+      "upstreamSha256": "d95704aca0d2f243f7ca93b5a34b9c1a999ab0731b5fa3e599e1884971ed11ec"
+    },
+    "Core/Sources/IMAP/StatusCommand.swift": {
+      "compiledSha256": "e114dbbfa8558be4354ca07a785a1e52ca01ffc7d9f5078b4f152bb7cea255e1",
+      "upstreamSha256": "5182a8f2131c045d622af901e129e87176f11d7111d6228b415cd37cf3af173f"
+    },
+    "Core/Sources/IMAP/StoreCommand.swift": {
+      "compiledSha256": "a482c237d99459703f50d1c0af386310b2e5c2c79bfe4c08137306ac1e1222b3",
+      "upstreamSha256": "a482c237d99459703f50d1c0af386310b2e5c2c79bfe4c08137306ac1e1222b3"
+    },
+    "Core/Sources/IMAP/SubscribeCommand.swift": {
+      "compiledSha256": "64797819a412df5f993ac7ddc096f1b28d8263a18e60f35bbef3b0999a9d792e",
+      "upstreamSha256": "64797819a412df5f993ac7ddc096f1b28d8263a18e60f35bbef3b0999a9d792e"
+    },
+    "Core/Sources/IMAP/UID.swift": {
+      "compiledSha256": "c92ccffac773500527a8aa69ffbe987daa5e1892ac22731aa299ed21e0b33547",
+      "upstreamSha256": "c92ccffac773500527a8aa69ffbe987daa5e1892ac22731aa299ed21e0b33547"
+    },
+    "Core/Sources/IMAP/UIDCopyCommand.swift": {
+      "compiledSha256": "484aaf31184f3d8e4fc67c6d6c4add08671a4d1cc67a00699bf43140a768ed4f",
+      "upstreamSha256": "484aaf31184f3d8e4fc67c6d6c4add08671a4d1cc67a00699bf43140a768ed4f"
+    },
+    "Core/Sources/IMAP/UIDFetchCommand.swift": {
+      "compiledSha256": "3857fad187ca9c9f6f006e6a5bd07dccc77011d03d357a211ea1e81a50a498c8",
+      "upstreamSha256": "3857fad187ca9c9f6f006e6a5bd07dccc77011d03d357a211ea1e81a50a498c8"
+    },
+    "Core/Sources/IMAP/UIDMoveCommand.swift": {
+      "compiledSha256": "c66cc5b45c7daae330cf3f6f2a6d33b3b38e3af3445e5a34d1627a37b5ae58ef",
+      "upstreamSha256": "c66cc5b45c7daae330cf3f6f2a6d33b3b38e3af3445e5a34d1627a37b5ae58ef"
+    },
+    "Core/Sources/IMAP/UIDStoreCommand.swift": {
+      "compiledSha256": "44e9ad28a6c0e2283caf852d62e60211e712e9cb98aa70fa4a472022f9e15318",
+      "upstreamSha256": "44e9ad28a6c0e2283caf852d62e60211e712e9cb98aa70fa4a472022f9e15318"
+    },
+    "Core/Sources/IMAP/UnsubscribeCommand.swift": {
+      "compiledSha256": "818d8cf3b5ba231fa19fd41dc5905871ac7294517c33f30cfefb92b66e3bcc69",
+      "upstreamSha256": "818d8cf3b5ba231fa19fd41dc5905871ac7294517c33f30cfefb92b66e3bcc69"
+    },
+    "Core/Sources/IMAP/VoidCommand.swift": {
+      "compiledSha256": "ae62829c36001297781f587e1a9127c74ec8ccf07a5ad19cbdd808bfe90437d2",
+      "upstreamSha256": "ae62829c36001297781f587e1a9127c74ec8ccf07a5ad19cbdd808bfe90437d2"
+    },
+    "Core/Sources/Account/EmailAttachment.swift": {
+      "compiledSha256": "b9587daf91aee5bc066b0117cbb16477d518483e0ce95772154289633894f6ef",
+      "upstreamSha256": "b9587daf91aee5bc066b0117cbb16477d518483e0ce95772154289633894f6ef"
+    },
+    "Core/Sources/Account/EmailBody.swift": {
+      "compiledSha256": "264dfd2b3d8e2cff4c6ae0ef9eba4caa74e14a1295cfd3d4b97689b716e0abd8",
+      "upstreamSha256": "f2a351b8d63461d9da0ec2a176bddc37d7123f5c2d61291d2d0e1512574d81d4"
+    },
+    "Core/Sources/Account/String.swift": {
+      "compiledSha256": "1999e260ad6bb85c9df7a784f65f8cba1b6cddf796c1a1fda88c0e5f0c8dfd45",
+      "upstreamSha256": "1999e260ad6bb85c9df7a784f65f8cba1b6cddf796c1a1fda88c0e5f0c8dfd45"
+    }
+  },
+  "coreSha256": "143dd85a92be2fc6786c351221fa0ae40d9c0294be3efcadedd365ab382fc708",
+  "packages": {
+    "harmony/entry/build/default/outputs/default/entry-default-unsigned.hap": "53ff7b0a3c978b310bd8ba80386498de3b0d94ff335eee3b3d5eaa427d0dec63",
+    ".tools/network-test-app/entry/build/default/outputs/default/entry-default-unsigned.hap": "a4f84e27005b96d60a590541e3cab1a582b9a160b4e15a6ac0b9a49491bfc63d",
+    ".tools/imap-test-app/entry/build/default/outputs/default/entry-default-unsigned.hap": "a340ff2f897d225ef6a687ef2bc3cd7a1390ed891a4958d429a54baf465d90f6"
+  },
+  "singleSharedMailCore": true,
+  "shippingDiagnostics": false,
+  "imapPackagedInMailApp": true,
+  "imapAccountUI": true,
+  "deviceTests": {
+    "passed": 76,
+    "failed": 0,
+    "imapAccountBodyUI": 24,
+    "networkingAndJmap": 32,
+    "mailAppCore": 5,
+    "historicalPrototypeAndUI": 15
+  },
+  "emulatorStoppedAfterTests": true,
+  "physicalDeviceVerified": false,
+  "remaining": [
+    "OAuth/provider interoperability and STARTTLS/autoconfiguration",
+    "SMTP sending, archive/folder moves, background synchronization, large messages, HTML/attachments",
+    "ARM build, signing and Pura X validation; remaining full-port modules and features"
+  ],
+  "evidence": {
+    ".tools/combined-mail-core-packages.json": "f3c873a8a1a03ef38cf24cfbc6decf6984800f315ee04b76085f99e8c33e67ff",
+    ".tools/imap-fixture-stats.json": "e8cbf5469e4b15ef188821e352c9f2f64c7f3d49df8dac51f752e3ed113bdc3e",
+    ".tools/imap-flags-build.log": "bec5ba0b21e4ac321c7a18fd9a23d2aaa7cc3a6c33e64037b19dd53048c73479",
+    ".tools/imap-flags-device-session.log": "b3449b107a0cd56034dafcee1532a852f2897ec8ee6d283b9df3f7ddf3a5f7f0",
+    ".tools/imap-flags-host-build.log": "33dbbda216e6db506e8ac590dc681bba476d8db369a799e61c73f3001cee9102",
+    ".tools/imap-flags-model-tests.log": "d179911eeae9de00c8d963e4400ee38fba31c864e6d999edeacea7e463c43e28",
+    ".tools/imap-reader.png": "6e799636816e8ff00f0f03a8da60246dca2acb92a23fe67b646282914cbe4258",
+    ".tools/imap-test-device.log": "379c1a280923038aaa13a671cb1b65e6a1b2d6602d13a40c59c2a2c9c3f477f0",
+    ".tools/imap-test-hilog.log": "a99926e1f298646ed34fc5cdc1c7cf92faa401dcdff1df5ac779ebf618f37d5d",
+    ".tools/jmap-device-test.log": "6b7db17422d7577ef6065696a99d6972dbede443642f3435e097d386b20b1e19",
+    ".tools/native-app-device.log": "bcdefca42aecdf76194292cdad96c45a93a26e3221e9bfe4d3de03ad4feda55e",
+    ".tools/native-app-hilog.log": "0a08ad1bb693e8569febf62645d4af738d7ea1e7e3a007373bc583c7644b58bb",
+    ".tools/network-fixture-stats.json": "d5223589eb78d210e8203ac853a88a32ab808466e924195099ac094396efdfab",
+    ".tools/network-test-device.log": "fae5b4b98493eabc52ce413f573c4c5321e9b96ced506ae607810c8e7eda28f2",
+    ".tools/network-test-hilog.log": "1e48f4f6db39b2e9b8758ce745c0bc116e1f7dee08d2e87bdbb97b327f4106bb",
+    ".tools/swift-probe/native-imap/app-probe-link.json": "b107c7b8869fb57f961efb0e0303da8fd9bd528dd83e1fa485c7842ad3fccdd9",
+    ".tools/swift-probe/native-imap/core-objects.json": "99cfa1f67b9523207a34b6bc00e71eac9b187ae679e9bd0ea8bfdd94c4efb4f2",
+    "harmony/entry/src/main/cpp/napi_init.cpp": "a209c6f66d487aaca51fcb55f6d76cf302f399cc1a8a1e0ad5ed8da3a5850396",
+    "harmony/entry/src/main/ets/data/AccountStore.ets": "1e82078c3e0dfd61d0ac932c77df94119c8e6d59cc05c5861c5dd4c5f1955c3e",
+    "harmony/entry/src/main/ets/mail/imap/NativeImapClient.ets": "767a4d3006662e401931383e323ebd2464c48f7bf59b0583ae71215e92452fa7",
+    "harmony/entry/src/main/ets/mail/jmap/JmapClient.ts": "6dff1fc9fee0e881fc9f7ff2496ba9f60fc28ebba786b32db2a1112a91276a22",
+    "harmony/entry/src/main/ets/pages/ConnectedMail.ets": "9aef775d5352fbb13ea5c674c1af0bbe4fbde40147b0d18969b6b824d714ce86",
+    "port/swift-accountbody/body-adapter.patch": "e8ece4d5339add8ece2f7a163d57566dc74fa588a103b618265f1f042a142663",
+    "port/swift-accountbody/upstream-files.json": "4b16ebfc91f95b9e84364edc3b78fd51b6a9724390e4e8c5b07897d12f9b1183",
+    "port/swift-imap/AccountCore.test.ets": "2beed3a329148cc159536bf83fa770da6a15df5340c21ff027006f3222264173",
+    "port/swift-imap/CHarmonyIMAPTrust/trust.c": "e47d473a94369071c2b7426a2fec7e116144a53ce0f401e95134c1f98308782a",
+    "port/swift-imap/CHarmonyIMAPTrust/trust.h": "5158ba9fe79847846b5b5c0dc79d1240ed3df36f5d621ff2c7e2067d1756d75a",
+    "port/swift-imap/ImapAccountCore.swift": "d74728b37b60e93b1a48080642c500b51742eafac6b4af051724ff7d66180f02",
+    "port/swift-imap/ImapModels.swift": "c90018836505e3a0c22dbe66359cb6375c1ac221356633b6fb6d5bc120050107",
+    "port/swift-imap/ImapTrust.swift": "13757f734e70f74656d2dc415cad9b70554dcfe0524d312c23b3b7bb182d06a1",
+    "port/swift-imap/account-fixture.cjs": "38738a0e8832dfbfce43103ad18dba80a740ae57319d01a17a28f6ade01da293",
+    "port/swift-imap/account-hooks.patch": "9e75fd0b51f1fde996788c34a89eb6406b586b008b70ddbe98e481d9cd83067e",
+    "port/swift-imap/message-flags.patch": "3250ff668cce82e662be931bccf5e383aece843959825f3e8ec409df70cfd7c0",
+    "scripts/build-imap-test-app": "7fde59ad67f73674ca887f8ed6fc6b45ed7d7bd34d322ed47d9a32e4695a045b",
+    "scripts/build-network-test-app": "61a2af0b6e98111fa8d4921575521f0cb1274078fcf32e861898b39d268ce086",
+    "scripts/link-imap-app-probe": "5879d29887f2db60f5b829395be3adbbd3cca4480382b3cb38de8d0303b5e905",
+    "scripts/prepare-imap-core-objects": "2d127f066da3d09197ec94ddf5292a85b1c6280410589ca550db2be9bb2be98f",
+    "scripts/prepare-imap-host": "e13a7bb31a563c184c5ff7bb3e1d9aa8342dc1c96c96a5b34e243f78ff06a9f0",
+    "scripts/prepare-imap-native": "d7a77ead1d6c7d7a4065bf3c1009c878b5df57c6ac6dfba71d927e9a6b79da5b",
+    "scripts/prepare-imap-test-app": "6cfa76444314ff7e59808c4f948d1b96391a34ad0af760c57b037de25b9618e8",
+    "scripts/prepare-native-app": "8b52bf215805eb909ec0de403de75bbaa42ef493909324bfd9aedad34c40df23",
+    "scripts/test-mail-core": "35ea58f1003847810ef06ad3572bd39f6abe1693a2554fd0cbce721ec74feae9",
+    "scripts/test-native-imap": "819ede7a2133b30becb205e5c0f3f9c74e1a799855a083f5182a42df6e92e2d7",
+    "scripts/verify-mail-core-packages": "20f056fec8617124141b5ce2335a2924d740778435b17941fb7cfbc7a98edd4a",
+    "scripts/with-test-emulator": "195eca4f6569d8e342109edca1a9ec82c767a6aa72dbc439243df810d8dc46f4"
+  },
+  "runtimeLibraries": {
+    "libswift_RegexParser.so": "21900ecc03a0d577dc38981250b6fe3b49d9798fb0132caa9399b49d96dd0419",
+    "libswift_Concurrency.so": "7af19c91926c426b83bec3a49e6f5db57b8a2fa7f48bc1811f47209e1d84b57c",
+    "libdispatch.so": "de1839316680d5c89b18df2768910b4dd65996c5d8e2acbcb3c02d444add16df",
+    "libcurl.so.4": "5e3cb72802d584638afe3b0b6992c5c243608a7fc3f0bfba5c45e99a9df7c4ba",
+    "libThunderbirdCore.so": "143dd85a92be2fc6786c351221fa0ae40d9c0294be3efcadedd365ab382fc708",
+    "libFoundationEssentials.so": "e49b25f1ea08b20a47978fbff65f7ec6e484baddf4ddd7bd4abdaa96729aa123",
+    "libFoundationNetworking.so": "7342d0674377574d287b4832c75e178f6f030eb88b7d8d1fc7bf6a4d1a47168e",
+    "libswiftSwiftOnoneSupport.so": "5a7f56f73dfbf1eac93dcdd6576515583d261efd95c85a9d654cc5268010c151",
+    "libfts.so": "a5cc138dba726f56eeba3c3e6ef4f43078ab99b17b9694149f3bed3c422e331f",
+    "libcrypto.so.3": "12fdff96530095eaefcb97d409fb0fdb14332f80417a7c25b6a28d775706c9c4",
+    "libxml2.so.16": "b95a67f2bfc0a83889663f12a824d5805bba461cc77097bf8211bbad72a945ad",
+    "lib_FoundationICU.so": "728bb12efbd17b96cd5a56ea39ebcdf6568e0cdbd9c2a48f77cc4e7befadef95",
+    "libFoundation.so": "5ac6d87f8d164e317a52253ef5a3071651d0f1c27f47d0a7cd47294300b628b7",
+    "libswiftSynchronization.so": "2325bfe49b1b8d8e0a6bbd256ca27848108f69e0b9602972030baa907af63e3c",
+    "libswiftMusl.so": "e1cba15b79f19da2ec19f4d777e991d20f14d21981ba6879bce66111ccbce54c",
+    "libFoundationInternationalization.so": "da9d64de86e4b702d70b63fe8d441892a36d93568a2e92a6c1142d0ecfedef6b",
+    "libc++_shared.so": "e8d1d1f753cfc58b01aaef917194e9b40a4338953b53edf5e2f6e00adb55c606",
+    "libswiftCore.so": "96336992c31a0d678157b6e90f2d69ef84f3c5c478f406e58558fed9c2bad4ea",
+    "libswift_StringProcessing.so": "dccfebabdff4011d8fa8b4abd92c61c68103ba15527a4aed8a9b5271061c6494",
+    "libssl.so.3": "de80af2122857af01b7c073908210d2985b0fe25f767b62a4f5638a892c03339",
+    "libswiftDispatch.so": "99eb503b82dec8d940fadfdb79e276e4156bc255959ed95b2946e2f63f370c82",
+    "libBlocksRuntime.so": "307d3afce64f8f34ca05c832e838fb7f3ea1e6c2d9aae40fd18bc6b1aad05d33"
+  },
+  "imapAccountReadOnly": false,
+  "originalAccountBodyFiles": 3,
+  "originalAccountBodyFixtures": 13,
+  "hostModelTestsPassed": 52,
+  "imapFlagChanges": true,
+  "separateEmailAndLogin": true,
+  "accountDatabaseSchema": 3
+}

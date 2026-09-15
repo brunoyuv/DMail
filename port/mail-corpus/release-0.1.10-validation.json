@@ -1,0 +1,67 @@
+{
+  "version": "0.1.10",
+  "versionCode": 100010,
+  "status": "installed-and-verified",
+  "host": {
+    "tests": 255,
+    "pass": 255,
+    "fail": 0,
+    "skipped": 0
+  },
+  "native": {
+    "tests": 1,
+    "passed": 1,
+    "scope": "Old synthetic header without body: network failure retains header and offers Retry; explicit retry caches a complete body; offline reopen preserves body and timestamp with no refetch; another downloaded body remains unchanged; saved OAuth Reconnect visible/enabled without browser interaction; exactly two in-memory body requests and no other mail calls"
+  },
+  "nativeDurationMs": 20700,
+  "emulator": {
+    "status": "stopped",
+    "isolatedTestAppCleanupRequested": true,
+    "screenProfileRestored": true
+  },
+  "privacy": {
+    "syntheticOnly": true,
+    "realAccountsAccessed": false,
+    "productionLaunched": false,
+    "realMessagesSent": false
+  },
+  "builds": {
+    "armSigned": true,
+    "x86Production": true,
+    "x86IsolatedFixture": true,
+    "hapSha256": "e6ae221129bafd6b2ef49888122299eeafb1f898ced52497d697e1db548878d3",
+    "nativeLibrariesUnchangedFrom": "0.1.9"
+  },
+  "installations": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "target": "PURA_X_WIFI_TARGET_REDACTED",
+      "versionCode": 100010,
+      "versionName": "0.1.10",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "e6ae221129bafd6b2ef49888122299eeafb1f898ced52497d697e1db548878d3"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "target": "MATEPAD_SERIAL_REDACTED",
+      "versionCode": 100010,
+      "versionName": "0.1.10",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "e6ae221129bafd6b2ef49888122299eeafb1f898ced52497d697e1db548878d3"
+    }
+  ],
+  "evidence": {
+    "hostLogSha256": "4baaec0ae147c0a5ac4a1801fdd640ea7fa1cd5932aa06bd83481baef153448b",
+    "nativeLogSha256": "52f8b3eae3dabcf84e816575d80fd1ae6c52ba8f23cb2ee3c9d599e9454ab859"
+  },
+  "limits": [
+    "The OAuth refresh-overlap failure was reproduced with synthetic fixtures; the cause of the user real-account send or loading failure remains unconfirmed.",
+    "Google and Outlook reconnect, mail provider retries and actual delivery remain user-operated; native UI test did not click Reconnect or open a browser.",
+    "Existing seven-day cache retention is unchanged; previously expired or never-downloaded bodies need a successful server download.",
+    "No background scheduling interval or private relay changes."
+  ]
+}

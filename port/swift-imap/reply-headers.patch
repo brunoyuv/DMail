@@ -1,0 +1,18 @@
+--- a/Sources/IMAP/Message.swift
++++ b/Sources/IMAP/Message.swift
+@@ -9,6 +9,7 @@
+ public typealias MessageSet = [SequenceNumber: Message]
+ 
+ public struct Message: Sendable {
++    public fileprivate(set) var references: [String] = []
+     public fileprivate(set) var body: Body?
+     public fileprivate(set) var emailID: String?
+     public fileprivate(set) var envelope: Envelope
+@@ -142,6 +143,7 @@
+         for component in components {
+             switch component {
+             case .bodyPart(_, let data):
++                message.references = replyReferences(data)
+                 message.body = try? Body(data)
+             case .bodyStructure:
+                 break  // Only decode complete message body

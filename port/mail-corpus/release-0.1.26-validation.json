@@ -1,0 +1,273 @@
+{
+  "versionName": "0.1.26",
+  "versionCode": 100026,
+  "status": "Installed on Pura X after bounded synthetic MatePad validation; MatePad production remains 0.1.24.",
+  "privacy": {
+    "automatedMailTestsSynthetic": true,
+    "productionLaunched": false,
+    "realMailReadOrSent": false,
+    "screenshotsOrNetworkCaptures": false,
+    "passiveEarlierPuraCpuCountersOnly": true,
+    "contentFileChoice": "Readable text/HTML in app-private persistent storage, selected by user"
+  },
+  "host": {
+    "tests": 647,
+    "pass": 647,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "javascriptFiles": 60,
+    "pythonTests": 28,
+    "pythonFiles": 4,
+    "pythonProfilerParserTestsRunSeparately": 8
+  },
+  "swift": {
+    "changedThisUpdate": false,
+    "rerunThisUpdate": false,
+    "previousPassingTests": 103,
+    "previousPassingSuites": 31,
+    "baseline": "0.1.25"
+  },
+  "builds": {
+    "productionArm": true,
+    "productionX86": true,
+    "compileSdk": "26.0.0.105",
+    "targetApi": 22,
+    "minimumApi": 22,
+    "signedHapVerified": true,
+    "shippingSourceFiles": 70,
+    "localizedResourcesEqual": true,
+    "testCountersIsolatedOnly": true,
+    "testCounterKinds": [
+      "loader-document-preparation",
+      "legacy-worker-scan",
+      "picture-batch",
+      "legacy-worker-query",
+      "loader-or-legacy-worker-completion",
+      "inbox-visibility"
+    ],
+    "coreSha256": {
+      "x86_64": "a61371cd438d8d577b02d6bf2e713494c5dafdc5791027cc7190921ffdc192cd",
+      "arm64-v8a": "a8e90fe8608497d26d022a3b8cd1fc58bd0ac44fef324e4a9298e431f9fd193c"
+    }
+  },
+  "changes": [
+    "Message bodies download only when explicitly opened; no bulk body/picture worker in production.",
+    "Automatic checks/header followups/initial IDLE setup share a serial lane with a minimum three-second rest, not a three-second poll.",
+    "New raw text/HTML and prepared HTML use immutable readable files, with metadata and references in encrypted RDB.",
+    "Legacy inline cached bodies migrate lazily with bounded UTF-8 reads and guarded file-reference publication.",
+    "Metadata updates reuse body references; missing body files allow explicit recovery; completed picture attempts remain fixed."
+  ],
+  "nativeRuntime": {
+    "device": "MatePad MRO-W00",
+    "isolatedBundle": "org.thunderbird.harmony.imaptest",
+    "testPassed": true,
+    "testDurationMs": 85338,
+    "images": 20,
+    "imageDecodedRgbaBytes": 28800000,
+    "paragraphs": 1200,
+    "flings": 110,
+    "flingIntervalMs": 15004,
+    "flingRequestedSpeedPixelsPerSecond": 16000,
+    "bodiesFetched": 1,
+    "htmlPreparations": 1,
+    "offlineReopen": true,
+    "storageCloseReopen": true,
+    "sealedSyntheticSource": true,
+    "rawMessageDatabaseBytes": 804,
+    "preparedDatabaseBytes": 215,
+    "preparedHtmlFileCharacters": 6183980,
+    "oversizedRdbProof": {
+      "insertedCharacters": 3145728,
+      "directReadSucceeded": false
+    },
+    "testLogSha256": "77b9b525a3deab5f6567d1032815f50610d97a697b74a0a5fdb9aef86603b200",
+    "isolatedBundleRemoved": true,
+    "isolatedProcessAbsent": true,
+    "hiperfProcessAbsent": true
+  },
+  "profiling": {
+    "tool": "SmartPerf + HiPerf",
+    "cpuCores": 12,
+    "normalization": "Percent of all CPU capacity across the 12 reported cores.",
+    "attribution": "SmartPerf parent 54915 was aa; child 54916 matched the isolated app main TID in HiPerf. Report child CPU for the observed app process.",
+    "phases": [
+      {
+        "phase": "idle",
+        "durationMs": 10015,
+        "coverageMs": 10015,
+        "appObservedCpuMeanPercent": 0.03397,
+        "appObservedCpuPeakPercent": 0.469956,
+        "workDelta": {
+          "sync_queries": 0,
+          "html_scans": 0,
+          "picture_batches": 0,
+          "completed_message_ids": 0,
+          "body_calls": 0,
+          "page_calls": 0,
+          "violations": 0,
+          "inbox_shown": 0,
+          "inbox_hidden": 0
+        }
+      },
+      {
+        "phase": "refresh",
+        "durationMs": 5692,
+        "coverageMs": 5692,
+        "appObservedCpuMeanPercent": 1.701312,
+        "appObservedCpuPeakPercent": 2.392822,
+        "workDelta": {
+          "sync_queries": 0,
+          "html_scans": 0,
+          "picture_batches": 0,
+          "completed_message_ids": 0,
+          "body_calls": 0,
+          "page_calls": 2,
+          "violations": 0,
+          "inbox_shown": 0,
+          "inbox_hidden": 0
+        }
+      },
+      {
+        "phase": "open",
+        "durationMs": 9610,
+        "coverageMs": 9610,
+        "appObservedCpuMeanPercent": 7.269455,
+        "appObservedCpuPeakPercent": 10.345406,
+        "workDelta": {
+          "sync_queries": 0,
+          "html_scans": 1,
+          "picture_batches": 0,
+          "completed_message_ids": 1,
+          "body_calls": 1,
+          "page_calls": 0,
+          "violations": 0,
+          "inbox_shown": 0,
+          "inbox_hidden": 0
+        }
+      },
+      {
+        "phase": "scroll",
+        "durationMs": 15004,
+        "coverageMs": 15004,
+        "appObservedCpuMeanPercent": 4.256069,
+        "appObservedCpuPeakPercent": 4.478854,
+        "workDelta": {
+          "sync_queries": 0,
+          "html_scans": 0,
+          "picture_batches": 0,
+          "completed_message_ids": 0,
+          "body_calls": 0,
+          "page_calls": 0,
+          "violations": 0,
+          "inbox_shown": 0,
+          "inbox_hidden": 0
+        }
+      },
+      {
+        "phase": "settled",
+        "durationMs": 10005,
+        "coverageMs": 10005,
+        "appObservedCpuMeanPercent": 0.527728,
+        "appObservedCpuPeakPercent": 3.991316,
+        "workDelta": {
+          "sync_queries": 0,
+          "html_scans": 0,
+          "picture_batches": 0,
+          "completed_message_ids": 0,
+          "body_calls": 0,
+          "page_calls": 0,
+          "violations": 0,
+          "inbox_shown": 0,
+          "inbox_hidden": 0
+        }
+      },
+      {
+        "phase": "background",
+        "durationMs": 10011,
+        "coverageMs": 10011,
+        "appObservedCpuMeanPercent": 0.347732,
+        "appObservedCpuPeakPercent": 2.147341,
+        "workDelta": {
+          "sync_queries": 0,
+          "html_scans": 0,
+          "picture_batches": 0,
+          "completed_message_ids": 0,
+          "body_calls": 0,
+          "page_calls": 0,
+          "violations": 0,
+          "inbox_shown": 0,
+          "inbox_hidden": 0
+        }
+      }
+    ],
+    "inputsSha256": {
+      "test_log": "77b9b525a3deab5f6567d1032815f50610d97a697b74a0a5fdb9aef86603b200",
+      "profiler_csv": "479e7da7d51127c8222e24e0ab5f4408b2e57f806e803c29755907d93a2bf130"
+    },
+    "hiPerf": {
+      "durationSeconds": 8,
+      "frequencyHz": 99,
+      "bytesLimitMiB": 8,
+      "capturedMiB": 1.642,
+      "samples": 4989,
+      "lostSamples": 0,
+      "summary": "Top named sampled rows included ioctl and Chrome IO recvmsg; no single mail-parser hotspot established.",
+      "reportSha256": "177bb0ace2abfa234189ec9b987438039d77b8973ee9922bf5e874dcd1d7402b"
+    },
+    "processIdentity": {
+      "target_bundle": "org.thunderbird.harmony.imaptest",
+      "primary_column": [
+        {
+          "pid": 54915,
+          "name": "aa",
+          "observations": 86,
+          "matches_target_name": false
+        }
+      ],
+      "reported_child_pids": [
+        {
+          "pid": 54916,
+          "observations": 85,
+          "verified_name": "org.thunderbird.harmony.imaptest",
+          "verification": "HiPerf reports this same TID with the target bundle comm; it matches a SmartPerf child PID."
+        }
+      ],
+      "semantics": "Primary means SmartPerf ProcCpuUsage, not necessarily the app: aa can be the reported parent. Child CPU remains the reported aggregate, not an inferred per-child split. A matching app PID does not establish that all ArkWeb renderer/compositor processes were captured."
+    },
+    "limits": [
+      "Opening the large image fixture caused a one-time CPU and device-sensor burst; these measurements do not establish that every heat issue is resolved.",
+      "Whole-phase settled/background averages include transition intervals; activity subsequently fell.",
+      "PSS fields are omitted because their process attribution was not independently verified."
+    ]
+  },
+  "installedDevices": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "versionCode": 100026,
+      "versionName": "0.1.26",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "06296aac937eeb294bc0fac3de9a9a4b09b471f7e6201362d9e313f63449c9f0"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "versionCode": 100026,
+      "versionName": "0.1.26",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "06296aac937eeb294bc0fac3de9a9a4b09b471f7e6201362d9e313f63449c9f0"
+    }
+  ],
+  "matepadProductionVersion": "0.1.26",
+  "emulatorStarted": false,
+  "limits": [
+    "Short synthetic CPU observations are not battery/watt measurements or proof of savings versus another mail app.",
+    "Refresh/open phases include test actions, rendering, verification and settling; durations are not pure network or MIME timing.",
+    "SmartPerf is not proof of complete ArkWeb/child-process coverage.",
+    "Images were bundled PNG data URLs; no real account, HTTP-picture or provider test was performed.",
+    "First interrupted native attempt included a user-confirmed accidental tap; the next attempt exposed the large-RDB-row failure."
+  ]
+}

@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+source "$ROOT/scripts/swift-target-env"
+NATIVE="$ROOT/.tools/command-line-tools/sdk/default/openharmony/native"
+CMAKE="$ROOT/.tools/swift-build-tools/bin/cmake"
+SOURCE="$ROOT/.tools/swift-dispatch-source"
+ARCHIVE="$ROOT/.tools/swift-downloads/dispatch-6.2.3.tar.gz"
+[[ -x "$CMAKE" && -d "$NATIVE/sysroot" ]] || {
+  echo 'Install the Huawei SDK and workspace CMake first (scripts/build-swift-runtime).' >&2; exit 1;
+}
+mkdir -p .tools/swift-downloads
+if [[ ! -f "$ARCHIVE" ]]; then
+  curl --fail --location --retry 2 --output "$ARCHIVE.part" \
+    https://github.com/swiftlang/swift-corelibs-libdispatch/archive/refs/tags/swift-6.2.3-RELEASE.tar.gz
+  mv "$ARCHIVE.part" "$ARCHIVE"
+fi
+printf '%s  %s\n' ccd933919865c1270f4b71cdff998bf90050e6854479c4112986555ebf4be9f0 "$ARCHIVE" | sha256sum --check --status
+if [[ ! -f "$SOURCE/CMakeLists.txt" ]]; then
+  mkdir -p "$SOURCE"
+  tar -xzf "$ARCHIVE" --strip-components=1 -C "$SOURCE"
+fi
+if ! patch --dry-run --reverse --force -p1 -d "$SOURCE" < port/swift-runtime/dispatch-harmonyos.patch >/dev/null 2>&1; then
+  patch --dry-run --forward --force -p1 -d "$SOURCE" < port/swift-runtime/dispatch-harmonyos.patch
+  patch --forward --force -p1 -d "$SOURCE" < port/swift-runtime/dispatch-harmonyos.patch
+fi
+"$CMAKE" -S "$SOURCE" -B .tools/swift-ohos-dispatch${SWIFT_BUILD_SUFFIX} -G Ninja \
+  -DCMAKE_MAKE_PROGRAM="$NATIVE/build-tools/cmake/bin/ninja" \
+  -DCMAKE_TOOLCHAIN_FILE="$NATIVE/build/cmake/ohos.toolchain.cmake" \
+  -DOHOS_ARCH="$HARMONY_CPU" -DCMAKE_INSTALL_PREFIX="$SWIFT_TARGET_SDK" \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON -DBUILD_TESTING=OFF \
+  -DINSTALL_PRIVATE_HEADERS=ON -DENABLE_SWIFT=OFF \
+  -DCMAKE_C_FLAGS=-Wno-unused-command-line-argument \
+  -DCMAKE_CXX_FLAGS=-Wno-unused-command-line-argument
+"$CMAKE" --build .tools/swift-ohos-dispatch${SWIFT_BUILD_SUFFIX} -j "${SWIFT_RUNTIME_JOBS:-4}"
+"$CMAKE" --install .tools/swift-ohos-dispatch${SWIFT_BUILD_SUFFIX}

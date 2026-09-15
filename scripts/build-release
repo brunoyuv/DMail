@@ -1,0 +1,261 @@
+#!/usr/bin/env python3
+"""Build a local unsigned release HAP and source/license bundle. No upload or install."""
+# SPDX-License-Identifier: MPL-2.0
+import argparse
+import hashlib
+import io
+import json
+import os
+from pathlib import Path
+import re
+import shutil
+import struct
+import subprocess
+import tempfile
+import zipfile
+
+ROOT = Path(__file__).resolve().parent.parent
+REPOSITORY = 'https://github.com/brunoyuv/DMail'
+NIL_REGISTRATION = 'enum LocalGoogleOAuth { static let registration: GoogleDesktopRegistration? = nil }\n'
+ARCHITECTURES = {'arm64': ('aarch64', 'arm64-v8a', '-aarch64', 183),
+                 'x86_64': ('x86_64', 'x86_64', '', 62)}
+
+
+def run(*args, **kwargs):
+    return subprocess.run(args, check=True, cwd=ROOT, **kwargs)
+
+
+def git(*args):
+    return subprocess.check_output(['git', *args], cwd=ROOT).decode().strip()
+
+
+def sha(data):
+    return hashlib.sha256(data).hexdigest()
+
+
+def require_public_policy(root):
+    policy = (root/'harmony/entry/src/main/ets/mail/oauth/RegisteredMailOAuth.ets').read_text()
+    if not re.search(r'static readonly googleBrowserSignInEnabled: boolean = false;', policy):
+        raise ValueError('Public packages require the default Google browser sign-in policy')
+
+
+def stage_project(root, app, abi):
+    # This dedicated generated directory never contains device signing. Read
+    # source-controlled files only, avoiding local profiles, libraries and logs.
+    if app.exists():
+        shutil.rmtree(app)
+    app.mkdir(parents=True)
+    names = subprocess.check_output(['git', 'ls-files', '-z', 'harmony'], cwd=root).decode().split('\0')
+    for name in filter(None, names):
+        relative = Path(name).relative_to('harmony')
+        if 'ohosTest' in relative.parts:
+            continue
+        target = app/relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(root/name, target)
+    node = root/'.tools/runtime/node_modules/node/bin/node'
+    script = r'''
+const fs = require('fs');
+const root = process.argv[1], app = process.argv[2], abi = process.argv[3];
+const json5 = require(root + '/.tools/deveco/node_modules/json5/lib/index.js');
+const profile = json5.parse(fs.readFileSync(app + '/build-profile.json5', 'utf8'));
+profile.app.signingConfigs = [];
+for (const product of profile.app.products) delete product.signingConfig;
+fs.writeFileSync(app + '/build-profile.json5', JSON.stringify(profile, null, 2) + '\n');
+const module = json5.parse(fs.readFileSync(app + '/entry/build-profile.json5', 'utf8'));
+module.buildOption.externalNativeOptions.abiFilters = [abi];
+module.buildOption.nativeLib.debugSymbol.strip = true;
+module.targets = [{ name: 'default' }];
+fs.writeFileSync(app + '/entry/build-profile.json5', JSON.stringify(module, null, 2) + '\n');
+'''
+    subprocess.run([str(node), '-e', script, str(root), str(app), abi], check=True)
+
+
+def add_notices(root, app, revision):
+    legal = app/'entry/src/main/resources/rawfile/legal'
+    legal.mkdir(parents=True, exist_ok=True)
+    for name in ['LICENSE', 'THIRD_PARTY_NOTICES.md']:
+        shutil.copy2(root/name, legal/name)
+    shutil.copytree(root/'licenses', legal/'licenses', dirs_exist_ok=True)
+    shutil.copy2(root/'port/swift-runtime/LICENSE.txt', legal/'licenses/swift-runtime.txt')
+    (legal/'SOURCE.txt').write_text(
+        f'D-Mail: independent AI-assisted HarmonyOS port/rework with OpenAI Codex.\n'
+        f'Project source: {REPOSITORY}/tree/{revision}\n'
+        'Project license: MPL-2.0; component licenses accompany this package.\n'
+        'The distribution ZIP includes the matching project source and upstream\n'
+        'revision/hash manifests, dependency URLs and explicit port patches.\n')
+    return legal
+
+
+def inspect_hap(hap, abi, machine, expected_app):
+    libraries = {}
+    with zipfile.ZipFile(hap) as archive:
+        app = json.loads(archive.read('module.json'))['app']
+        if app.get('debug') is not False or app.get('buildMode') != 'release':
+            raise ValueError('HAP is not a non-debug release build')
+        for name in ['bundleName', 'versionName', 'versionCode', 'vendor']:
+            if app.get(name) != expected_app[name]:
+                raise ValueError(f'Packaged app metadata mismatch: {name}')
+        if app['minAPIVersion'] % 100 != 22 or app['targetAPIVersion'] % 100 != 22:
+            raise ValueError('Unexpected minimum/target API')
+        names = archive.namelist()
+        if not any(n.endswith('/modules.abc') for n in names):
+            raise ValueError('Missing compiled ArkTS')
+        if not any(n.endswith('/legal/LICENSE') for n in names):
+            raise ValueError('Missing packaged license notices')
+        for name in names:
+            if name.endswith('/'):
+                continue
+            data = archive.read(name)
+            if re.search(rb'GOCSPX-[A-Za-z0-9_-]+|ya29\.[A-Za-z0-9_-]+|-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----', data):
+                raise ValueError(f'Credential material in package member: {name}')
+            if not name.startswith('libs/'):
+                continue
+            if Path(name).name in ['libThunderbirdIMAP.so', 'libThunderbirdJMAP.so', 'libIMAPProbe.so', 'libNetworkProbe.so']:
+                raise ValueError('Diagnostic/duplicate native library in package')
+            if not data.startswith(b'\x7fELF') or data[4:6] != b'\x02\x01' or struct.unpack('<H', data[18:20])[0] != machine or not name.startswith(f'libs/{abi}/'):
+                raise ValueError(f'Unexpected native architecture: {name}')
+            libraries[Path(name).name] = sha(data)
+        if not {'libThunderbirdCore.so', 'libthunderbird.so'} <= libraries.keys():
+            raise ValueError('Missing mail core/bridge')
+    return app, libraries
+
+
+def appgallery_identity(root, app):
+    """Apply the registered store identity only to the generated project."""
+    identity = json.loads((root/'packaging/appgallery.json').read_text())
+    manifest = app/'AppScope/app.json5'
+    data = json.loads(manifest.read_text())
+    data['app']['bundleName'] = identity['bundleName']
+    manifest.write_text(json.dumps(data, indent=2)+'\n')
+
+
+def inspect_app(path, hap, expected):
+    # Huawei repacks the HAP and reformats pack.info when making an APP.
+    # Allow that JSON formatting change only; all other payloads must match.
+    with zipfile.ZipFile(path) as archive:
+        haps = [n for n in archive.namelist() if n.endswith('.hap')]
+        if haps != ['entry-default.hap']:
+            raise ValueError('APP does not contain the verified release HAP')
+        embedded = io.BytesIO(archive.read(haps[0]))
+        if not zipfile.is_zipfile(embedded):
+            raise ValueError('APP does not contain the verified release HAP')
+        with zipfile.ZipFile(embedded) as packaged, zipfile.ZipFile(hap) as original:
+            names = packaged.namelist()
+            if len(names) != len(set(names)) or set(names) != set(original.namelist()):
+                raise ValueError('APP does not contain the verified release HAP')
+            for name in names:
+                before, after = original.read(name), packaged.read(name)
+                equal = json.loads(before) == json.loads(after) if name == 'pack.info' else before == after
+                if not equal:
+                    raise ValueError('APP does not contain the verified release HAP')
+        app = json.loads(archive.read('pack.info'))['summary']['app']
+        if (app['bundleName'] != expected['bundleName'] or
+                app['version'] != {'code': expected['versionCode'], 'name': expected['versionName']}):
+            raise ValueError('APP identity/version mismatch')
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--arch', choices=ARCHITECTURES, default='arm64')
+    parser.add_argument('--appgallery', action='store_true',
+                        help='Build an unsigned ARM64 APP with the registered AppGallery identity; release signing is still required')
+    args = parser.parse_args()
+    if args.appgallery and args.arch != 'arm64':
+        parser.error('AppGallery packaging requires ARM64')
+    if git('status', '--porcelain', '--untracked-files=normal'):
+        raise SystemExit('Commit source changes before packaging so the source archive exactly identifies this build.')
+    require_public_policy(ROOT)
+    revision = git('rev-parse', 'HEAD')
+    cpu, abi, suffix, machine = ARCHITECTURES[args.arch]
+    sdk = ROOT/f'.tools/swift-ohos-sdk{suffix}'
+    if not (sdk/'lib/swift/musl/libFoundationNetworking.so').is_file():
+        raise SystemExit('Prepare the native Swift SDK first; see docs/release-packages.md.')
+    # Native generation shares compiler caches with local development builds.
+    # Serialize release jobs; do not run other native builders concurrently.
+    import fcntl
+    lock = (ROOT/'.tools/release-build.lock').open('w')
+    fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    app = ROOT/f'.tools/release-app{suffix}'
+    stage_project(ROOT, app, abi)
+    if args.appgallery:
+        appgallery_identity(ROOT, app)
+    expected = json.loads((app/'AppScope/app.json5').read_text())['app']
+    legal = add_notices(ROOT, app, revision)
+    environment = {**os.environ, 'DMAIL_PUBLIC_RELEASE': '1', 'THUNDERBIRD_SWIFT_ARCH': cpu}
+    run(str(ROOT/'scripts/prepare-native-app'), env=environment)
+    registration = ROOT/f'.tools/swift-probe/native-autoconfiguration{suffix}/LocalGoogleOAuth.swift'
+    if registration.read_text() != NIL_REGISTRATION:
+        raise SystemExit('Public build unexpectedly contains a local Google registration')
+    environment.update(ROOT=str(ROOT), DMAIL_RELEASE_PROJECT=str(app))
+    run('bash', '-c', '''set -euo pipefail
+source "$ROOT/scripts/harmony-build-env"
+cd "$DMAIL_RELEASE_PROJECT"
+"$THUNDERBIRD_BUILD_TOOLS/ohpm/bin/ohpm" install --all
+"$THUNDERBIRD_BUILD_TOOLS/bin/hvigorw" assembleApp --mode project -p product=default -p buildMode=release --no-daemon
+''', env=environment)
+    if git('rev-parse', 'HEAD') != revision or git('status', '--porcelain', '--untracked-files=normal'):
+        raise SystemExit('Source changed during build; refusing to export mismatched release/source artifacts')
+    hap = app/'entry/build/default/outputs/default/entry-default-unsigned.hap'
+    metadata, libraries = inspect_hap(hap, abi, machine, expected)
+    app_package = app/f'build/outputs/default/{app.name}-default-unsigned.app'
+    inspect_app(app_package, hap, expected)
+    version = metadata['versionName']
+    if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+(?:-[a-zA-Z0-9.-]+)?', version):
+        raise SystemExit('Version cannot be used as an artifact filename')
+    variant = '-appgallery' if args.appgallery else ''
+    name = f'D-Mail-{version}-{abi}{variant}-unsigned'
+    dist = ROOT/'dist'; dist.mkdir(exist_ok=True)
+    with tempfile.TemporaryDirectory(prefix='release-export-', dir=ROOT/'.tools') as temporary:
+        bundle = Path(temporary)/name; bundle.mkdir()
+        shutil.copy2(hap, bundle/f'{name}.hap')
+        shutil.copy2(app_package, bundle/f'{name}.app')
+        shutil.copytree(legal, bundle/'legal')
+        source = bundle/f'D-Mail-{version}-source.tar.gz'
+        run('git', 'archive', '--format=tar.gz', f'--prefix=DMail-{revision[:12]}/', f'--output={source}', revision)
+        record = {'repository': REPOSITORY, 'revision': revision, 'version': version,
+                  'versionCode': metadata['versionCode'], 'architecture': abi,
+                  'bundleName': metadata['bundleName'], 'appgalleryIdentity': args.appgallery,
+                  'buildMode': 'release', 'debug': False, 'signed': False,
+                  'googleBrowserSignInEnabled': False, 'localGoogleRegistrationIncluded': False,
+                  'minAPI': 22, 'targetAPI': 22, 'compileSDK': metadata['compileSdkVersion'],
+                  'hapSha256': sha(hap.read_bytes()), 'appSha256': sha(app_package.read_bytes()),
+                  'sourceSha256': sha(source.read_bytes()),
+                  'nativeLibraries': libraries}
+        (bundle/'release.json').write_text(json.dumps(record, indent=2)+'\n')
+        (bundle/'README.txt').write_text(
+            f'D-Mail {version} ({abi}) — unsigned release-mode package\n\n'
+            'The APP and HAP are UNSIGNED and are not ready for AppGallery upload\n'
+            'or device installation. Release signing with a matching certificate,\n'
+            'private key and release profile is still required.\n'
+            f'Bundle ID: {metadata["bundleName"]}\n'
+            'A different bundle ID installs as a separate app with separate data.\n'
+            'Do not uninstall an existing app to work around signing mismatches.\n\n'
+            'Gmail browser login is disabled. Use a Google app password. This public\n'
+            'build contains no local Google client secret; existing Google OAuth\n'
+            'accounts from private development builds may need that original build\n'
+            'configuration to refresh. No saved data is migrated by this package.\n\n'
+            f'AI-assisted port/rework with OpenAI Codex. Source: {REPOSITORY}/tree/{revision}\n'
+            'Matching project source, upstream manifests/patches and license notices\n'
+            'are included. No private toolchains, signing keys or OAuth configuration\n'
+            'are included. This build has not been installed or device-tested.\n')
+        members = sorted(p for p in bundle.rglob('*') if p.is_file())
+        (bundle/'SHA256SUMS').write_text(''.join(f'{sha(p.read_bytes())}  {p.relative_to(bundle)}\n' for p in members))
+        output = Path(temporary)/f'{name}.zip'
+        with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
+            for p in sorted(bundle.rglob('*')):
+                if p.is_file():
+                    archive.write(p, f'{name}/{p.relative_to(bundle)}')
+        checksum = sha(output.read_bytes())
+        output.replace(dist/output.name)
+        (dist/f'{name}.zip.sha256').write_text(f'{checksum}  {name}.zip\n')
+        shutil.copy2(app_package, dist/f'{name}.app')
+        (dist/f'{name}.app.sha256').write_text(f'{sha(app_package.read_bytes())}  {name}.app\n')
+    print(f'Release package: {dist/name}.zip')
+    print(f'Unsigned APP: {dist/name}.app')
+    print(f'SHA-256: {checksum}')
+    print('Unsigned; no install, upload or GitHub release performed.')
+
+
+if __name__ == '__main__':
+    main()

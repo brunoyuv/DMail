@@ -1,0 +1,106 @@
+--- a/Core/Sources/JMAP/JMAPClient.swift
++++ b/Core/Sources/JMAP/JMAPClient.swift
+@@ -166,6 +166,103 @@
+         return try await updateEmail(undo.emailID, patch: patch, ifInState: state)
+     }
+ 
++    public enum DraftFailureCode: String, Sendable {
++        case invalidDraft, draftTooLarge, draftsUnavailable, forbidden, overQuota, draftRejected
++        case requestTooLarge, draftOutcomeUnknown
++    }
++    public struct DraftFailure: Error {
++        public let code: DraftFailureCode
++        public let mayHaveCreated: Bool
++    }
++    public struct Draft: Decodable, Sendable {
++        // A draft address is lossless input, not a parsed delivery address.
++        public struct Address: Decodable, Sendable { public let name: String; public let email: String }
++        public let from: Address?
++        public let to: [Address], cc: [Address], bcc: [Address], replyTo: [Address]
++        public let subject: String, textBody: String
++        public let inReplyTo: [String], references: [String]
++
++        public func validate() throws { _ = try requestObject() }
++        fileprivate func requestObject() throws -> [String: Any] {
++            func header(_ text: String) throws -> String {
++                guard !text.unicodeScalars.contains(where: { $0.value < 32 || $0.value == 127 }) else {
++                    throw DraftFailure(code: .invalidDraft, mayHaveCreated: false)
++                }
++                return text
++            }
++            func address(_ value: Address) throws -> [String: String] {
++                ["name": try header(value.name), "email": try header(value.email)]
++            }
++            func addresses(_ values: [Address]) throws -> Any {
++                values.isEmpty ? NSNull() : try values.map(address)
++            }
++            func messageIDs(_ values: [String]) throws -> Any {
++                guard values.allSatisfy({ !$0.isEmpty && !$0.contains(where: { $0.isWhitespace || $0 == "<" || $0 == ">" }) }) else {
++                    throw DraftFailure(code: .invalidDraft, mayHaveCreated: false)
++                }
++                return values.isEmpty ? NSNull() : try values.map(header)
++            }
++            guard !textBody.contains("\0") else { throw DraftFailure(code: .invalidDraft, mayHaveCreated: false) }
++            guard textBody.utf8.count <= 256 * 1024 else { throw DraftFailure(code: .draftTooLarge, mayHaveCreated: false) }
++            return ["from": try from.map { [try address($0)] } as Any? ?? NSNull(),
++                "to": try addresses(to), "cc": try addresses(cc), "bcc": try addresses(bcc), "replyTo": try addresses(replyTo),
++                "subject": try header(subject), "inReplyTo": try messageIDs(inReplyTo), "references": try messageIDs(references),
++                "textBody": [["partId": "body", "type": "text/plain"]],
++                "bodyValues": ["body": ["value": textBody, "isTruncated": false, "isEncodingProblem": false]]]
++        }
++    }
++    public struct CreatedDraft: Encodable, Sendable {
++        public let id: String, blobId: String, threadId: String
++        public let size: Int
++        public let state: String, mailboxId: String
++    }
++    public func createDraft(_ draft: Draft) async throws -> CreatedDraft {
++        // Value input is fixed before the first suspension point.
++        var content = try draft.requestObject()
++        let (session, accountID) = try writableAccount()
++        let drafts = try await changeMailboxes().filter { $0.role == .drafts }
++        guard drafts.count == 1 else { throw DraftFailure(code: .draftsUnavailable, mayHaveCreated: false) }
++        let mailbox = drafts[0]
++        guard mailbox.rights.mayAddItems else { throw DraftFailure(code: .forbidden, mayHaveCreated: false) }
++        content["mailboxIds"] = [mailbox.id: true]
++        content["keywords"] = [Email.Keyword.draft.rawValue: true, Email.Keyword.seen.rawValue: true]
++        try Task.checkCancellation()
++        do {
++            guard let response = try await urlSession.jmapAPI([
++                Email.SetMethod(accountID, actions: [.create(["draft": content])])
++            ], url: session.apiURL, authorization: server.authorization!, maxRequestBytes: session.capabilities[.core]?.maxSizeRequest).first as? MethodSetResponse else {
++                throw URLError(.cannotDecodeContentData)
++            }
++            let reported = Array(response.created.keys) + response.notCreated.keys
++            guard reported == ["draft"], response.updated.isEmpty, response.notUpdated.isEmpty,
++                  response.destroyed.isEmpty, response.notDestroyed.isEmpty else { throw URLError(.cannotDecodeContentData) }
++            if let rejected = response.notCreated["draft"] {
++                let code: DraftFailureCode
++                switch rejected {
++                case .forbidden: code = .forbidden
++                case .overQuota: code = .overQuota
++                case .tooLarge: code = .draftTooLarge
++                case .invalidProperties: code = .invalidDraft
++                default: code = .draftRejected
++                }
++                throw DraftFailure(code: code, mayHaveCreated: false)
++            }
++            guard let object = response.created["draft"] as? [String: Any] else { throw URLError(.cannotDecodeContentData) }
++            struct Created: Decodable { let id: String; let blobId: String; let threadId: String; let size: Int }
++            let created = try JSONDecoder().decode(Created.self, from: JSONSerialization.data(withJSONObject: object))
++            guard [created.id, created.blobId, created.threadId].allSatisfy(Self.validChangeID),
++                  created.size >= 0, created.size <= 9_007_199_254_740_991 else { throw URLError(.cannotDecodeContentData) }
++            return CreatedDraft(id: created.id, blobId: created.blobId, threadId: created.threadId, size: created.size,
++                state: response.newState, mailboxId: mailbox.id)
++        } catch let error as DraftFailure { throw error }
++        catch let error as URLError where error.code == .dataLengthExceedsMaximum {
++            throw DraftFailure(code: .requestTooLarge, mayHaveCreated: false)
++        } catch {
++            // Correlation IDs are not idempotency keys. Never replay this call.
++            throw DraftFailure(code: .draftOutcomeUnknown, mayHaveCreated: true)
++        }
++    }
++
+     public func thread(for email: Email) async throws -> [Email] {
+         if let session {
+             guard let id: String = selectedAccountID(in: session) else {

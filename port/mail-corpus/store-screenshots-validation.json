@@ -1,0 +1,101 @@
+{
+  "applicationSourceCommit": "eb5994ba7b678cff3f1818dd0dfff5e1d6214c86",
+  "applicationSourceTree": "57a140baa63cf785a8ab33a094a8616555cea47c",
+  "version": "0.1.11",
+  "captureDate": "2026-09-14",
+  "language": "en",
+  "theme": "light",
+  "fixtureBundle": "org.thunderbird.harmony.imaptest",
+  "productionOpened": false,
+  "realMailAccessed": false,
+  "syntheticMailOnly": true,
+  "mailServiceCalls": 0,
+  "sentMessages": 0,
+  "postprocessed": false,
+  "emulatorStopped": true,
+  "nativeTests": {
+    "phone": {
+      "tests": 1,
+      "passed": 1,
+      "durationMs": 28774,
+      "logSha256": "c83f9832807ec6bf3cc5813c55d514f0076475619e5fe2356530cd74f1a8fcd6"
+    },
+    "tablet": {
+      "tests": 1,
+      "passed": 1,
+      "durationMs": 28641,
+      "logSha256": "e08b15d3dfb59453d1bdc18443d030dc46e01d8a0944f3fc4291f268a4e289bf"
+    }
+  },
+  "screenshots": [
+    {
+      "path": "docs/screenshots/appgallery/01-phone-inbox.png",
+      "width": 1080,
+      "height": 2400,
+      "bytes": 326220,
+      "sha256": "24af29035a12d7ae4bd62d8c06dd24ca658a942076ad23ab01b5c22669dc5e8e"
+    },
+    {
+      "path": "docs/screenshots/appgallery/02-phone-reader.png",
+      "width": 1080,
+      "height": 2400,
+      "bytes": 209932,
+      "sha256": "271ef830587056bda4a2dfe1c86cc91019eeaf9bfe1dd04381632cb8b08aef78"
+    },
+    {
+      "path": "docs/screenshots/appgallery/03-phone-composer.png",
+      "width": 1080,
+      "height": 2400,
+      "bytes": 232048,
+      "sha256": "b89b0200de826267e08ca6328e96c26f4868372eac3315194caf518b8828deae"
+    },
+    {
+      "path": "docs/screenshots/appgallery/04-tablet-inbox.png",
+      "width": 2800,
+      "height": 1840,
+      "bytes": 490341,
+      "sha256": "bb667b44301e0b319d90d57319e39403968a3dffa4ccb0d5b4731d47294831e8"
+    },
+    {
+      "path": "docs/screenshots/appgallery/05-tablet-reader.png",
+      "width": 2800,
+      "height": 1840,
+      "bytes": 446385,
+      "sha256": "6b79294390c35674b2457023ba9e82c64c38c0b5c21daaa687b045aa50b7a390"
+    },
+    {
+      "path": "docs/screenshots/appgallery/06-tablet-composer.png",
+      "width": 2800,
+      "height": 1840,
+      "bytes": 455587,
+      "sha256": "14920d8910dfb5132352e199a471374885dfab6c752e7382aeabf3cd43fc320b"
+    }
+  ],
+  "htmlFixtures": {
+    "port/mail-corpus/store-workshop.html": "d15b06cd67d3e1c960f8f93c3a64cc76d42108da0957f81da7d77db3a708880e",
+    "port/mail-corpus/store-newsletter.html": "50e2656f905bd80335fab22c87897ce8f95a646a45fd2a07c4d8de1c72902a2c",
+    "port/mail-corpus/store-workshop-reply.html": "53e57297b8cc94855d03151ca2b57b3b2202cedf743c9f17f3fc50b2c84554d7"
+  },
+  "mainTestHapSha256": "ef41e552156d47d90606b93a7337db674eeeeee5e18cd205be241f3018032265",
+  "conversationChecks": {
+    "messageCount": 3,
+    "mailboxes": [
+      "inbox",
+      "sent"
+    ],
+    "replyHeaderLinked": true,
+    "distinctThreadIds": true,
+    "inboxMergedRowAndCount": true,
+    "earlierSentReplyExpandedThenCollapsed": true,
+    "quotedTextExpandedThenFolded": true,
+    "expandedBodiesAtCapture": 1,
+    "diagnosticInstrumentation": false
+  },
+  "hostTests": {
+    "javascript": 291,
+    "python": 9,
+    "failed": 0,
+    "logSha256": "2ba158d8e9e3819f0fa9fda767c384864918e99673c1d8349d4a836dd82bf516"
+  },
+  "testHapSha256": "42967124cfc112d9e06a88914bed9c2a2371b60029a62c7036dcf27608643c26"
+}

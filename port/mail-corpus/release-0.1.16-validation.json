@@ -1,0 +1,175 @@
+{
+  "version": "0.1.16",
+  "versionCode": 100016,
+  "bundleName": "org.thunderbird.harmony.dev",
+  "status": "installed-and-verified",
+  "hostJavaScript": {
+    "tests": 427,
+    "pass": 427,
+    "fail": 0,
+    "skipped": 0,
+    "files": 44
+  },
+  "hostPython": {
+    "tests": 9,
+    "pass": 9
+  },
+  "deterministicEvidence": {
+    "cacheQueries": {
+      "viewEntries": 71,
+      "before": 72,
+      "after": 3,
+      "batchLimit": 64,
+      "scope": "Synthetic SQLite adapter query counts, not physical latency."
+    },
+    "pictureQueue": {
+      "distinctImages": 7,
+      "activeWhenHidden": 4,
+      "httpRequestsBeforeFix": 7,
+      "httpRequestsAfterFix": 4,
+      "scope": "Actual cache/renderer methods with synthetic HTTP/RDB; in-flight four may finish, remaining work is canceled; resume is cache-first."
+    },
+    "refresh": "Held index and Sent do not hold visible Inbox completion. Repeated pulls preserve only latest companion intent. Background/composer/navigation guards prevent new requests; paused cached index resumes once."
+  },
+  "nativeStorage": {
+    "tests": 1,
+    "passed": 1,
+    "durationMs": 9514,
+    "scope": "Actual encrypted RDB:65 reversed headers across two batches, dirty inclusion/exclusion, pagination/query state, original offline body timestamp, close/reopen ordering and stale handle rejection. Zero mail calls.",
+    "logSha256": "f12bf753fe5f504c63091301c425cc744bffeac37cf15d4bcfe4c1fe6996078c"
+  },
+  "nativeInboxLatency": {
+    "tests": 1,
+    "passed": 1,
+    "screen": "pura-main",
+    "scope": "Synthetic Inbox plus one held Sent page; Inbox layout settles, repeated native pulls coalesce Sent, and cached reader opens before Sent release. Background bus signal prevents new requests.",
+    "limitations": "This is a functional native gate, not a provider-latency, physical screen-lock, frame-rate, temperature or power measurement.",
+    "visualEvidence": [
+      "cached",
+      "held",
+      "settled",
+      "repeat",
+      "reader",
+      "background"
+    ],
+    "durationMs": 28286,
+    "logSha256": "642c02d424e4d76f344ce21ab20cea30d300f15878ba2e00f38407c5b0154fad",
+    "screenshotSha256": {
+      "cached": "a95eca0d870aa9462612ba629406879902808605d90b4c2ac9c873b825225cb2",
+      "held": "c39d761729bce548bffc807a68dc516166819df269501ddd4ad23d04843fb27d",
+      "settled": "c39d761729bce548bffc807a68dc516166819df269501ddd4ad23d04843fb27d",
+      "repeat": "c4889d3defa3c223aed2b9deb295de576c00b910f9ea633a3d21d5eb0a630835",
+      "reader": "0ee81cb4d64d5c562a15ed9347134c4b67b0323c292e4cf1befabcdd2e6a51af",
+      "background": "0ee81cb4d64d5c562a15ed9347134c4b67b0323c292e4cf1befabcdd2e6a51af"
+    }
+  },
+  "nativePictures": {
+    "tests": 1,
+    "passed": 1,
+    "scope": "Actual HtmlMail fitContent reader within Scroll; fresh HTTP200 PNG and200 replacement served as application/octet-stream pass NetworkKit ArrayBuffer handling, normalize to persisted image/png, and render natively; pending retry coalesces; two HTTP503 failures retain replacement bytes, timestamp, consent and visible colors. Four loopback requests only.",
+    "limits": "Synthetic main-HAP fixture and loopback only; no production accounts or external servers.",
+    "screenshots": {
+      "fresh": {
+        "originalColorPixels": [
+          27816,
+          27633,
+          27633
+        ],
+        "sha256": "f0426ddb4f6feb7cadfbf622e05b10335a405b06e4606a705d55f2a87ca8d5f1"
+      },
+      "replacement": {
+        "originalColorPixels": [
+          37149,
+          36966,
+          37149
+        ],
+        "sha256": "49a5b1e9933e4a7d6ef24e06254dbb7c8816721ea7088a98f2b366d89dd30550"
+      },
+      "failed-refresh": {
+        "originalColorPixels": [
+          37149,
+          36966,
+          37149
+        ],
+        "sha256": "084a8b95b99b9d3dd8637bdcc08df1cfadcbb4f25b671156dbc085de7e3a9e4d"
+      },
+      "retried": {
+        "originalColorPixels": [
+          37149,
+          36966,
+          37149
+        ],
+        "sha256": "084a8b95b99b9d3dd8637bdcc08df1cfadcbb4f25b671156dbc085de7e3a9e4d"
+      }
+    },
+    "durationMs": 16983,
+    "logSha256": "d8c6fba560b3ffc9f7d6e7cfe66f0a7505cfde23a4eb4e4917982a6a28d7f1d1"
+  },
+  "emulator": {
+    "status": "stopped",
+    "nativeProcessAbsenceVerified": true,
+    "testBoundSeconds": 240,
+    "earlyHarnessAttempt": "A 300-second invocation was rejected by the wrapper limit before tests and stopped; the corrected 240-second group passed all three gates."
+  },
+  "builds": {
+    "productionX86Sha256": "a3add59eac1f333835a2f8d25d24ddc171aa682ad08b377bf612659c51de17fb",
+    "signedArmSha256": "6643851140992c3369cd72a0b40c3ad066fb8a3960e2f87c9382d1a7b9589995",
+    "isolatedMainSha256": "8f0974fcd9ba89a353593fe642a29146b19312d42eea56fc633d70ebf6a38073",
+    "isolatedTestSha256": "b0219d364e52a691e211cd063e83c3f993858c4af524aa65412251a4d752ecfe"
+  },
+  "nativeLibrariesUnchangedFrom": "0.1.15",
+  "installations": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "versionCode": 100016,
+      "versionName": "0.1.16",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "6643851140992c3369cd72a0b40c3ad066fb8a3960e2f87c9382d1a7b9589995"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "versionCode": 100016,
+      "versionName": "0.1.16",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "6643851140992c3369cd72a0b40c3ad066fb8a3960e2f87c9382d1a7b9589995"
+    }
+  ],
+  "sourceParity": {
+    "signedArmVerified": true,
+    "isolatedShippingPageDataMailCoreModelFilesMatched": 52,
+    "rendererDiagnosticsEnabled": false
+  },
+  "evidence": {
+    "hostLogSha256": "e278f14d6973f05da0ecb33bbb3559feb966cabe4d781541c40045f76f132d49",
+    "signedBuildLogSha256": "6b5ef36fdc604922d2648aad052bcb24059856437fa3c1981eaf44ad6191d310"
+  },
+  "toolchain": {
+    "commandLineTools": "26.0.0.821",
+    "hvigor": "6.26.4",
+    "compileSdk": "26.0.0.105",
+    "targetApi": 22,
+    "minimumApi": 22,
+    "swiftNativeApi": 22
+  },
+  "privacy": {
+    "automatedTestsSyntheticOnly": true,
+    "mailboxAccessed": false,
+    "productionLaunched": false,
+    "realMessagesSent": false,
+    "physicalMailScreensCaptured": false,
+    "appDataCleared": false
+  },
+  "limits": [
+    "Device temperature, battery life and real-provider refresh duration were not measured.",
+    "Queued picture cancellation has synthetic host coverage; native picture gate verifies actual renderer/cache/retry behavior.",
+    "Native Inbox background coverage injects the production foreground signal, not physical screen locking.",
+    "Already active picture downloads may finish and cache. Dispatched mail requests and bounded watch cleanup may briefly outlive the UI.",
+    "Server authentication, preview sampling and logout still contribute latency. Existing IMAP classification and MIME/CID limits remain.",
+    "Tablet split-layout source is unchanged; this round native Inbox gate uses the phone profile. Tablet evidence remains in 0.1.15.",
+    "AppGallery was not rebuilt."
+  ]
+}

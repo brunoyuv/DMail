@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+status=0
+for tool in .tools/runtime/node_modules/node/bin/node \
+  .tools/deveco/node_modules/.bin/devecocli \
+  .tools/command-line-tools/sdk/default/openharmony/native/llvm/bin/clang \
+  .tools/deveco-26/command-line-tools/bin/hvigorw \
+  .tools/deveco-26/command-line-tools/emulator/Emulator; do
+  if [[ -x "$tool" ]]; then echo "OK $tool";
+  else echo "MISSING $tool"; status=1; fi
+done
+if [[ -r /dev/kvm && -w /dev/kvm ]]; then echo 'OK KVM access';
+else echo 'KVM unavailable in this execution context; check host access before starting the emulator.'; fi
+exit "$status"

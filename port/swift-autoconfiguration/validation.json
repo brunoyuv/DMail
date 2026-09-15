@@ -1,0 +1,56 @@
+{
+  "date": "2026-09-14",
+  "originalSourceFiles": 13,
+  "unchangedSourceFiles": 8,
+  "originalTestFiles": 6,
+  "hostTestsPassed": 28,
+  "shippingIntegration": true,
+  "nativeExecution": {
+    "puraMainProfile": {
+      "testsPassed": 5,
+      "publicHTTPS": true,
+      "credentialPersistence": true,
+      "accountForm": true
+    },
+    "puraCoverProfile": {
+      "testsPassed": 5,
+      "publicHTTPS": true,
+      "credentialPersistence": true,
+      "accountForm": true,
+      "screenshotsReviewed": [
+        "discovery-options.png",
+        "discovery-applied.png"
+      ],
+      "limitations": [
+        "Long server/security choice text ellipsizes in the closed Select on the cover screen."
+      ]
+    }
+  },
+  "physicalDevice": {
+    "model": "VDE-AL00",
+    "installedHapSha256": "5b76189952b66bede30918463cdf32bc8fdd9a2f93c54fd051f8e965e9615314",
+    "launchSucceeded": true,
+    "discoveryFunctionalityVerified": false
+  },
+  "nativeBuilds": {
+    "x86_64": {
+      "compileAndLinkPassed": true,
+      "sha256": "9ca73e1f5ddad8cc45fddd0841a40981d8725e9676262951ec68dd275dff7c2f"
+    },
+    "aarch64": {
+      "compileAndLinkPassed": true,
+      "sha256": "2ad2c4059b951bd059cdef329cdb1210545756ed8c588f87305a8b869b31851f"
+    }
+  },
+  "evidence": {
+    ".tools/discovery-host-tests.log": "a169d8e6d2f5659e3da64c03c36c680c9e73efdb0eab1646035c0042d1358e5e",
+    ".tools/discovery-emulator-session.log": "33337b3c9cf0abb487c9d442cabee4cd461bb3a4aff59b9ff675b156fbb18171",
+    ".tools/discovery-ui/pura-main/result.json": "a471b074292f0c58acbebd2cbf71cea33fc18b04e72c2b85d57d29d423c05bcd",
+    ".tools/discovery-device-build.log": "6efb2077b91a1ad3fce4c289511fe18ac733926a62e024375e574a5f27bb7b71",
+    "port/swift-autoconfiguration/Discovery.swift": "b77f79c0840aa31abeb95f4891e8f1c27532d1eecca458f454737b3c9847967c",
+    "port/swift-autoconfiguration/ConfigCompatibilityTests.swift": "7ce847781adaf03c1427229070ff3f495793407992c11dc09b965352dc3b11c6",
+    "port/swift-autoconfiguration/harmonyos.patch": "8cf5555d4d07c35cf3a0fdc9fb3b3e664346800c41ed8312d1e2eb78ce9c4cf1",
+    ".tools/discovery-ui/pura-cover/result.json": "a471b074292f0c58acbebd2cbf71cea33fc18b04e72c2b85d57d29d423c05bcd",
+    ".tools/discovery-ui/pura-cover/test.log": "39cf6e7998acc10d8c4986610dc0590a3c2cbc5e7d37d23a499fb0e677042919"
+  }
+}

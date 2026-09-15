@@ -1,0 +1,17 @@
+{
+  "repository": "https://github.com/thunderbird/thunderbird-ios",
+  "revision": "61c78d9ebe39ac5b61f31fce371bdfe8c001f7bf",
+  "files": {
+    "Core/Sources/SMTP/ByteHandler.swift": "8684ba5252e5e4e6966eb78ff1ca82509f005f72ea0d8c02a20610aaf0b5b8bb",
+    "Core/Sources/SMTP/ConnectionSecurity.swift": "a694ef0104d94e0eed88c71820b6074582dfeea906ec07667ece55e1d7936cf5",
+    "Core/Sources/SMTP/Email.swift": "c83688aece9ab8d9040bbeb21c2f3485bc265d248805616c79216943f6c4f161",
+    "Core/Sources/SMTP/LoggingHandler.swift": "1fab7140d2e4b07d61e9a2f889982b1cd3aa2b274f63d41961f0837d62092f69",
+    "Core/Sources/SMTP/MessageHandler.swift": "399434df2c73279c74ef626eaa86ff7eaf401df2684beaaf7b167d3fa37f2756",
+    "Core/Sources/SMTP/RequestEncoder.swift": "e6ebd745bb604d7b92c3df8144e613b148530be62ce3f9d7f83fdc61e6600a5c",
+    "Core/Sources/SMTP/ResponseHandler.swift": "6d4cada8dfbf2751876f85b77d27104c9466b59d7afeae07091634ef35d6095a",
+    "Core/Sources/SMTP/SMTPClient.swift": "5e0f65e0059406c3cc7d974510423a094bd9c6dd225997ec5ca99017e52aa133",
+    "Core/Sources/SMTP/SMTPError.swift": "8023b807d7c5574ede75201cb03c59aa6ce8fb475573dbf3a1653e2d51bbe0ed",
+    "Core/Sources/SMTP/SendHandler.swift": "b54c75aae657e07207455b3434cfe0ff77cf1d2ae1c2cbfeafd6e7157edce4ce",
+    "Core/Sources/SMTP/Server.swift": "aa8a636748dc7a95888d5417c541e46e0577d52451c486baa9542afa309206dc"
+  }
+}

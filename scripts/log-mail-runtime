@@ -1,0 +1,294 @@
+#!/usr/bin/env python3
+"""Collect 15 minutes of numeric D-Mail runtime data; never operate the app/UI.
+
+Requires the already verified MatePad HDC_TARGET/DMAIL_AUTHORIZED_MATEPAD_SERIAL
+and DMAIL_RUNTIME_UID. Output stays under ignored .tools/. No process arguments,
+stacks, screenshots, navigation, network traffic, mail or system logs are read.
+"""
+import csv
+from datetime import datetime, timezone
+import json
+import math
+import os
+from pathlib import Path
+import re
+import selectors
+import signal
+import subprocess
+import sys
+import time
+import uuid
+
+ROOT = Path(__file__).resolve().parents[1]
+HDC = ROOT / '.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc'
+OUTPUT = ROOT / '.tools/matepad-reader-runtime-026'
+BUNDLE = 'org.thunderbird.harmony.dev'
+DURATION_SECONDS = 900
+INTERVAL_SECONDS = 5
+GROUPS = {'main', 'renderer', 'compositor', 'ChromeIO', 'FFRT', 'GC', 'other'}
+FIELDS = ('host_timestamp_ms', 'sample', 'kind', 'uid', 'pid', 'ppid', 'tid', 'group',
+          'user_ticks', 'system_ticks', 'start_ticks', 'virtual_bytes', 'resident_pages', 'threads',
+          'system_cpu_ticks', 'online_cpus', 'device_uptime_ms', 'total_cpu_ms')
+
+
+def snapshot_command(uid):
+    if not re.fullmatch(r'[1-9][0-9]{0,9}', str(uid)):
+        raise ValueError('Expected a verified numeric app UID')
+    # Harmony's shell image need not include awk. Builtin read/case/arithmetic
+    # keep this bounded and avoid spawning one command per process or thread.
+    return r"""
+dmail_uid=UID_VALUE
+dmail_total=0; dmail_cpus=0
+read -r n a b c d e f g h rest < /proc/stat
+[ "$n" = cpu ] && dmail_total=$((a+b+c+d+e+f+g+h))
+dmail_cpus=$(grep -c '^cpu[0-9]' /proc/stat)
+dmail_up=0
+read -r dmail_up dmail_rest 2>/dev/null < /proc/uptime || dmail_up=0
+dmail_uptime=$((${dmail_up%%.*}*1000))
+dmail_row() {
+  row_kind=$1; row_pid=$2; row_tid=$3; row_path=$4
+  IFS= read -r row_line < "$row_path" || return
+  row_name=${row_line#*\(}; row_name=${row_name%%\)*}
+  row_values=${row_line##*\) }
+  set -- $row_values
+  [ "$#" -ge 22 ] || return
+  row_ppid=$2; row_user=${12}; row_system=${13}; row_start=${20}; row_virtual=${21}; row_resident=${22}; row_threads=${18}
+  case "$row_ppid $row_user $row_system $row_start $row_virtual $row_resident $row_threads" in *[!0-9\ ]*) return;; esac
+  case "$row_name" in
+    *[Cc]ompositor*|Viz*) row_group=compositor;;
+    *[Rr]ender*) row_group=renderer;;
+    Chrome_IO*) row_group=ChromeIO;;
+    *FFRT*|*ffrt*) row_group=FFRT;;
+    GC|GC_*|*_GC|*_GC_*|*Garbage*) row_group=GC;;
+    *) if [ "$row_pid" = "$row_tid" ]; then row_group=main; else row_group=other; fi;;
+  esac
+  printf '%s %s %s %s %s %s %s %s %s %s %s %s\n' "$row_kind" "$dmail_uid" "$row_pid" "$row_ppid" "$row_tid" "$row_group" "$row_user" "$row_system" "$row_start" "$row_virtual" "$row_resident" "$row_threads"
+}
+dmail_processes=0; dmail_threads=0; dmail_targets=
+# This device permits direct /proc reads but shell glob enumeration is empty.
+# pidof discovers the exact app; every counter read rechecks its numeric UID.
+for dmail_pid in $(pidof org.thunderbird.harmony.dev); do
+  dmail_real=
+  while read -r dmail_key dmail_value dmail_rest; do
+    if [ "$dmail_key" = Uid: ]; then dmail_real=$dmail_value; break; fi
+  done < "/proc/$dmail_pid/status" 2>/dev/null
+  [ "$dmail_real" = "$dmail_uid" ] || continue
+  dmail_targets="$dmail_targets$dmail_pid,"
+  case "$dmail_pid" in *[!0-9]*|'') continue;; esac
+  dmail_processes=$((dmail_processes+1)); [ "$dmail_processes" -le 32 ] || break
+  dmail_row P "$dmail_pid" "$dmail_pid" "/proc/$dmail_pid/stat" 2>/dev/null
+done
+# One native ps pass avoids a slow shell open/read for every individual thread.
+[ -z "$dmail_targets" ] || ps -T -p "${dmail_targets%,}" -o PID,TID,UID,PPID,TIME+,CMD | while read -r row_pid row_tid row_uid row_ppid row_time row_name; do
+  [ "$row_uid" = "$dmail_uid" ] || continue
+  dmail_threads=$((dmail_threads+1)); [ "$dmail_threads" -le 1024 ] || break
+  case "$row_name" in
+    *[Cc]ompositor*|Viz*) row_group=compositor;;
+    *[Rr]ender*) row_group=renderer;;
+    Chrome_IO*) row_group=ChromeIO;;
+    *FFRT*|*ffrt*) row_group=FFRT;;
+    GC|GC_*|*_GC|*_GC_*|*Garbage*) row_group=GC;;
+    *) if [ "$row_pid" = "$row_tid" ]; then row_group=main; else row_group=other; fi;;
+  esac
+  printf 'Q %s %s %s %s %s %s\n' "$row_uid" "$row_pid" "$row_ppid" "$row_tid" "$row_group" "$row_time"
+
+done
+printf 'S %s %s %s\n' "$dmail_total" "$dmail_cpus" "$dmail_uptime"
+""".replace('UID_VALUE', str(uid))
+
+
+def parse_snapshot(output, uid, sample, timestamp_ms):
+    records, totals, system = [], [], None
+    for line in output.splitlines():
+        values = line.split()
+        if len(values) == 4 and values[0] == 'S' and all(value.isdigit() for value in values[1:]):
+            system = tuple(map(int, values[1:]))
+        elif len(values) == 7 and values[0] == 'Q' and values[5] in GROUPS:
+            if not all(value.isdigit() for value in values[1:5]) or int(values[1]) != uid:
+                continue
+            if not re.fullmatch(r'[0-9]+:[0-9]{2}(?::[0-9]{2})?(?:\.[0-9]+)?', values[6]):
+                continue
+            parts = values[6].split(':')
+            if float(parts[-1]) >= 60 or (len(parts) == 3 and int(parts[-2]) >= 60):
+                continue
+            seconds = float(parts[-1]) + int(parts[-2]) * 60 + (int(parts[-3]) * 3600 if len(parts) == 3 else 0)
+            if not math.isfinite(seconds) or seconds > 1e12:
+                continue
+            records.append([timestamp_ms, sample, 'T', *map(int, values[1:5]), values[5], '', '', '', '', '', ''])
+            totals.append(round(seconds * 1000))
+        elif len(values) == 12 and values[0] in ('P', 'T') and values[5] in GROUPS:
+            numeric = values[1:5] + values[6:]
+            if not all(value.isdigit() for value in numeric) or int(values[1]) != uid:
+                continue
+            if int(values[2]) <= 0 or int(values[4]) <= 0:
+                continue
+            records.append([timestamp_ms, sample, values[0], *map(int, values[1:5]), values[5], *map(int, values[6:])])
+            totals.append('')
+    if system is None or system[1] <= 0:
+        raise ValueError('Numeric process sampling unavailable')
+    if len(records) > 1056:
+        raise ValueError('Numeric process sample exceeded its limit')
+    return [row + list(system) + [total] for row, total in zip(records, totals)], system
+
+
+def collector_stop_command(pid, start_ticks):
+    if not all(re.fullmatch(r'[1-9][0-9]*', str(value)) for value in (pid, start_ticks)):
+        raise ValueError('Invalid collector ownership')
+    # Refuse a recycled PID or a process other than the collector we started.
+    return r"""if IFS= read -r dmail_line < /proc/PID_VALUE/stat; then dmail_name=${dmail_line#*\(}; dmail_name=${dmail_name%%\)*}; dmail_values=${dmail_line##*\) }; set -- $dmail_values; if [ "$dmail_name" = SP_daemon ] && [ "${20}" = START_VALUE ]; then kill -INT PID_VALUE; fi; fi""".replace('PID_VALUE', str(pid)).replace('START_VALUE', str(start_ticks))
+
+
+def write_status(path, value):
+    temporary = path.with_suffix('.json.part')
+    temporary.write_text(json.dumps(value, indent=2, allow_nan=False) + '\n')
+    temporary.replace(path)
+
+
+def main():
+    target, authorized = os.environ.get('HDC_TARGET', ''), os.environ.get('DMAIL_AUTHORIZED_MATEPAD_SERIAL', '')
+    uid_text = os.environ.get('DMAIL_RUNTIME_UID', '')
+    if not target or target != authorized or not re.fullmatch(r'[1-9][0-9]{0,9}', uid_text):
+        print('Set matching authorized MatePad targets and its verified DMAIL_RUNTIME_UID.', file=sys.stderr)
+        return 2
+    uid = int(uid_text)
+    base = [str(HDC), '-t', target]
+
+    def hdc(arguments, timeout=4):
+        return subprocess.run(base + arguments, capture_output=True, text=True, timeout=timeout, check=False)
+
+    try:
+        if hdc(['shell', 'param get const.product.model']).stdout.strip() != 'MRO-W00' or \
+                hdc(['shell', 'uname -m']).stdout.strip() != 'aarch64':
+            raise ValueError('Authorized MatePad model/architecture verification failed')
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        print('Authorized MatePad verification failed.', file=sys.stderr)
+        return 2
+    OUTPUT.mkdir(parents=True, exist_ok=True)
+    status_path = OUTPUT / 'status.json'
+    if status_path.exists():
+        previous = OUTPUT / ('attempt-' + uuid.uuid4().hex[:12])
+        previous.mkdir()
+        for entry in OUTPUT.iterdir():
+            if entry.is_file():
+                entry.rename(previous / entry.name)
+    token = uuid.uuid4().hex
+    remote_csv = f'/data/local/tmp/dmailruntime{token}.csv'
+    remote_sampler = f'/data/local/tmp/dmail-runtime-{token}-sample.sh'
+    remote_collector = f'/data/local/tmp/dmail-runtime-{token}-collect.sh'
+    remote_stop = f'/data/local/tmp/dmail-runtime-{token}-stop.sh'
+    started_wall = time.time()
+    duration = DURATION_SECONDS
+    process_only = os.environ.get('DMAIL_RUNTIME_PROCESS_ONLY') == '1'
+    if process_only and os.environ.get('DMAIL_RUNTIME_DEADLINE_EPOCH'):
+        duration = max(0, min(DURATION_SECONDS, float(os.environ['DMAIL_RUNTIME_DEADLINE_EPOCH']) - started_wall))
+    started, deadline = time.monotonic(), time.monotonic() + duration
+    status = {'schema': 1, 'state': 'collecting', 'bundle': BUNDLE, 'uid': uid,
+              'started_at': datetime.fromtimestamp(started_wall, timezone.utc).isoformat(),
+              'deadline_at': datetime.fromtimestamp(started_wall + duration, timezone.utc).isoformat(),
+              'duration_seconds': duration, 'process_only': process_only, 'thread_counter_source': 'ps TIME+ total CPU; per-thread start/user/system unavailable', 'uptime_zero_means_unavailable': True, 'process_coverage': 'Exact bundle pidof processes after UID verification; additional separately named renderer processes are not covered', 'successful_samples': 0, 'failed_samples': 0,
+              'last_process_count': 0, 'seen_processes': [], 'interrupted': False,
+              'scope': 'Numeric app-UID process/thread stats and SmartPerf only. No app launch/stop or UI/content capture.'}
+    status['remote_csv'] = None if process_only else remote_csv
+    write_status(status_path, status)
+    interrupted = False
+
+    def stop(_signal, _frame):
+        nonlocal interrupted
+        interrupted = True
+
+    old_handlers = {kind: signal.signal(kind, stop) for kind in (signal.SIGINT, signal.SIGTERM)}
+    collector = None
+    collector_owner = None
+    errors = []
+    try:
+        # Hold this HDC connection while the finite native collector runs.
+        # Its PID/start time are the sole authority for collector-only cleanup.
+        launch = f'SP_daemon -N 900 -PKG {BUNDLE} -c -g -t -f -OUT {remote_csv} >/dev/null 2>&1 &' + \
+            '\ndmail_collector=$!\nif IFS= read -r dmail_line < "/proc/$dmail_collector/stat"; then ' + \
+            'dmail_values=${dmail_line##*\\) }; set -- $dmail_values; printf "COLLECTOR %s %s\\n" "$dmail_collector" "${20}"; fi\nwait "$dmail_collector"'
+        # HDC shell command forwarding can silently truncate multiline argv.
+        # Send the exact scripts as files, then execute a short single command.
+        for name, content, remote in [('sampler.sh', snapshot_command(uid), remote_sampler),
+                                      ('collector.sh', launch, remote_collector)]:
+            local = OUTPUT / name
+            local.write_text('#!/system/bin/sh\n' + content.strip() + '\n')
+            if hdc(['file', 'send', str(local), remote], timeout=4).returncode != 0:
+                raise ValueError('Numeric collector script could not be transferred')
+        if not process_only:
+            collector = subprocess.Popen(base + ['shell', f'sh {remote_collector}'], stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+        if collector is not None:
+            with selectors.DefaultSelector() as selector:
+                selector.register(collector.stdout, selectors.EVENT_READ)
+                if selector.select(timeout=4):
+                    line = collector.stdout.readline().split()
+                    if len(line) == 3 and line[0] == 'COLLECTOR' and all(value.isdigit() and int(value) > 0 for value in line[1:]):
+                        collector_owner = (int(line[1]), int(line[2]))
+        status['collector_owned'] = collector_owner is not None
+        if collector_owner:
+            status['collector_pid'], status['collector_start_ticks'] = collector_owner
+        command = f'sh {remote_sampler}'
+        seen = set()
+        with (OUTPUT / 'processes.csv').open('w', newline='') as stream:
+            writer = csv.writer(stream); writer.writerow(FIELDS)
+            sample, next_sample = 0, started
+            while not interrupted and time.monotonic() < deadline:
+                now = time.monotonic()
+                if now < next_sample:
+                    time.sleep(min(next_sample - now, 0.2)); continue
+                sample += 1
+                try:
+                    response = hdc(['shell', command], timeout=max(0.1, min(4, deadline - now)))
+                    if response.returncode != 0:
+                        raise ValueError('Collector connection unavailable')
+                    rows, system = parse_snapshot(response.stdout, uid, sample, int(time.time() * 1000))
+                    writer.writerows(rows); stream.flush()
+                    processes = {(row[4], row[10]) for row in rows if row[2] == 'P'}
+                    seen.update(processes)
+                    status.update({'successful_samples': status['successful_samples'] + 1,
+                                   'last_process_count': len(processes), 'last_device_uptime_ms': system[2],
+                                   'last_sample': sample, 'seen_processes': [{'pid': pid, 'start_ticks': ticks} for pid, ticks in sorted(seen)]})
+                except (OSError, ValueError, subprocess.TimeoutExpired):
+                    status['failed_samples'] += 1
+                status['elapsed_seconds'] = round(time.monotonic() - started, 1)
+                write_status(status_path, status)
+                # Missed samples are skipped; never catch up with a tight loop.
+                next_sample = started + (int((time.monotonic() - started) / INTERVAL_SECONDS) + 1) * INTERVAL_SECONDS
+    except (OSError, ValueError, subprocess.SubprocessError):
+        errors.append('runtime_collection_failed')
+    finally:
+        status.update({'state': 'collecting_output', 'interrupted': interrupted})
+        write_status(status_path, status)
+        if collector_owner:
+            try:
+                local_stop = OUTPUT / 'stop-collector.sh'
+                local_stop.write_text('#!/system/bin/sh\n' + collector_stop_command(*collector_owner) + '\n')
+                sent = hdc(['file', 'send', str(local_stop), remote_stop], timeout=4)
+                result = hdc(['shell', f'sh {remote_stop}'], timeout=4) if sent.returncode == 0 else sent
+                status['collector_stop_requested'] = result.returncode == 0
+            except (OSError, subprocess.TimeoutExpired):
+                status['collector_stop_requested'] = False
+        if collector is not None:
+            try:
+                collector.wait(timeout=4)
+            except subprocess.TimeoutExpired:
+                collector.terminate()
+                try: collector.wait(timeout=2)
+                except subprocess.TimeoutExpired: collector.kill(); collector.wait(timeout=2)
+            if collector.stdout: collector.stdout.close()
+        if not process_only:
+            try:
+                received = hdc(['file', 'recv', remote_csv, str(OUTPUT / 'smartperf.csv')], timeout=8)
+                status['smartperf_received'] = received.returncode == 0 and (OUTPUT / 'smartperf.csv').exists()
+            except (OSError, subprocess.TimeoutExpired):
+                status['smartperf_received'] = False
+        status.update({'state': 'interrupted' if interrupted else 'failed' if errors else 'complete',
+                       'elapsed_seconds': round(time.monotonic() - started, 1), 'errors': errors,
+                       'finished_at': datetime.now(timezone.utc).isoformat()})
+        write_status(status_path, status)
+        for kind, handler in old_handlers.items(): signal.signal(kind, handler)
+    print(str(status_path))
+    return 130 if interrupted else 1 if errors else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

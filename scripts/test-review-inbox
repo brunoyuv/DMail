@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# Native gestures touch only synthetic mail in the isolated emulator bundle.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+[[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 && "${HDC_TARGET:-}" == 127.0.0.1:5555 ]]
+case "${DMAIL_REVIEW_SCREEN:-}" in pura-main|matepad-landscape) ;; *) exit 2;; esac
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app"
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == x86_64 ]]
+for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+  [[ -f "$APP/entry/build/default/outputs/$hap" ]] || { echo 'Build both isolated review Inbox HAPs first.' >&2; exit 1; }
+done
+OUT="$ROOT/.tools/emulator-review-inbox-$DMAIL_REVIEW_SCREEN"
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  find "$OUT" -maxdepth 1 -type f -exec mv -t "$PREVIOUS" {} +
+fi
+INSTALLED=false
+cleanup() {
+  local result=$?
+  trap - EXIT
+  if "$INSTALLED"; then
+    for shot in cached held up down actions reader released failure; do
+      run_hdc -t "$HDC_TARGET" file recv "/data/local/tmp/review-inbox-$shot.png" "$OUT/$shot.png" >/dev/null 2>&1 || true
+    done
+    run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+for shot in cached held up down actions reader released failure; do
+  run_hdc -t "$HDC_TARGET" shell rm -f "/data/local/tmp/review-inbox-$shot.png"
+done
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+INSTALLED=true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+timeout --foreground --kill-after=5s 190s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/ReviewInboxRunner \
+  -s timeout 180000 | tee "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"
+grep -q 'REVIEW_INBOX_RESULT: 2000 cached headers; upward and downward drags, read and star actions, and cached reader succeed before page release; one client, one page, two flag operations, zero body or other requests; late page preserves reader, flags and cache' "$OUT/test.log"
+python3 - "$OUT" "$DMAIL_REVIEW_SCREEN" <<'RESULT'
+from pathlib import Path
+import json,sys
+out=Path(sys.argv[1])
+(out/'result.json').write_text(json.dumps({'tests':1,'passed':1,'screen':sys.argv[2],
+    'scope':'2000 synthetic cached headers with one held page; actual upward/downward drags, read/star swipe acknowledgements and cached reader before release; one client construction, one page, two flag operations, no body/provider requests; late page preserves flags, reader and cache.',
+    'limitations':'This is a functional native gesture gate, not a frame-rate, temperature or power measurement. Accessibility row exposure does not count native component construction.',
+    'visualEvidence':['cached','held','up','down','actions','reader','released']},indent=2)+'\n')
+print('PASS: large synthetic Inbox remains interactive during held refresh.')
+RESULT

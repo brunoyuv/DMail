@@ -1,0 +1,45 @@
+#!/usr/bin/env bash
+# Native picture transport matrix; strictly synthetic loopback resources.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+[[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 && "${HDC_TARGET:-}" == 127.0.0.1:5555 ]]
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app"
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == x86_64 ]]
+for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+  [[ -f "$APP/entry/build/default/outputs/$hap" ]] || { echo 'Build both isolated picture-transport HAPs first.' >&2; exit 1; }
+done
+OUT="$ROOT/.tools/emulator-picture-transport"
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  find "$OUT" -maxdepth 1 -type f -exec mv -t "$PREVIOUS" {} +
+fi
+INSTALLED=false
+cleanup() {
+  local result=$?
+  trap - EXIT
+  if "$INSTALLED"; then run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true; fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+INSTALLED=true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+timeout --foreground --kill-after=5s 55s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/PictureTransportRunner \
+  -s timeout 50000 | tee "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"
+grep -q 'PICTURE_TRANSPORT_RESULT: two redirect/header-case chains and PNG JPEG GIF WebP persisted; wrong image subtype canonicalized; cache rereads made no requests; text/plain PNG rejected; invalid refresh retained bytes and timestamp' "$OUT/test.log"
+python3 - "$OUT" <<'PY'
+from pathlib import Path
+import json,sys
+out=Path(sys.argv[1])
+(out/'result.json').write_text(json.dumps({'tests':1,'passed':1,
+    'scope':'Actual PictureCache on native NetworkKit:302 text/html to200 image/png with changed Content-Type case in both directions; correct PNG JPEG GIF WebP bodies persist; PNG served as image/jpeg canonicalizes to image/png; cached rereads do not request; text/plain PNG preserves current rejection policy; invalid image-labelled HTML refresh keeps good bytes and timestamp. Eleven loopback HTTP requests.',
+    'limits':'Synthetic bytes in isolated emulator app, no production accounts, external resources or physical UI.'},indent=2)+'\n')
+print('PASS: native picture redirects, binary formats and cache retention.')
+PY

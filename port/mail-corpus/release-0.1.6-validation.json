@@ -1,0 +1,227 @@
+{
+  "version": "0.1.6",
+  "versionCode": 100006,
+  "host": {
+    "tests": 154,
+    "pass": 154,
+    "fail": 0
+  },
+  "hostCoverage": {
+    "componentRacesAndSwipes": 14,
+    "pictureCacheAndConsent": 21,
+    "recipientHistory": 8,
+    "compositionSettings": 5
+  },
+  "swiftSenderIdentityTests": {
+    "tests": 3,
+    "passed": 3
+  },
+  "nativeSwipeUI": {
+    "status": "passed",
+    "tests": 1,
+    "steps": [
+      {
+        "index": 0,
+        "keyword": "$seen",
+        "enabled": true,
+        "held": false,
+        "point": "center",
+        "calls": "Beta:setKeyword:$seen:true",
+        "pending": 0,
+        "violations": 0
+      },
+      {
+        "index": 1,
+        "keyword": "$seen",
+        "enabled": false,
+        "held": true,
+        "point": "upper-left",
+        "calls": "Beta:setKeyword:$seen:true,Beta:setKeyword:$seen:false",
+        "pending": 0,
+        "violations": 0
+      },
+      {
+        "index": 2,
+        "keyword": "$flagged",
+        "enabled": true,
+        "held": false,
+        "point": "center",
+        "calls": "Beta:setKeyword:$seen:true,Beta:setKeyword:$seen:false,Beta:setKeyword:$flagged:true",
+        "pending": 0,
+        "violations": 0
+      },
+      {
+        "index": 3,
+        "keyword": "$flagged",
+        "enabled": false,
+        "held": false,
+        "point": "lower-right",
+        "calls": "Beta:setKeyword:$seen:true,Beta:setKeyword:$seen:false,Beta:setKeyword:$flagged:true,Beta:setKeyword:$flagged:false",
+        "pending": 0,
+        "violations": 0
+      }
+    ],
+    "bounds": [
+      {
+        "index": 0,
+        "point": "center",
+        "density": 2.549999952316284,
+        "row": {
+          "bottom": 719,
+          "displayId": 0,
+          "left": 0,
+          "right": 1320,
+          "top": 463
+        },
+        "button": {
+          "bottom": 719,
+          "displayId": 0,
+          "left": 0,
+          "right": 224,
+          "top": 463
+        },
+        "x": 112,
+        "y": 591,
+        "actionEnabled": true
+      },
+      {
+        "index": 1,
+        "point": "upper-left",
+        "density": 2.549999952316284,
+        "row": {
+          "bottom": 719,
+          "displayId": 0,
+          "left": 0,
+          "right": 1320,
+          "top": 463
+        },
+        "button": {
+          "bottom": 719,
+          "displayId": 0,
+          "left": 0,
+          "right": 224,
+          "top": 463
+        },
+        "x": 15,
+        "y": 478,
+        "actionEnabled": true
+      },
+      {
+        "index": 2,
+        "point": "center",
+        "density": 2.549999952316284,
+        "row": {
+          "bottom": 719,
+          "displayId": 0,
+          "left": 0,
+          "right": 1320,
+          "top": 463
+        },
+        "button": {
+          "bottom": 719,
+          "displayId": 0,
+          "left": 932,
+          "right": 1126,
+          "top": 463
+        },
+        "x": 1029,
+        "y": 591,
+        "actionEnabled": true
+      },
+      {
+        "index": 3,
+        "point": "lower-right",
+        "density": 2.549999952316284,
+        "row": {
+          "bottom": 719,
+          "displayId": 0,
+          "left": 0,
+          "right": 1320,
+          "top": 463
+        },
+        "button": {
+          "bottom": 719,
+          "displayId": 0,
+          "left": 932,
+          "right": 1126,
+          "top": 463
+        },
+        "x": 1111,
+        "y": 704,
+        "actionEnabled": true
+      }
+    ],
+    "screenshots": {
+      "read-open": "9079079a5f2d67ebeea0bbfb0ff3692f52dab1d3bf98fa74d1d4ca758d95b451",
+      "unread-open": "7b06740c5e17c6df4b327142adb2cd6ce351e45c7fd20e862029b6bf911aa17d",
+      "star-open": "3da9e45cb82e9c79225db9da68fb6491252166dd8c563cc3bfae798e986d18fc",
+      "held": "62d00ca175db2427637f45dff0e71b5d7de41eb881b676d0b56e60b1eb4ee9f1",
+      "final": "defceac1c42f663cf1d3e3043ccd99d19f0a2e1ac70585edcbd7345b12f640bb"
+    },
+    "scope": "Read/Unread and Star/Unstar center/edge taps; pending double-tap dispatches once; exact four fake acknowledgements, no reader opening or body/network fetch, cached bodies preserved; global boundary view untouched",
+    "reproduction": "After the first toggle, the next optimistic flag-keyed row could retain a disabled native action after acknowledgement. The passing test explicitly checks enabled state at all four center/edge taps.",
+    "scopeNote": "Validated final swipe implementation before unrelated composition hooks were added. Later complete production builds include both."
+  },
+  "nativeCompositionUI": {
+    "tests": 1,
+    "passed": 1,
+    "senderIdentity": {
+      "tests": 1,
+      "passed": 1
+    },
+    "screenshots": {
+      "sent": "d1190c626b892b95650a55abc949e22c02f8a48266ed9c1b3ccf3106f8f1d30c",
+      "composer": "04c3323736fffe9af4c85cd30bd24c5c5de5e7954be85885052f57a0f5eeff20"
+    },
+    "scope": "Cached synthetic Sent title, Settings sender/signature autosave, local recipient selection, draft reopen preserves exactly one signature; zero mail service calls, no SMTP send",
+    "status": "passed",
+    "durationMs": 27841,
+    "visualReview": "Sent screenshot reviewed and correct. Composer screenshot was captured during the navigation transition and is not final layout evidence; native assertions verified all fields and exactly one saved signature.",
+    "setupHistory": "Initial combined attempt passed sender preflight but timed out before UI runner output. Idempotent synthetic fixture directory setup and an isolated runner process reset were added; the focused rerun passed."
+  },
+  "builds": {
+    "armSigned": true,
+    "x86": true,
+    "sourceAndNativeParity": true,
+    "hapSha256": "80240d3a1d37336d7a0bdef401ff3e4828f022185b815a4264d1cf5fd4c24007"
+  },
+  "installations": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "target": "PURA_X_WIFI_TARGET_REDACTED",
+      "versionCode": 100006,
+      "versionName": "0.1.6",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "80240d3a1d37336d7a0bdef401ff3e4828f022185b815a4264d1cf5fd4c24007"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "target": "MATEPAD_SERIAL_REDACTED",
+      "versionCode": 100006,
+      "versionName": "0.1.6",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "80240d3a1d37336d7a0bdef401ff3e4828f022185b815a4264d1cf5fd4c24007"
+    }
+  ],
+  "privacy": {
+    "syntheticOnly": true,
+    "realAccountsAccessed": false,
+    "productionLaunched": false,
+    "realMessagesSent": false
+  },
+  "emulator": {
+    "status": "stopped",
+    "boundedWrapper": true,
+    "isolatedTestAppRemoved": true,
+    "screenProfileRestored": true
+  },
+  "retention": {
+    "messageAndPictureDays": 7,
+    "recipientHistoryIndependentOfMessageExpiry": true,
+    "recipientAddressLimitPerAccount": 500
+  }
+}

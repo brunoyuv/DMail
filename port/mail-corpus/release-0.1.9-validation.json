@@ -1,0 +1,66 @@
+{
+  "version": "0.1.9",
+  "versionCode": 100009,
+  "status": "installed-and-verified",
+  "host": {
+    "tests": 225,
+    "pass": 225,
+    "fail": 0,
+    "skipped": 0
+  },
+  "native": {
+    "tests": 1,
+    "passed": 1,
+    "scope": "Cached unread account/mailbox/header dots and mark-read/unread header updates; visible notification opt-in; foreground banner dismissal preserves composer; isolated OS notification permission, LEVEL_HIGH social slot, private alert/cancellation, launcher badge 1 then 0, persisted two-hour schedule removal; account stays off, zero mail service calls, no production notifications read",
+    "limits": "Badge getter verifies OS count even if launcher presentation is disabled; slot level verifies banner-capable delivery, not a captured banner or launcher image."
+  },
+  "nativeDurationMs": 19141,
+  "emulator": {
+    "status": "stopped",
+    "isolatedTestAppRemoved": true,
+    "screenProfileRestored": true
+  },
+  "privacy": {
+    "syntheticOnly": true,
+    "realAccountsAccessed": false,
+    "productionLaunched": false,
+    "realMessagesSent": false
+  },
+  "builds": {
+    "armSigned": true,
+    "x86Production": true,
+    "x86IsolatedFixture": true,
+    "hapSha256": "6640094f9143f15268eb3f049b899a35d639f872148b844b055899031d335eeb"
+  },
+  "installations": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "target": "PURA_X_WIFI_TARGET_REDACTED",
+      "versionCode": 100009,
+      "versionName": "0.1.9",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "6640094f9143f15268eb3f049b899a35d639f872148b844b055899031d335eeb"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "target": "MATEPAD_SERIAL_REDACTED",
+      "versionCode": 100009,
+      "versionName": "0.1.9",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "6640094f9143f15268eb3f049b899a35d639f872148b844b055899031d335eeb"
+    }
+  ],
+  "evidence": {
+    "hostLogSha256": "e4d021117f86205fbf389509acf2566e4198e70a355d3227e78edcdd905efa92",
+    "nativeLogSha256": "2b39f2bf40165d0612677a0b83eac9047027a39b47a2e2319d8883e11da6cce0"
+  },
+  "limits": [
+    "Unread presence reflects downloaded current mailbox members, not a complete unread total from the server.",
+    "Native OS state and banner-capable channel verified; physical launcher/system banner presentation remains user-controlled.",
+    "No changes to background execution interval or relay requirements."
+  ]
+}

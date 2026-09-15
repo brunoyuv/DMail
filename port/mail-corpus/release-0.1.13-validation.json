@@ -1,0 +1,123 @@
+{
+  "version": "0.1.13",
+  "versionCode": 100013,
+  "bundleName": "org.thunderbird.harmony.dev",
+  "status": "installed-and-verified",
+  "cause": "PNG images served as application/octet-stream were rejected despite successful downloads.",
+  "hostJavaScript": {
+    "tests": 314,
+    "pass": 314,
+    "fail": 0,
+    "skipped": 0
+  },
+  "hostPython": {
+    "tests": 9,
+    "pass": 9
+  },
+  "baselineRegression": {
+    "newTests": 3,
+    "failedBeforeFix": 3,
+    "passedAfterFix": 3
+  },
+  "nativePictures": {
+    "tests": 1,
+    "passed": 1,
+    "scope": "Actual HtmlMail fitContent reader within Scroll; fresh HTTP200 PNG and200 replacement served as application/octet-stream pass NetworkKit ArrayBuffer handling, normalize to persisted image/png, and render natively; pending retry coalesces; two HTTP503 failures retain replacement bytes, timestamp, consent and visible colors. Four loopback requests only.",
+    "limits": "Synthetic main-HAP fixture and loopback only; no production accounts or external servers.",
+    "screenshots": {
+      "fresh": {
+        "originalColorPixels": [
+          27816,
+          27633,
+          27633
+        ],
+        "sha256": "b12e7f7bbb5442b1088feddc0c34f2e65ea31ac85f373678909e618f022f65ef"
+      },
+      "replacement": {
+        "originalColorPixels": [
+          37149,
+          36966,
+          37149
+        ],
+        "sha256": "358c291bff062cd3a32550eba469d8843eac958024895f4a91addbece8508f21"
+      },
+      "failed-refresh": {
+        "originalColorPixels": [
+          37149,
+          36966,
+          37149
+        ],
+        "sha256": "358c291bff062cd3a32550eba469d8843eac958024895f4a91addbece8508f21"
+      },
+      "retried": {
+        "originalColorPixels": [
+          37149,
+          36966,
+          37149
+        ],
+        "sha256": "358c291bff062cd3a32550eba469d8843eac958024895f4a91addbece8508f21"
+      }
+    },
+    "durationMs": 17723,
+    "shippingSourceParity": true,
+    "rendererDiagnosticsEnabled": false,
+    "logSha256": "0146ffe4adaf386daf8c28a83d7a0af07c640c6752622bfd76d36518cee66c7e"
+  },
+  "emulator": {
+    "status": "stopped",
+    "nativeProcessAbsenceVerified": true
+  },
+  "builds": {
+    "productionX86Sha256": "f182c56725763163309bd059b2c8154309b62b9b893528aabcd0770fe1f7f86b",
+    "signedArmSha256": "7c95c599db9a05294e4d184f0403f1fff00abd6a91121355d7a3bd4cb5121c21",
+    "isolatedMainSha256": "9d386b3fbe94be8fcf31b99e6020be20fb6415b6ac5c1abb192933c4fd604b20",
+    "isolatedTestSha256": "921db549190c3cfc34268dd88a0a716c2c0fa9925a7860818fe34b55dc6799cb",
+    "signedArmSourceAndLibraryParityVerified": true
+  },
+  "installations": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "versionCode": 100013,
+      "versionName": "0.1.13",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "7c95c599db9a05294e4d184f0403f1fff00abd6a91121355d7a3bd4cb5121c21"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "versionCode": 100013,
+      "versionName": "0.1.13",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "7c95c599db9a05294e4d184f0403f1fff00abd6a91121355d7a3bd4cb5121c21"
+    }
+  ],
+  "toolchain": {
+    "commandLineTools": "26.0.0.821",
+    "hvigor": "6.26.4",
+    "compileSdk": "26.0.0.105",
+    "targetApi": 22,
+    "minimumApi": 22,
+    "swiftNativeApi": 22
+  },
+  "privacy": {
+    "automatedTestsSyntheticOnly": true,
+    "userSuppliedNewsletterInspected": true,
+    "newsletterSourceAndUrlsExcludedFromPublicFixtures": true,
+    "mailboxAccessed": false,
+    "productionLaunched": false,
+    "realMessagesSent": false
+  },
+  "evidence": {
+    "hostLogSha256": "4aaaba9931a5af8d1ed75aa8f7e6df71df457109557198581281184ce739a675",
+    "signedBuildLogSha256": "067c6825deff1a978ae4e5102c989a3dff7ffb5a03a36e613df9447dff6c830c"
+  },
+  "limits": [
+    "Generic or missing MIME inference covers PNG/JPEG/GIF/WebP signatures, not full decoding.",
+    "Explicit non-image content remains blocked.",
+    "Native validation uses synthetic loopback images; physical newsletter viewing remains user-operated.",
+    "The isolated loopback HTTP allowance is unchanged; production network settings were not broadened."
+  ]
+}

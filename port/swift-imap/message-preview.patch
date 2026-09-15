@@ -1,0 +1,52 @@
+--- a/Sources/IMAP/Message.swift
++++ b/Sources/IMAP/Message.swift
+@@ -24,6 +24,7 @@
+     public fileprivate(set) var internalDate: Date?
+     public fileprivate(set) var threadID: String?
+     public fileprivate(set) var uid: UID?
++    public fileprivate(set) var preview: String? = nil
+ 
+     public init(
+         body: Body? = nil,
+@@ -63,6 +64,7 @@
+         case internalDate(Date)
+         case threadID(String)
+         case uid(UID)
++        case preview(String?)
+ 
+         // Shared convenience decoder/mapper for message components
+         // Used by `FetchHandler`, `IdleHandler` and `NoopHandler`
+@@ -97,6 +99,8 @@
+                     return nil
+                 }
+                 self = .threadID(threadID)
++            case .preview(let preview):
++                self = .preview(preview.map { String($0) })
+             case .uid(let uid):
+                 self = .uid(uid)
+             default:
+@@ -116,6 +120,7 @@
+             case .gmailMessageID(let id), .gmailThreadID(let id): "\(self.id): \(id)"
+             case .internalDate(let date): "\(id): \(date)"
+             case .uid(let uid): "\(id): \(uid)"
++            case .preview: id
+             }
+         }
+ 
+@@ -138,6 +143,7 @@
+             case .internalDate: "internalDate"
+             case .threadID: "threadID"
+             case .uid: "uid"
++            case .preview: "preview"
+             }
+         }
+     }
+@@ -171,6 +177,8 @@
+                 message.internalDate = internalDate
+             case .threadID(let threadID):
+                 message.threadID = threadID
++            case .preview(let preview):
++                message.preview = preview
+             case .uid(let uid):
+                 message.uid = uid
+             }

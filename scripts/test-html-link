@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# Prepared synthetic ArkWeb tap check; no browser launch or mail service.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+: "${HDC_TARGET:?Set the bounded emulator or explicitly authorized MatePad target}"
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app-aarch64"; SIGNATURE=signed; CPU=aarch64; PREFIX=matepad
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 ]]; then
+  [[ "$HDC_TARGET" == 127.0.0.1:5555 ]]
+  APP="$ROOT/.tools/imap-test-app"; SIGNATURE=unsigned; CPU=x86_64; PREFIX=emulator
+else
+  [[ "$HDC_TARGET" == "${DMAIL_AUTHORIZED_MATEPAD_SERIAL:?Set the separately verified authorized MatePad serial}" ]]
+fi
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == "$CPU" ]]
+if [[ "$PREFIX" == matepad ]]; then
+  [[ "$(run_hdc -t "$HDC_TARGET" shell param get const.product.model | tr -d '[:space:]')" == MRO-W00 ]]
+fi
+OUT="$ROOT/.tools/${PREFIX}-html-link"
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  for name in test.log long-before.png long-after.png failure.png; do
+    if [[ -f "$OUT/$name" ]]; then mv "$OUT/$name" "$PREVIOUS/$name"; fi
+  done
+fi
+cleanup() {
+  local result=$?
+  trap - EXIT
+  for name in long-before long-after failure; do
+    run_hdc -t "$HDC_TARGET" file recv "/data/local/tmp/html-link-$name.png" "$OUT/$name.png" >/dev/null 2>&1 || true
+  done
+  run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+for variant in default ohosTest; do
+  run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/$variant/entry-$variant-${SIGNATURE}.hap"
+done
+run_hdc -t "$HDC_TARGET" shell rm -f /data/local/tmp/html-link-long-before.png /data/local/tmp/html-link-long-after.png /data/local/tmp/html-link-failure.png
+# Bring up the isolated blank fixture before the test's wake/gesture setup.
+# Never swipe whichever production app the user happened to leave open.
+START_OUTPUT="$(run_hdc -t "$HDC_TARGET" shell aa start -a EntryAbility -b org.thunderbird.harmony.imaptest)"
+[[ "$START_OUTPUT" == *"start ability successfully"* ]]
+timeout --foreground --kill-after=5s 55s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/HtmlLinkRunner \
+  -s timeout 50000 | tee "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"
+grep -q 'HTML_LINK_RESULT: target=_blank user tap reached injected opener exactly once' "$OUT/test.log"
+grep -q 'HTML_LONG_RESULT: 1500 rows;' "$OUT/test.log"

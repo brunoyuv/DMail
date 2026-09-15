@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+# Prepared isolated synthetic A/B/C scroll phases with bounded SmartPerf samples.
+# Stage with DMAIL_HTML_SCROLL_POWER_TRACE=1 before building this test app.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+: "${HDC_TARGET:?Set the explicitly authorized MatePad target}"
+: "${DMAIL_AUTHORIZED_MATEPAD_SERIAL:?Set the separately verified authorized MatePad serial}"
+[[ "$HDC_TARGET" == "$DMAIL_AUTHORIZED_MATEPAD_SERIAL" ]]
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app-aarch64"
+SDK="${DMAIL_HTML_POWER_SDK:-26}"
+case "$SDK" in
+  26) SDK_SUFFIX='' ;;
+  22) APP="$APP-sdk22"; SDK_SUFFIX='-sdk22' ;;
+  *) echo 'Unsupported synthetic compiler comparison.' >&2; exit 1 ;;
+esac
+SCENARIO="${DMAIL_HTML_POWER_SCENARIO:-text}"
+case "$SCENARIO" in
+  text) RUNNER=HtmlScrollPowerRunner; MODES=(baseline011 current018 asyncViewport); SUFFIX='' ;;
+  pictures) RUNNER=HtmlPictureScrollRunner; MODES=(baseline018 current019); SUFFIX='-pictures' ;;
+  *) echo 'Unknown synthetic scrolling scenario.' >&2; exit 1 ;;
+esac
+OUT="${DMAIL_HTML_POWER_OUT:-$ROOT/.tools/matepad-html-scroll-power$SUFFIX$SDK_SUFFIX}"
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == aarch64 ]]
+[[ "$(run_hdc -t "$HDC_TARGET" shell param get const.product.model | tr -d '[:space:]')" == MRO-W00 ]]
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" || -f "$OUT/profiler.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  for file in test.log profiler.log profiler.csv; do
+    [[ ! -f "$OUT/$file" ]] || mv "$OUT/$file" "$PREVIOUS/$file"
+  done
+fi
+SAMPLER_PID=''
+collect_samples() {
+  [[ -n "$SAMPLER_PID" ]] || return 0
+  # Finite remote collection flushes its CSV on exit; the host has an additional
+  # hard deadline. Never leave an unbounded device profiler running.
+  wait "$SAMPLER_PID" || true
+  SAMPLER_PID=''
+  run_hdc -t "$HDC_TARGET" file recv /data/local/tmp/dmailpower.csv "$OUT/profiler.csv" >/dev/null
+}
+cleanup() {
+  local result=$?
+  trap - EXIT
+  run_hdc -t "$HDC_TARGET" shell aa force-stop org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  collect_samples || true
+  run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+for variant in default ohosTest; do
+  run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/$variant/entry-$variant-signed.hap"
+done
+# Bring only the isolated blank page forward before the driver's first wake.
+START_OUTPUT="$(run_hdc -t "$HDC_TARGET" shell aa start -a EntryAbility -b org.thunderbird.harmony.imaptest)"
+[[ "$START_OUTPUT" == *"start ability successfully"* ]]
+# SP_daemon's parser rejects hyphens in output basenames. Do not add screenshots,
+# network capture or navigation tracing: this records only performance counters.
+run_hdc -t "$HDC_TARGET" shell rm -f /data/local/tmp/dmailpower.csv
+timeout --foreground --kill-after=5s 170s "$HDC" -t "$HDC_TARGET" shell SP_daemon \
+  -N 155 -PKG org.thunderbird.harmony.imaptest -c -g -f -t -p \
+  -OUT /data/local/tmp/dmailpower.csv > "$OUT/profiler.log" 2>&1 &
+SAMPLER_PID=$!
+timeout --foreground --kill-after=5s 150s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest "/ets/testrunner/$RUNNER" \
+  -s timeout 140000 | tee "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"
+for mode in "${MODES[@]}"; do
+  grep -q "POWER_RESULT $mode " "$OUT/test.log"
+  for phase in idle scroll settled; do
+    grep -q "POWER_PHASE $mode $phase start " "$OUT/test.log"
+    grep -q "POWER_PHASE $mode $phase end " "$OUT/test.log"
+  done
+done

@@ -1,0 +1,299 @@
+#!/usr/bin/env python3
+"""Summarize isolated on-demand mail phases from existing SmartPerf/HiPerf files.
+
+No device access. CPU intervals crossing phase edges are overlap-weighted
+estimates, not instantaneous measurements of short refresh/open operations.
+"""
+import argparse
+import csv
+import hashlib
+import io
+import json
+import math
+from pathlib import Path
+import re
+import sys
+
+PHASES = ('idle', 'refresh', 'open', 'reader_idle', 'scroll', 'settled', 'background')
+REQUIRED_PHASES = tuple(phase for phase in PHASES if phase != 'reader_idle')
+TEMPERATURES = ('Battery', 'cluster0', 'gpu', 'npu_thermal', 'shell_back',
+                'shell_frame', 'shell_front', 'soc_thermal', 'system_h')
+MEMORY = ('pss', 'nativeHeapPss', 'arktsHeapPss', 'graphicPss', 'gpuPss')
+COUNTERS = ('sync_queries', 'html_scans', 'picture_batches', 'completed_message_ids',
+            'body_calls', 'page_calls', 'violations', 'inbox_shown', 'inbox_hidden')
+TARGET_BUNDLE = 'org.thunderbird.harmony.imaptest'
+
+
+class SummaryError(ValueError):
+    pass
+
+
+def number(raw, nonnegative=False):
+    try:
+        value = float(raw)
+        return value if math.isfinite(value) and (not nonnegative or value >= 0) else None
+    except (ValueError, TypeError):
+        return None
+
+
+def child_usage(raw):
+    entries = str(raw or '').split('|')
+    while len(entries) > 1 and not entries[-1].strip():
+        entries.pop()
+    values = [number(entry.strip(), True) for entry in entries]
+    observed = [value for value in values if value is not None]
+    return (sum(observed) if observed else None), bool(observed) and len(observed) == len(values)
+
+
+def phase_ranges(log):
+    edges = {}
+    for name, edge, raw_stamp in re.findall(r'\bDEMAND_POWER_PHASE\s+(\w+)\s+(start|end)\s+(\S+)', log):
+        if name not in PHASES:
+            raise SummaryError(f'Unknown phase: {name}')
+        stamp = number(raw_stamp, True)
+        if stamp is None or stamp != int(stamp):
+            raise SummaryError(f'Invalid phase timestamp: {name}/{edge}')
+        key = (name, edge)
+        if key in edges and edges[key] != int(stamp):
+            raise SummaryError(f'Conflicting phase marker: {name}/{edge}')
+        edges[key] = int(stamp)
+    result = []
+    for name in PHASES:
+        if name not in REQUIRED_PHASES and not any(key[0] == name for key in edges):
+            continue
+        if any((name, edge) not in edges for edge in ('start', 'end')):
+            raise SummaryError(f'Missing phase marker: {name}')
+        start, end = (edges[(name, edge)] for edge in ('start', 'end'))
+        if end <= start:
+            raise SummaryError(f'Nonpositive phase duration: {name}')
+        if result and start < result[-1]['end_ms']:
+            raise SummaryError(f'Overlapping or out-of-order phase: {name}')
+        result.append({'phase': name, 'start_ms': start, 'end_ms': end})
+    status = re.findall(r'Tests run:\s*(\d+), Failure:\s*(\d+), Error:\s*(\d+), Pass:\s*(\d+)', log)
+    if not status or tuple(map(int, status[-1])) != (1, 0, 0, 1):
+        raise SummaryError('The native fixture did not report one passing test')
+    if not re.search(r'\bDEMAND_POWER_RESULT\b', log):
+        raise SummaryError('Missing successful fixture result')
+    return result
+
+
+def stats(values):
+    usable = [(value, weight) for value, weight in values if value is not None and weight > 0]
+    duration = sum(weight for _, weight in usable)
+    return {'samples': len(usable), 'observed_ms': duration,
+            'mean': round(sum(value * weight for value, weight in usable) / duration, 6) if duration else None,
+            'min': min((value for value, _ in usable), default=None),
+            'max': max((value for value, _ in usable), default=None)}
+
+
+def phase_counters(log):
+    result = {}
+    for name, edge, _stamp, raw in re.findall(
+            r'\bDEMAND_POWER_COUNTS\s+(\w+)\s+(start|end)\s+(\d+)\s+([^\r\n]+)', log):
+        values = raw.strip().split(',')
+        if name not in PHASES or len(values) != len(COUNTERS) or any(not value.strip().isdigit() for value in values):
+            raise SummaryError(f'Invalid fixture counters: {name}/{edge}')
+        values = dict(zip(COUNTERS, map(int, values)))
+        key = (name, edge)
+        if key in result and result[key] != values:
+            raise SummaryError(f'Conflicting fixture counters: {name}/{edge}')
+        result[key] = values
+    return result
+
+
+def hiperf_rows(report):
+    """Keep the reported rows separate; do not sum functions/callchains/events."""
+    rows = []
+    for line in report.splitlines():
+        match = re.match(r'^\s*(\d+(?:\.\d+)?)%\s+(.+?)\s*$', line)
+        if not match:
+            continue
+        percent = number(match.group(1), True)
+        if percent is None or percent > 100:
+            continue
+        payload = match.group(2)
+        # The runner requests --sort comm,tid,dso,func. Count is present by
+        # default; keep an unrecognized format as a raw reported row instead.
+        parsed = re.fullmatch(r'(?:(\d+)\s+)?(\S+)\s+(\d+)\s+(\S+)\s+(.+)', payload)
+        row = {'reported_percent': percent, 'reported_row': payload}
+        if parsed:
+            count, comm, tid, dso, function = parsed.groups()
+            row.update({'count': int(count) if count else None, 'comm': comm,
+                        'tid': int(tid), 'dso': dso, 'function': function})
+        rows.append(row)
+    rows.sort(key=lambda row: row['reported_percent'], reverse=True)
+    return rows
+
+
+def hiperf_summary(report):
+    rows = hiperf_rows(report)
+    return {'status': 'reported' if rows else 'unparsed_or_unavailable',
+            'sha256': hashlib.sha256(report.encode()).hexdigest(), 'top_reported_rows': rows[:12],
+            'semantics': 'Percentages belong to the profiler report, not elapsed CPU time or energy. '
+                         'Rows are not combined across threads, events or callchains.'}
+
+
+def process_identity(rows, hiperf):
+    primary, children = {}, {}
+    for row in rows:
+        pid, name = number(row.get('ProcId'), True), row.get('ProcAppName', '')
+        if pid is not None and pid > 0 and pid == int(pid):
+            key = (int(pid), name)
+            primary[key] = primary.get(key, 0) + 1
+        for value in set(str(row.get('ChildProcId', '')).split('|')):
+            child = number(value, True)
+            if child is not None and child > 0 and child == int(child):
+                children[int(child)] = children.get(int(child), 0) + 1
+    known_app_tids = {row['tid'] for row in hiperf_rows(hiperf or '')
+                      if row.get('comm') == TARGET_BUNDLE and 'tid' in row}
+    observed_children = []
+    for pid, count in sorted(children.items()):
+        entry = {'pid': pid, 'observations': count}
+        if pid in known_app_tids:
+            entry.update({'verified_name': TARGET_BUNDLE,
+                          'verification': 'HiPerf reports this same TID with the target bundle comm; it matches a SmartPerf child PID.'})
+        observed_children.append(entry)
+    return {'target_bundle': TARGET_BUNDLE,
+            'primary_column': [{'pid': pid, 'name': name, 'observations': count,
+                                'matches_target_name': name == TARGET_BUNDLE}
+                               for (pid, name), count in sorted(primary.items())],
+            'reported_child_pids': observed_children,
+            'semantics': 'Primary means SmartPerf ProcCpuUsage, not necessarily the app: aa can be the reported parent. '
+                         'Child CPU remains the reported aggregate, not an inferred per-child split. '
+                         'A matching app PID does not establish that all ArkWeb renderer/compositor processes were captured.'}
+
+
+def summarize(log, csv_text, min_interval_ms=750, max_interval_ms=1500, hiperf=None):
+    if not 0 < min_interval_ms <= max_interval_ms:
+        raise SummaryError('Invalid sample interval bounds')
+    phases, counters = phase_ranges(log), phase_counters(log)
+    reader = csv.DictReader(io.StringIO(csv_text.lstrip('\ufeff')))
+    fields = reader.fieldnames or []
+    for field in ('timestamp', 'ProcCpuUsage', 'ChildProcCpuUsage'):
+        if field not in fields:
+            raise SummaryError(f'Missing profiler CSV field: {field}')
+    rows = []
+    for line, row in enumerate(reader, 2):
+        if not any(row.values()):
+            continue
+        if None in row:
+            raise SummaryError(f'CSV row {line} has more values than its header')
+        stamp = number(row['timestamp'], True)
+        if stamp is None or stamp != int(stamp):
+            raise SummaryError(f'Invalid CSV timestamp at row {line}')
+        row['_stamp'] = int(stamp)
+        if rows and row['_stamp'] <= rows[-1]['_stamp']:
+            raise SummaryError(f'Profiler timestamps are not strictly increasing at row {line}')
+        rows.append(row)
+    if len(rows) < 2:
+        raise SummaryError('At least two samples are needed; the first sample is excluded')
+    intervals, rejected = [], 0
+    for previous, current in zip(rows, rows[1:]):
+        start, end = previous['_stamp'], current['_stamp']
+        if min_interval_ms <= end - start <= max_interval_ms:
+            intervals.append((start, end, current))
+        else:
+            rejected += 1
+    output = []
+    for phase in phases:
+        selected = [(min(end, phase['end_ms']) - max(start, phase['start_ms']), start, end, row)
+                    for start, end, row in intervals if start < phase['end_ms'] and end > phase['start_ms']]
+        metrics = {name: [] for name in ('main_cpu_pct', 'child_observed_cpu_pct', 'child_complete_cpu_pct', 'fps', 'gpu_load_pct')}
+        temperatures = {name: [] for name in TEMPERATURES if name in fields}
+        memory = {name: [] for name in MEMORY if name in fields}
+        missing_main = missing_children = missing_main_ms = missing_child_ms = 0
+        for weight, _start, _end, row in selected:
+            identified = 'ProcId' not in fields or (number(row['ProcId']) or 0) > 0
+            main = number(row['ProcCpuUsage'], True)
+            if not identified:
+                main = None
+            children, complete = child_usage(row['ChildProcCpuUsage'])
+            missing_main += main is None
+            missing_children += not complete
+            missing_main_ms += weight if main is None else 0
+            missing_child_ms += weight if not complete else 0
+            for name, value in (('main_cpu_pct', main), ('child_observed_cpu_pct', children),
+                                ('child_complete_cpu_pct', children if complete else None),
+                                ('fps', number(row.get('fps'), True)), ('gpu_load_pct', number(row.get('gpuLoad'), True))):
+                metrics[name].append((value, weight))
+            for name in temperatures:
+                temperatures[name].append((number(row[name]), weight))
+            for name in memory:
+                memory[name].append((number(row[name], True) if identified else None, weight))
+        sampled = sum(weight for weight, _, _, _ in selected)
+        record = {**phase, 'duration_ms': phase['end_ms'] - phase['start_ms'],
+                  'samples': len(selected), 'sampled_ms': sampled,
+                  'uncovered_ms': phase['end_ms'] - phase['start_ms'] - sampled,
+                  'edge_overlap_samples': sum(start < phase['start_ms'] or end > phase['end_ms'] for _, start, end, _ in selected),
+                  'missing_main_samples': missing_main, 'missing_main_ms': missing_main_ms,
+                  'incomplete_child_samples': missing_children, 'incomplete_child_ms': missing_child_ms,
+                  'metrics': {name: stats(values) for name, values in metrics.items()},
+                  'temperatures_c': {name: stats(values) for name, values in temperatures.items()},
+                  'memory_raw': {name: stats(values) for name, values in memory.items()}}
+        if counters:
+            start, end = (counters.get((phase['phase'], edge)) for edge in ('start', 'end'))
+            if start is None or end is None:
+                raise SummaryError(f'Missing fixture counters: {phase["phase"]}')
+            delta = {name: end[name] - start[name] for name in COUNTERS}
+            if any(value < 0 for value in delta.values()):
+                raise SummaryError(f'Fixture counters moved backwards: {phase["phase"]}')
+            record['work'] = {'start': start, 'end': end, 'delta': delta}
+        output.append(record)
+    cores = sorted(int(match.group(1)) for field in fields if (match := re.fullmatch(r'cpu(\d+)Usage', field)))
+    result = {'schema': 1, 'fixture': 'mail-on-demand', 'profiler_rows': len(rows), 'first_sample_excluded': True,
+              'process_identity': process_identity(rows, hiperf),
+              'cpu_cores': len(cores) if cores and cores == list(range(len(cores))) else None,
+              'interval_limits_ms': [min_interval_ms, max_interval_ms], 'rejected_interval_count': rejected,
+              'semantics': {
+                  'cpu': 'SmartPerf machine-normalized percent. main_cpu_pct is the measured primary ProcCpuUsage column, which may be aa rather than the app. Reported child CPU stays separate.',
+                  'children': 'Observed sums include numeric pipe-separated entries only; NA is missing, never zero. Complete sums require every entry numeric.',
+                  'phase_edges': 'A CPU row describes its preceding interval. Means use overlap duration; edge portions assume the interval average and cannot isolate subsecond work.',
+                  'coverage': 'A sample can contribute to adjacent phases without double-counting time. Rejected intervals and missing values contribute no observations.',
+                  'optional_metrics': 'FPS, device GPU/temperature and raw process memory use matching rows and overlap weights; they are not per-phase instrumented deltas.',
+                  'scope': 'Only processes reported by SmartPerf. Child PID inclusion does not prove capture of all ArkWeb renderer/compositor processes. No proof of application watts, energy or battery share.'},
+              'inputs_sha256': {'test_log': hashlib.sha256(log.encode()).hexdigest(), 'profiler_csv': hashlib.sha256(csv_text.encode()).hexdigest()},
+              'phases': output}
+    if hiperf is not None:
+        result['hiperf'] = hiperf_summary(hiperf)
+    return result
+
+
+def table(result):
+    def mean(value):
+        return 'NA' if value['mean'] is None else f'{value["mean"]:.3f}'
+    identity = result['process_identity']
+    primary = ', '.join(f'{item["pid"]}:{item["name"] or "unknown"}' for item in identity['primary_column']) or 'unavailable'
+    children = ', '.join(f'{item["pid"]}:{item.get("verified_name", "name unverified")}' for item in identity['reported_child_pids']) or 'unavailable'
+    lines = [f'Measured primary column: {primary}', f'Reported child PIDs: {children}',
+             'Phase         Coverage(ms) ProcCPU% ChildKnown% ChildComplete% Edges']
+    for phase in result['phases']:
+        metrics = phase['metrics']
+        lines.append(f'{phase["phase"]:13} {phase["sampled_ms"]:6}/{phase["duration_ms"]:<6} '
+                     f'{mean(metrics["main_cpu_pct"]):>7} {mean(metrics["child_observed_cpu_pct"]):>11} '
+                     f'{mean(metrics["child_complete_cpu_pct"]):>14} {phase["edge_overlap_samples"]:5}')
+    lines.append('CPU values are overlap-weighted estimates; NA remains missing. Child coverage may omit ArkWeb processes; these are not app energy measurements.')
+    return '\n'.join(lines)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('test_log', type=Path)
+    parser.add_argument('profiler_csv', type=Path)
+    parser.add_argument('--json', dest='output', type=Path, required=True)
+    parser.add_argument('--hiperf', type=Path)
+    parser.add_argument('--min-interval-ms', type=int, default=750)
+    parser.add_argument('--max-interval-ms', type=int, default=1500)
+    args = parser.parse_args()
+    try:
+        report = args.hiperf.read_text() if args.hiperf and args.hiperf.exists() else None
+        result = summarize(args.test_log.read_text(), args.profiler_csv.read_text(), args.min_interval_ms, args.max_interval_ms, report)
+        args.output.write_text(json.dumps(result, indent=2, allow_nan=False) + '\n')
+        print(table(result))
+    except (OSError, SummaryError) as error:
+        print(f'On-demand power summary failed: {error}', file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

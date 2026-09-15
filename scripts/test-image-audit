@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+[[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 && "${HDC_TARGET:-}" == 127.0.0.1:5555 ]]
+result=0
+for check in test-picture-transport test-html-image-sizing test-picture-refresh; do
+  "$ROOT/scripts/$check" || result=1
+done
+exit "$result"

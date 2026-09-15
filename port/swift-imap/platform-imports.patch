@@ -1,0 +1,28 @@
+--- a/Sources/IMAP/IMAPClient.swift
++++ b/Sources/IMAP/IMAPClient.swift
+@@ -7,7 +7,11 @@
+ import NIO
+ import NIOIMAP
+ import NIOSSL
++#if canImport(OSLog)
+ import OSLog
++#else
++import HarmonyLogging
++#endif
+ 
+ /// Configure `IMAPClient` with a single ``Server``.
+ public class IMAPClient {
+--- a/Sources/IMAP/LoggingHandler.swift
++++ b/Sources/IMAP/LoggingHandler.swift
+@@ -3,7 +3,11 @@
+ // file, You can obtain one at http://mozilla.org/MPL/2.0/
+ 
+ import NIOCore
++#if canImport(OSLog)
+ import OSLog
++#else
++import HarmonyLogging
++#endif
+ 
+ // Generic NIO channel logger, a pass-through duplex handler
+ // Reads the raw bytes going both directions without modifying

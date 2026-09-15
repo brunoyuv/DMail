@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+# Isolated native persistent IDLE against a strict loopback-only IMAP fixture.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+: "${HDC_TARGET:?Set the authorized MatePad or bounded emulator target}"
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+NODE="$ROOT/.tools/runtime/node_modules/node/bin/node"
+APP="$ROOT/.tools/imap-test-app-aarch64"; SIGNATURE=signed; CPU=aarch64; PREFIX=matepad
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 ]]; then
+  [[ "$HDC_TARGET" == 127.0.0.1:5555 ]]
+  APP="$ROOT/.tools/imap-test-app"; SIGNATURE=unsigned; CPU=x86_64; PREFIX=emulator
+else
+  [[ "$HDC_TARGET" == "${DMAIL_AUTHORIZED_MATEPAD_SERIAL:?Set the separately verified authorized MatePad serial}" ]]
+fi
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == "$CPU" ]]
+if [[ "$PREFIX" == matepad ]]; then
+  [[ "$(run_hdc -t "$HDC_TARGET" shell param get const.product.model | tr -d '[:space:]')" == MRO-W00 ]]
+fi
+for hap in "default/entry-default-${SIGNATURE}.hap" "ohosTest/entry-ohosTest-${SIGNATURE}.hap"; do
+  [[ -f "$APP/entry/build/default/outputs/$hap" ]] || { echo 'Build isolated IDLE test HAPs first.' >&2; exit 1; }
+done
+if run_hdc fport ls | grep -Eq 'tcp:976[0-6] '; then echo 'IMAP fixture ports are in use.' >&2; exit 1; fi
+FIXTURE_PID=''; FORWARDED=false; INSTALLED=false
+cleanup() {
+  local result=$?
+  trap - EXIT
+  curl --max-time 3 --fail --silent http://127.0.0.1:9760/stats > ".tools/${PREFIX}-inbox-watch-stats.json" || true
+  if "$INSTALLED"; then run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true; fi
+  if "$FORWARDED"; then
+    for port in 9761 9765; do run_hdc -t "$HDC_TARGET" fport rm "tcp:$port" "tcp:$port" >/dev/null 2>&1 || true; done
+  fi
+  if [[ -n "$FIXTURE_PID" ]]; then kill "$FIXTURE_PID" 2>/dev/null || true; wait "$FIXTURE_PID" 2>/dev/null || true; fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+THUNDERBIRD_IMAP_OAUTH=0 THUNDERBIRD_IMAP_IDLE=1 "$NODE" port/swift-imap/fixture.cjs .tools/imap-test-certs > ".tools/${PREFIX}-inbox-watch-fixture.log" 2>&1 & FIXTURE_PID=$!
+READY=false
+for ((i=0;i<30;i++)); do
+  if curl --max-time 1 --fail --silent http://127.0.0.1:9760/health >/dev/null; then READY=true; break; fi
+  sleep 0.1
+done
+"$READY"
+FORWARDED=true
+for port in 9761 9765; do run_hdc -t "$HDC_TARGET" rport "tcp:$port" "tcp:$port" | grep -q 'Forwardport result:OK'; done
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-${SIGNATURE}.hap"
+INSTALLED=true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-${SIGNATURE}.hap"
+timeout --foreground --kill-after=5s 65s "$HDC" -t "$HDC_TARGET" shell aa test -b org.thunderbird.harmony.imaptest -m entry_test \
+  -s unittest /ets/testrunner/InboxWatchRunner -s timeout 55000 | tee ".tools/${PREFIX}-inbox-watch-tests.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' ".tools/${PREFIX}-inbox-watch-tests.log"
+for ((i=0;i<60;i++)); do
+  curl --max-time 2 --fail --silent http://127.0.0.1:9760/stats > ".tools/${PREFIX}-inbox-watch-stats.json"
+  if "$NODE" -e 'const s=require(process.argv[1]);process.exit(s.active===0?0:1)' "$ROOT/.tools/${PREFIX}-inbox-watch-stats.json"; then break; fi
+  sleep 0.1
+done
+"$NODE" - "$PREFIX" <<'JS'
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const prefix=process.argv[2]; assert.ok(['matepad','emulator'].includes(prefix));
+const stats=JSON.parse(fs.readFileSync(`.tools/${prefix}-inbox-watch-stats.json`));
+assert.deepEqual(stats.violations,[]); assert.equal(stats.active,0);
+assert.equal(stats.sessions.length,4);
+for (const session of stats.sessions) {
+  assert.ok(session.closed); assert.ok(!session.violation,session.violation); assert.equal(session.fetches,0);
+  assert.equal(session.commands.filter(c=>c==='LOGIN').length,1);
+}
+const watch=stats.sessions.find(s=>s.mode==='idle-watch');
+assert.deepEqual(watch.commands,['CAPABILITY','LOGIN','CAPABILITY','EXAMINE','IDLE','DONE']);
+assert.equal(watch.idleStarts,1);assert.equal(watch.idleDone,1);assert.equal(watch.idleExaminations,1);
+const unsupported=stats.sessions.find(s=>s.mode==='idle-unsupported');
+assert.deepEqual(unsupported.commands,['CAPABILITY','LOGIN','CAPABILITY']);
+const trigger=stats.sessions.find(s=>s.mode==='idle-trigger');
+assert.deepEqual(trigger.commands,['CAPABILITY','LOGIN','EXAMINE','LOGOUT']);assert.equal(trigger.pushes,1);
+const canceled=stats.sessions.find(s=>s.mode==='idle-cancel');
+assert.deepEqual(canceled.commands,['CAPABILITY','LOGIN','CAPABILITY','EXAMINE']);
+console.log('PASS: actual original Swift IDLE persists one authenticated connection across quiet reads and EXISTS; DONE closes it; capabilities discovered after LOGIN; unsupported capability falls back; foreign owner rejected; pending EXAMINE canceled; no list/body/header fetches.');
+JS

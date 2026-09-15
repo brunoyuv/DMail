@@ -1,0 +1,4 @@
+module CAutoconfigCrypto {
+    header "crypto.h"
+    export *
+}

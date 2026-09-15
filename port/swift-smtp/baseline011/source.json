@@ -1,0 +1,17 @@
+{
+  "version": "0.1.11",
+  "versionCode": 100011,
+  "purpose": "Read-only historical renderer baseline for isolated synthetic scrolling CPU comparisons; excluded from shipping source.",
+  "files": [
+    {
+      "path": "harmony/entry/src/main/ets/pages/HtmlMail.ets",
+      "fixture": "HtmlMail.ets",
+      "sha256": "92ea4ae53f6838f0c43190463b9d959cf0f656541d4e4ee8cfda899c8696b98a"
+    },
+    {
+      "path": "harmony/entry/src/main/ets/mail/html/HtmlDocument.ts",
+      "fixture": "HtmlDocument.ts",
+      "sha256": "27404d080b8e0adf04c70360341c358f9532ed02cd9af1eda0bbdb13ce6c8378"
+    }
+  ]
+}

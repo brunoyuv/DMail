@@ -1,0 +1,63 @@
+{
+  "verified": "2026-09-13",
+  "target": "x86_64-unknown-linux-ohos",
+  "productionCoreSha256": "13cfdd35540f2bceed7c082d9fcc281fa158e12b728f65f07a21ffd7432ef53b",
+  "shippingFacadeRequiresSwiftCore": true,
+  "shippingBytecodeContainsNativeFactoryAndBridge": true,
+  "shippingBytecodeContainsHistoricalProtocol": false,
+  "shippingBytecodeContainsRcpTransport": false,
+  "historicalTestBytecodeContainsPrototype": true,
+  "productionAndNetworkTestCoreIdentical": true,
+  "hostTests": {
+    "passed": 52,
+    "productionFacadeChecks": 4,
+    "historicalProtocolChecks": 37,
+    "previewModelChecks": 6,
+    "cacheFormatChecks": 5
+  },
+  "deviceTests": {
+    "nativeNetworkingAndJmap": 32,
+    "nativeEmailAddressAndMime": 5,
+    "historicalPrototypeAndAccountUI": 15
+  },
+  "testRecovery": "First session passed 32 native checks and 14 historical/storage checks; the historical UI failed opening a window. Added display wake and lock-screen handling already used by the composer test. Rebuilt only the test HAP, then all 15 historical/UI and 5 main-app tests passed.",
+  "emulatorFinalStatus": "stopped",
+  "emulatorStoppedAfterBothSessions": true,
+  "remainingWork": [
+    "Connected composer and durable draft upload/recovery",
+    "Production native-core setup-to-reader UI fixture and live-provider interoperability",
+    "Further Account, IMAP/SMTP and OAuth module integration",
+    "HTML/attachments and MIME reader integration",
+    "ARM device build and validation"
+  ],
+  "evidence": {
+    "harmony/entry/build/default/outputs/default/entry-default-unsigned.hap": "88fb627457c1e6e0c8073ee3847bfda6d2a057e589f89a9a0c149e795ebe2b2c",
+    "harmony/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap": "40d42b6877a80c3a57c0496a467b5bdd0f560c1c6f6717881dcfb8a1f192d672",
+    ".tools/network-test-app/entry/build/default/outputs/default/entry-default-unsigned.hap": "ebdc815747fde885f879a5bed5306dfa9b6a8a3ad6fc173636ada38076261460",
+    ".tools/facade-main.pa": "77a7c0d71da2522a8ed7cba7924a541d191e8a0308da6da3bad51cb47939e1e9",
+    ".tools/facade-historical-test.pa": "e148cac23919712d3d53b0002c9358417ba49b9a193a5fbc95c361141669b221",
+    ".tools/facade-host-tests.log": "d584e026ad83525dac51f8ab9ecdb3e7af7a6f9036490ad4a889cfe24d6373d1",
+    ".tools/facade-main-build.log": "f2c71efe6ae0a5e5b57c4ff9983856fb964c21ff5a50ab51c547c729350ef1f5",
+    ".tools/facade-network-build.log": "9f452a245288ce2b3c150f3405f09b804ce6c01df4ae833f2ffe2ceba62e03ae",
+    ".tools/facade-ui-rebuild.log": "c5d4653c1bfcea07117a549395f7ce49eebd9299b940cf2a04b50bda247aad28",
+    ".tools/native-facade-device-session.log": "42be0577db101299872546ac3e6d18a5dba3977d0d3d4f45a6ebda2339559816",
+    ".tools/native-facade-ui-session.log": "bbc1d77b6e085bb427c6ac7c3155634cbb35d369fc3ef0fae3adbba83296977b",
+    ".tools/jmap-device-test.log": "7d03226692fddf7f49f46f750a30dbcb885e594f0c0b3823ea450f24b86aa5a3",
+    ".tools/jmap-fixture-stats.json": "5bd67375400013c6cd6f2aa6cb0c0bbb4ab8cd84c2da0f6e3b6b437d59286412",
+    ".tools/network-test-device.log": "704155add444ecca71bd6ad88c32ebfc12371190705158c8f55482c0a903f17b",
+    ".tools/network-fixture-stats.json": "da79ff8dcbae16ebdb03a507b61c10c5eb0fe787f0dc33db58c0e66a5b991137",
+    ".tools/native-app-device.log": "6983829256da0a68acacaae19875487b9236d95822385c054064b341d23297ba",
+    "harmony/entry/src/main/ets/mail/jmap/JmapClient.ts": "8faf4feaa64849bde5ad818d0126a84fca25b2792edb7b87ca52385f6fc44fac",
+    "harmony/entry/src/main/ets/mail/jmap/HarmonyJmapTransport.ets": "4499e802f9ad5ba3160b91f0a298263b176446f2c7804cd00a454f062ceef64f",
+    "harmony/entry/src/main/ets/pages/ConnectedMail.ets": "be921f5ef54d242046b9e95762dd0c24b85408526f5152f31168a712aa9ad4e8",
+    "harmony/entry/src/ohosTest/ets/support/PrototypeJmapClient.ts": "07d84ff7077761588f182ffd548ab12b304c06b804d4d0bca2c1519854b538ea",
+    "harmony/entry/src/ohosTest/ets/support/PrototypeRcpTransport.ets": "a23287511566ecb96b98774cdd88bcb439092b53d747826202f1c07865b7be2b",
+    "harmony/entry/src/ohosTest/ets/pages/AccountFixture.ets": "997819839295ed551793ca1f247b9ad286c88c68e5443626667ee7ece013c3ef",
+    "harmony/entry/src/ohosTest/ets/test/Jmap.test.ets": "b7b1e8269eed2e75c0a61bc84f16022d504a76ac13253d1452919ab3df9ae813",
+    "harmony/entry/src/ohosTest/ets/test/AccountStore.test.ets": "28880fea1bb883a6c758d1de5716425671aa546492181cdd84557154bd500d71",
+    "tests/jmap-native-facade.test.cjs": "7aa5925ccf730f649258430fc0d8cb45c2d6cd96eb174923c90e26b5503bc46d",
+    "scripts/test": "7bdf79a4fdec1963c9ff5b31ef8e11f03e9e49e383a911258f178a2cfc9b96b1",
+    "scripts/test-device": "90f6807b5e147be659e473d5b2ff49accd9360d1f9aef87cd0443dc1d6809bf5",
+    "scripts/with-test-emulator": "195eca4f6569d8e342109edca1a9ec82c767a6aa72dbc439243df810d8dc46f4"
+  }
+}

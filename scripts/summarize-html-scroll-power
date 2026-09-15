@@ -1,0 +1,262 @@
+#!/usr/bin/env python3
+"""Correlate isolated HtmlScrollPower phase markers with SmartPerf CSV samples.
+
+Usage: scripts/summarize-html-scroll-power TEST_LOG PROFILER_CSV --json OUTPUT
+No device access. ProcCpuUsage is machine-normalized; child values use '|'.
+"""
+import argparse
+import csv
+import hashlib
+import io
+import json
+import math
+from pathlib import Path
+import re
+import sys
+
+MODES = ('baseline011', 'current018', 'asyncViewport')
+PHASES = ('idle', 'scroll', 'settled')
+TEMPERATURES = ('Battery', 'cluster0', 'gpu', 'npu_thermal', 'shell_back',
+                'shell_frame', 'shell_front', 'soc_thermal', 'system_h')
+
+
+class SummaryError(ValueError):
+    pass
+
+
+def number(raw):
+    try:
+        result = float(raw)
+        return result if math.isfinite(result) else None
+    except (ValueError, TypeError):
+        return None
+
+
+def child_usage(raw):
+    """Return observed numeric sum and completeness; NA never becomes zero."""
+    entries = str(raw or '').split('|')
+    while len(entries) > 1 and not entries[-1].strip():
+        entries.pop()
+    values = [number(entry.strip()) for entry in entries]
+    numeric = [value for value in values if value is not None and value >= 0]
+    complete = bool(numeric) and len(numeric) == len(values)
+    return (sum(numeric) if numeric else None), complete
+
+
+def phase_ranges(log, modes=MODES):
+    edges = {}
+    for mode, phase, edge, stamp in re.findall(
+            r'\bPOWER_PHASE\s+(\w+)\s+(\w+)\s+(start|end)\s+(\d+)', log):
+        if mode not in modes or phase not in PHASES:
+            raise SummaryError(f'Unknown phase marker: {mode}/{phase}')
+        key = (mode, phase, edge)
+        stamp = int(stamp)
+        if key in edges and edges[key] != stamp:
+            raise SummaryError(f'Conflicting duplicate phase marker: {mode}/{phase}/{edge}')
+        edges[key] = stamp
+    result = []
+    for mode in modes:
+        for phase in PHASES:
+            missing = [edge for edge in ('start', 'end') if (mode, phase, edge) not in edges]
+            if missing:
+                raise SummaryError(f'Missing phase marker: {mode}/{phase}/{",".join(missing)}')
+            start, end = [edges[(mode, phase, edge)] for edge in ('start', 'end')]
+            if end <= start:
+                raise SummaryError(f'Nonpositive phase duration: {mode}/{phase}')
+            if result and start < result[-1]['end_ms']:
+                raise SummaryError(f'Overlapping or out-of-order phase: {mode}/{phase}')
+            result.append({'mode': mode, 'phase': phase, 'start_ms': start, 'end_ms': end,
+                           'eligible_start_ms': start + (1000 if phase == 'settled' else 0)})
+    completed = set(re.findall(r'\bPOWER_RESULT\s+(\w+)\s+\d+', log))
+    for mode in modes:
+        if mode not in completed:
+            raise SummaryError(f'Missing successful mode result: {mode}')
+    status = re.findall(r'Tests run:\s*(\d+), Failure:\s*(\d+), Error:\s*(\d+), Pass:\s*(\d+)', log)
+    if not status or tuple(map(int, status[-1])) != (1, 0, 0, 1):
+        raise SummaryError('The complete native benchmark did not report one passing test')
+    return result
+
+
+def stats(values):
+    usable = [(value, duration) for value, duration in values if value is not None]
+    if not usable:
+        return {'samples': 0, 'mean': None, 'min': None, 'max': None}
+    duration = sum(weight for _, weight in usable)
+    return {'samples': len(usable),
+            'mean': round(sum(value * weight for value, weight in usable) / duration, 6),
+            'min': min(value for value, _ in usable), 'max': max(value for value, _ in usable)}
+
+
+def summarize(log, csv_text, cpu_cores=None, min_interval_ms=750, max_interval_ms=1500, modes=MODES):
+    if not 0 < min_interval_ms <= max_interval_ms:
+        raise SummaryError('Invalid sample interval bounds')
+    if not modes or len(set(modes)) != len(modes) or any(not re.fullmatch(r'\w+', mode) for mode in modes):
+        raise SummaryError('Expected unique nonempty benchmark mode names')
+    phases = phase_ranges(log, modes)
+    picture_counts = {}
+    for mode, phase, edge, _stamp, counters in re.findall(
+            r'PICTURE_POWER_COUNTS\s+(\w+)\s+(\w+)\s+(start|end)\s+(\d+)\s+([^\r\n]+)', log):
+        values = dict((name, int(value)) for name, value in re.findall(r'(\w+)=(\d+)', counters))
+        picture_counts[(mode, phase, edge)] = values
+    reader = csv.DictReader(io.StringIO(csv_text))
+    fields = reader.fieldnames or []
+    for field in ('timestamp', 'ProcCpuUsage', 'ChildProcCpuUsage'):
+        if field not in fields:
+            raise SummaryError(f'Missing profiler CSV field: {field}')
+    detected = sorted(int(match.group(1)) for field in fields
+                      if (match := re.fullmatch(r'cpu(\d+)Usage', field)))
+    inferred_cores = len(detected) if detected == list(range(len(detected))) else None
+    if cpu_cores is None:
+        cpu_cores = inferred_cores
+    if not cpu_cores or cpu_cores < 1:
+        raise SummaryError('Cannot infer CPU core count; supply --cpu-cores')
+    if inferred_cores and cpu_cores != inferred_cores:
+        raise SummaryError('Requested CPU core count differs from profiler headers')
+    rows = []
+    for line, row in enumerate(reader, start=2):
+        if not any(value for value in row.values()):
+            continue
+        if None in row:
+            raise SummaryError(f'CSV row {line} has more values than its header')
+        stamp = number(row.get('timestamp'))
+        if stamp is None or stamp != int(stamp):
+            raise SummaryError(f'Invalid timestamp in CSV row {line}')
+        row['_stamp'] = int(stamp)
+        if rows and row['_stamp'] <= rows[-1]['_stamp']:
+            raise SummaryError(f'Profiler timestamps are not strictly increasing at row {line}')
+        rows.append(row)
+    if len(rows) < 2:
+        raise SummaryError('At least two profiler samples are required; the first sample is excluded')
+    # CPU deltas cover the preceding interval, not an instantaneous endpoint.
+    intervals = []
+    rejected_intervals = 0
+    for previous, current in zip(rows, rows[1:]):
+        start, end = previous['_stamp'], current['_stamp']
+        duration = end - start
+        if min_interval_ms <= duration <= max_interval_ms:
+            intervals.append((start, end, duration, current))
+        else:
+            rejected_intervals += 1
+    output = []
+    for phase in phases:
+        selected = [(duration, row) for start, end, duration, row in intervals
+                    if start >= phase['eligible_start_ms'] and end <= phase['end_ms']]
+        if not selected:
+            raise SummaryError(f'No complete {min_interval_ms}–{max_interval_ms} ms samples inside '
+                               f'{phase["mode"]}/{phase["phase"]}')
+        metrics = {name: [] for name in ('main_cpu_pct', 'child_cpu_pct', 'known_process_cpu_pct',
+                    'complete_process_cpu_pct', 'complete_process_cores', 'gpu_load_pct', 'fps',
+                    'current_now_raw', 'voltage_now_raw')}
+        temperatures = {name: [] for name in TEMPERATURES if name in fields}
+        missing_main = missing_children = 0
+        for duration, row in selected:
+            main = number(row.get('ProcCpuUsage'))
+            if main is not None and main < 0:
+                main = None
+            # SmartPerf emits zeros when it failed to identify the requested app.
+            if 'ProcId' in fields and (number(row.get('ProcId')) or 0) <= 0:
+                main = None
+            children, children_complete = child_usage(row.get('ChildProcCpuUsage'))
+            missing_main += main is None
+            missing_children += not children_complete
+            known = [value for value in (main, children) if value is not None]
+            complete = main + children if main is not None and children_complete else None
+            for name, value in (
+                    ('main_cpu_pct', main), ('child_cpu_pct', children),
+                    ('known_process_cpu_pct', sum(known) if known else None),
+                    ('complete_process_cpu_pct', complete),
+                    ('complete_process_cores', complete * cpu_cores / 100 if complete is not None else None),
+                    ('gpu_load_pct', number(row.get('gpuLoad'))), ('fps', number(row.get('fps'))),
+                    ('current_now_raw', number(row.get('currentNow'))),
+                    ('voltage_now_raw', number(row.get('voltageNow')))):
+                metrics[name].append((value, duration))
+            for name in temperatures:
+                temperatures[name].append((number(row.get(name)), duration))
+        if all(value is None for value, _ in metrics['known_process_cpu_pct']):
+            raise SummaryError(f'No numeric process CPU samples inside {phase["mode"]}/{phase["phase"]}')
+        record = {**phase, 'samples': len(selected),
+                       'sampled_ms': sum(duration for duration, _ in selected),
+                       'first_sample_end_ms': selected[0][1]['_stamp'],
+                       'last_sample_end_ms': selected[-1][1]['_stamp'],
+                       'missing_main_samples': missing_main,
+                       'incomplete_child_samples': missing_children,
+                       'metrics': {name: stats(values) for name, values in metrics.items()},
+                       'temperatures_c': {name: stats(values) for name, values in temperatures.items()}}
+        if picture_counts:
+            start_counts = picture_counts.get((phase['mode'], phase['phase'], 'start'))
+            end_counts = picture_counts.get((phase['mode'], phase['phase'], 'end'))
+            expected = {'resources', 'cache', 'good_http', 'missing_http', 'tracker_http'}
+            if start_counts is None or end_counts is None or set(start_counts) != expected or set(end_counts) != expected:
+                raise SummaryError(f'Missing picture counters inside {phase["mode"]}/{phase["phase"]}')
+            delta = {name: end_counts[name] - start_counts[name] for name in expected}
+            if any(value < 0 for value in delta.values()):
+                raise SummaryError(f'Picture counters moved backwards inside {phase["mode"]}/{phase["phase"]}')
+            record['picture_work'] = {'start': start_counts, 'end': end_counts, 'delta': delta}
+        output.append(record)
+    return {'schema': 1, 'modes': list(modes), 'cpu_cores': cpu_cores, 'profiler_rows': len(rows),
+            'first_sample_excluded': True, 'interval_limits_ms': [min_interval_ms, max_interval_ms],
+            'rejected_interval_count': rejected_intervals, 'settled_initial_exclusion_ms': 1000,
+            'semantics': {
+                'cpu': 'Machine-normalized percent; 100 / cpu_cores percent equals one fully occupied core.',
+                'children': 'Pipe-separated numeric entries are summed. NA is missing, never zero.',
+                'known_process_cpu_pct': 'Sum of available main/child readings; incomplete samples can undercount.',
+                'complete_process_cpu_pct': 'Only samples with main CPU and every reported child entry numeric.',
+                'process_scope': 'Only PIDs supplied to SmartPerf; this is not proof of a complete app/ArkWeb process tree.',
+                'mean': 'Weighted by accepted sample interval duration; GPU/FPS/temperature use matching rows.',
+                'gpu_load_pct': 'Whole-device GPU load, not app-attributed GPU usage.',
+                'current_now_raw': 'Signed raw currentNow sensor reading; original units and charging direction retained.',
+                'voltage_now_raw': 'Raw voltageNow sensor reading; no unit conversion.',
+                'energy': 'These readings do not establish application watts, energy, or battery share.'},
+            'inputs_sha256': {'test_log': hashlib.sha256(log.encode()).hexdigest(),
+                              'profiler_csv': hashlib.sha256(csv_text.encode()).hexdigest()},
+            'phases': output}
+
+
+def table(summary):
+    def mean(metric):
+        return 'NA' if metric['mean'] is None else f'{metric["mean"]:.3f}'
+    lines = ['Mode          Phase    N  MainCPU% ChildCPU% ListedCPU% Cores  GPU%   FPS   SOC°C Current(raw)']
+    for phase in summary['phases']:
+        metrics = phase['metrics']
+        soc = phase['temperatures_c'].get('soc_thermal', {'mean': None})
+        lines.append(f'{phase["mode"]:13} {phase["phase"]:8} {phase["samples"]:2} '
+                     f'{mean(metrics["main_cpu_pct"]):>8} {mean(metrics["child_cpu_pct"]):>9} '
+                     f'{mean(metrics["complete_process_cpu_pct"]):>9} {mean(metrics["complete_process_cores"]):>6} '
+                     f'{mean(metrics["gpu_load_pct"]):>6} {mean(metrics["fps"]):>6} '
+                     f'{mean(soc):>6} {mean(metrics["current_now_raw"]):>12}')
+        if phase['missing_main_samples'] or phase['incomplete_child_samples']:
+            lines.append(f'  Coverage: {phase["missing_main_samples"]} missing main samples; '
+                         f'{phase["incomplete_child_samples"]} incomplete child samples; total uses complete samples only.')
+        if 'picture_work' in phase:
+            delta = phase['picture_work']['delta']
+            lines.append(f'  Picture phase delta: callbacks={delta["resources"]}, cache calls={delta["cache"]}, '
+                         f'HTTP saved/missing/tracker={delta["good_http"]}/{delta["missing_http"]}/{delta["tracker_http"]}')
+    lines.append(f'CPU is machine-normalized across {summary["cpu_cores"]} cores and covers only listed processes. GPU is whole-device. '
+                 'Raw signed current includes charging; no application watts or energy claim.')
+    return '\n'.join(lines)
+
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('test_log', type=Path)
+    parser.add_argument('profiler_csv', type=Path)
+    parser.add_argument('--json', type=Path, dest='output')
+    parser.add_argument('--cpu-cores', type=int)
+    parser.add_argument('--modes', default=','.join(MODES), help='Comma-separated expected mode order')
+    parser.add_argument('--min-interval-ms', type=int, default=750)
+    parser.add_argument('--max-interval-ms', type=int, default=1500)
+    args = parser.parse_args()
+    try:
+        summary = summarize(args.test_log.read_text(), args.profiler_csv.read_text(), args.cpu_cores,
+                            args.min_interval_ms, args.max_interval_ms, tuple(args.modes.split(',')))
+        if args.output:
+            args.output.write_text(json.dumps(summary, indent=2, allow_nan=False) + '\n')
+        print(table(summary))
+    except (OSError, SummaryError) as error:
+        print(f'Scroll power summary failed: {error}', file=sys.stderr)
+        return 1
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())

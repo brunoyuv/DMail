@@ -1,0 +1,201 @@
+{
+  "version": "0.1.27",
+  "scope": "Decoder infinite-loop fix, progressive pictures, bounded visible loading and independent file-body limits",
+  "javascript": {
+    "tests": 654,
+    "passed": 654,
+    "files": 60
+  },
+  "pythonTests": 31,
+  "swift": {
+    "mimeAndAccountBodyTests": 108,
+    "newRegressionTests": 5,
+    "optimizedSyntheticDecoder": {
+      "scope": "Synthetic optimized host proof; no device, real mail or network access. Does not identify real-message contents or measure device energy.",
+      "cause": "MIME htmlEntitiesDecoded guard for absent semicolon continued without advancing its cursor; InlineImages attribute rendering and body preview call this synchronous decoder. Swift Task.cancel is cooperative and did not stop the loop.",
+      "before": [
+        {
+          "mode": "control",
+          "exit": 0,
+          "cpuSeconds": 0.0071360000000000035,
+          "output": "93\nelapsedNs=1735684"
+        },
+        {
+          "mode": "raw-url",
+          "exit": 124,
+          "cpuSeconds": 2.001379,
+          "output": ""
+        },
+        {
+          "mode": "preview",
+          "exit": 124,
+          "cpuSeconds": 2.001448,
+          "output": ""
+        }
+      ],
+      "cancelBefore": {
+        "mode": "cancelled",
+        "exit": 124,
+        "cpuSeconds": 2.00183,
+        "output": "",
+        "diagnostic": "task_cancel_requested"
+      },
+      "after": [
+        {
+          "mode": "control",
+          "exit": 0,
+          "cpuSeconds": 0.007068999999999867,
+          "output": "93\nelapsedNs=1418525",
+          "diagnostic": ""
+        },
+        {
+          "mode": "raw-url",
+          "exit": 0,
+          "cpuSeconds": 0.006317000000000045,
+          "output": "89\nelapsedNs=1182325",
+          "diagnostic": ""
+        },
+        {
+          "mode": "preview",
+          "exit": 0,
+          "cpuSeconds": 0.0045399999999999885,
+          "output": "A & B\nelapsedNs=201819",
+          "diagnostic": ""
+        },
+        {
+          "mode": "cancelled",
+          "exit": 0,
+          "cpuSeconds": 0.007142000000000176,
+          "output": "89",
+          "diagnostic": "task_cancel_requested"
+        }
+      ],
+      "receive": [
+        {
+          "stage": "receive",
+          "literalBytes": 1048576,
+          "chunkBytes": 256,
+          "iterations": 4,
+          "verifiedBytes": 4194304,
+          "events": 16412,
+          "elapsedNs": 7767641
+        },
+        {
+          "stage": "receive",
+          "literalBytes": 1048576,
+          "chunkBytes": 4096,
+          "iterations": 4,
+          "verifiedBytes": 4194304,
+          "events": 1052,
+          "elapsedNs": 800077
+        },
+        {
+          "stage": "receive",
+          "literalBytes": 1048576,
+          "chunkBytes": 16384,
+          "iterations": 4,
+          "verifiedBytes": 4194304,
+          "events": 284,
+          "elapsedNs": 465408
+        },
+        {
+          "stage": "receive",
+          "literalBytes": 1048576,
+          "chunkBytes": 65536,
+          "iterations": 4,
+          "verifiedBytes": 4194304,
+          "events": 92,
+          "elapsedNs": 399868
+        },
+        {
+          "stage": "receive",
+          "literalBytes": 3145728,
+          "chunkBytes": 256,
+          "iterations": 4,
+          "verifiedBytes": 12582912,
+          "events": 49180,
+          "elapsedNs": 21612209
+        },
+        {
+          "stage": "receive",
+          "literalBytes": 3145728,
+          "chunkBytes": 4096,
+          "iterations": 4,
+          "verifiedBytes": 12582912,
+          "events": 3100,
+          "elapsedNs": 2674290
+        },
+        {
+          "stage": "receive",
+          "literalBytes": 3145728,
+          "chunkBytes": 16384,
+          "iterations": 4,
+          "verifiedBytes": 12582912,
+          "events": 796,
+          "elapsedNs": 1120636
+        },
+        {
+          "stage": "receive",
+          "literalBytes": 3145728,
+          "chunkBytes": 65536,
+          "iterations": 4,
+          "verifiedBytes": 12582912,
+          "events": 220,
+          "elapsedNs": 903426
+        }
+      ],
+      "validation": {
+        "focusedTests": 5,
+        "fullMIMEAccountBodyTests": 108,
+        "watchdogSeconds": 30,
+        "optimizedCompilation": "swiftc -O -whole-module-optimization, copied original staged modules; only entity decoder patch differs",
+        "productionPatchSha256": "16cfdeea75c3e8ad723566f2d5d3463e4168ec1b2a45bd7871a9cf2381e00223"
+      },
+      "limits": "First 4MiB literal run hit parser exclusive body-size boundary; comparison uses1MiB/3MiB. Parser fixture and network chunking do not reproduce remote TLS delays or all MIME structures."
+    }
+  },
+  "artifacts": {
+    "version": "0.1.27",
+    "hapSha256": "824fbc0abfa13e546df9656a1698693d67a7182d4778d3215d07f535d4efe8a6",
+    "native": {
+      "aarch64": "efa4a780865cab7d9a3e45a7ca6fa78e394de15663f7492ee4ba2ecdf20dd86e",
+      "x86_64": "f1e14567d588737dcae33e5aa7ef3885db89ec2ce11ef5024c61a1902779004e"
+    },
+    "mimePatchSha256": "16cfdeea75c3e8ad723566f2d5d3463e4168ec1b2a45bd7871a9cf2381e00223"
+  },
+  "nativeArchitecturesRebuilt": [
+    "aarch64",
+    "x86_64"
+  ],
+  "hapBuildsPassed": [
+    "signed-arm",
+    "x86"
+  ],
+  "installedDevices": [
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "versionCode": 100027,
+      "versionName": "0.1.27",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "824fbc0abfa13e546df9656a1698693d67a7182d4778d3215d07f535d4efe8a6"
+    },
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "versionCode": 100027,
+      "versionName": "0.1.27",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "824fbc0abfa13e546df9656a1698693d67a7182d4778d3215d07f535d4efe8a6"
+    }
+  ],
+  "emulatorStarted": false,
+  "limits": [
+    "No real email contents, UI, network capture, provider test, or production app launch by tools.",
+    "Actual ArkWeb progressive-image rendering remains to be checked on device; host tests mock WebResourceResponse while exercising real renderer/cache/helper.",
+    "The CPU loop is confirmed synthetically; it does not establish the cause of every real-device heat symptom.",
+    "Live numeric profiling is user-operated and does not measure per-app wattage or other-app battery savings."
+  ]
+}

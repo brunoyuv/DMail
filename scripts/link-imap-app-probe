@@ -1,0 +1,30 @@
+#!/usr/bin/env python3
+"""Link only the IMAP diagnostic driver against the exact shipping shared core."""
+from pathlib import Path
+import subprocess, hashlib, json, os
+root=Path(__file__).resolve().parent.parent
+subprocess.run([str(root/'scripts/probe-native-imap-dependencies'), 'IMAPProbe'], check=True)
+native=root/'.tools/command-line-tools/sdk/default/openharmony/native'
+cpu=os.environ.get('THUNDERBIRD_SWIFT_ARCH', 'x86_64')
+assert cpu in ['x86_64', 'aarch64']
+suffix='' if cpu=='x86_64' else '-aarch64'
+abi='x86_64' if cpu=='x86_64' else 'arm64-v8a'
+sdk=root/('.tools/swift-ohos-sdk'+suffix); out=root/('.tools/swift-probe/native-imap'+suffix)
+project=root/('harmony' if cpu=='x86_64' else '.tools/device-app')
+core=project/f'entry/libs/{abi}/libThunderbirdCore.so'
+assert core.exists(), 'Build the shipping native core first'
+objects=sorted((out/f'build/{cpu}-unknown-linux-ohos/debug/IMAPProbe.build').glob('*.swift.o'))
+assert len(objects)==1
+args=[str(native/'llvm/bin/clang'),'-target',f'{cpu}-linux-ohos','--sysroot='+str(native/'sysroot'),'-shared',
+      *map(str,objects),str(sdk/f'lib/swift/musl/{cpu}/swiftrt.o'),'-L'+str(core.parent),'-lThunderbirdCore']
+for path in ['lib/swift/musl',f'lib/swift/musl/{cpu}','lib/swift/ohos','lib']: args+=['-L'+str(sdk/path)]
+for lib in ['Foundation','FoundationEssentials','FoundationInternationalization','_FoundationICU','swiftCore',
+            'swift_Concurrency','swiftMusl','swiftSwiftOnoneSupport','swiftSynchronization','swift_StringProcessing',
+            'swift_RegexParser','swiftDispatch','dispatch','BlocksRuntime','fts','c++_shared','hilog_ndk.z']: args+=['-l'+lib]
+args+=['-Wl,--no-undefined','-Wl,-soname,libIMAPProbe.so','-Wl,-rpath,$ORIGIN','-o',str(out/'libIMAPProbe.so')]
+subprocess.run(args,check=True)
+def sha(p): return hashlib.sha256(p.read_bytes()).hexdigest()
+(out/'app-probe-link.json').write_text(json.dumps({'coreSha256':sha(core),
+    'probeSha256':sha(out/'libIMAPProbe.so'),'driverObjectSha256':sha(objects[0]),
+    'definesOriginalIMAPModules':False},indent=2)+'\n')
+print('Linked IMAP driver against the shipping core; no duplicate module objects.')

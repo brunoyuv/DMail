@@ -1,0 +1,212 @@
+{
+  "versionName": "0.1.20",
+  "versionCode": 100020,
+  "status": "Validated and installed in place on Pura X and MatePad; automatic picture and fixed snapshot work complete",
+  "privacy": {
+    "syntheticOnly": true,
+    "productionLaunched": false,
+    "realMailReadOrSent": false,
+    "physicalScreenshots": false
+  },
+  "host": {
+    "javascriptTests": 477,
+    "javascriptFiles": 48,
+    "javascriptFailures": 0,
+    "pythonTests": 13
+  },
+  "builds": {
+    "productionX86": true,
+    "productionArm": true,
+    "isolatedMainAndTests": true,
+    "swiftRebuiltThisUpdate": false,
+    "nativeSwiftUnchangedFrom": "0.1.19",
+    "compileSdk": "26.0.0.105",
+    "targetApi": 22,
+    "minimumApi": 22,
+    "signedHapSha256": "5dfb16d7887fa79f2dc11d991334e1ce791ce27296e1bd5e7ce3698f93084161"
+  },
+  "sourceParity": {
+    "shippingSourceFiles": 56,
+    "localizedResourcesEqual": true,
+    "testCountersIsolatedOnly": true,
+    "testCounterKinds": [
+      "snapshot",
+      "link"
+    ],
+    "coreSha256": {
+      "x86_64": "6a9fe2143f45fbb4f0497429a7e36d5579cd412ca9e89177da00042a39b33681",
+      "arm64-v8a": "c49bce38888f2ff0382b0d0a4a09d4afa28c49de9592b74fa2a1ac33be0cffdb"
+    }
+  },
+  "fixedSnapshots": {
+    "automaticPictures": true,
+    "browserNetworkingBlocked": true,
+    "browserScriptDisabled": true,
+    "interceptedResourcesUseFixedMemoryOnly": true,
+    "savedAttemptIncludesFailures": true,
+    "automaticRetriesOfSavedAttempts": false,
+    "explicitRetryReplacesDocumentOnce": true,
+    "completeSnapshotHasNoRetry": true,
+    "metadataAcknowledgementsPreserveVisibleBody": true
+  },
+  "bounds": {
+    "maxDistinctPictureUrls": 256,
+    "maxEncodedPictureBytes": 67108864,
+    "maxConcurrentDownloads": 4,
+    "newDownloadStartCutoffSeconds": 30,
+    "cutoffIsTotalCompletionDeadline": false,
+    "activeDownloadsUseExistingConnectionAndReadTimeouts": true,
+    "existingRetentionDays": 7,
+    "attachmentsRemainOnDemand": true
+  },
+  "nativePictureSnapshot": {
+    "tests": 1,
+    "passed": 1,
+    "scope": "Synthetic isolated main-HAP reader and encrypted picture cache with loopback HTTP only.",
+    "automaticBeforeWeb": true,
+    "heldRetryKeepsExistingWeb": true,
+    "documentMounts": 5,
+    "documentLoads": 5,
+    "perImageRequests": [
+      1,
+      3,
+      3
+    ],
+    "nonContentRequests": 0,
+    "savedBytesAndTimestampsIntact": true,
+    "failedAndSavedReopenWithoutHttp": true,
+    "foregroundAndScrollAddNoHttpOrDocumentLoads": true,
+    "maximumNativeScrollVp": 2148.758848391493,
+    "testLogSha256": "97187aeba6833af396c7b0b39291b9a0f3994aea18862badb1c0c8b6dfde9eac",
+    "emulatorVisualProof": {
+      "partial": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "replacementColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "visibleWebCropPx": [
+          51,
+          482,
+          1269,
+          2049
+        ],
+        "sha256": "4c15da98e0472455fc92773c773d9a919afc71a82a6bf034b80bd1b9ad87ece8"
+      },
+      "failed-reopened": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "replacementColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "visibleWebCropPx": [
+          51,
+          482,
+          1269,
+          2049
+        ],
+        "sha256": "93d0f78cbc141a51dfd65682cb8d4d85970df31e15d9d315849867908e3509f9"
+      },
+      "recovered": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "replacementColorPixels": [
+          74501,
+          74134,
+          74501
+        ],
+        "visibleWebCropPx": [
+          51,
+          340,
+          1269,
+          2049
+        ],
+        "sha256": "5dd916e7ce969d7ad78614adcc7d10537d6242c85c55a10fbaa6c76418d23013"
+      },
+      "reopened": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "replacementColorPixels": [
+          74501,
+          74134,
+          74501
+        ],
+        "visibleWebCropPx": [
+          51,
+          340,
+          1269,
+          2049
+        ],
+        "sha256": "c2a4be762f41642d625f36ca1ed769152e962ee22c7dcd62e76ed2e7a4dca596"
+      }
+    },
+    "limits": "Synthetic content, x86 emulator screenshots and simulated picture foreground lifecycle; no physical captures, app battery measurement, production mail or external servers."
+  },
+  "nativeLinks": {
+    "passed": true,
+    "injectedOpenerCalls": 1,
+    "localAnchorsPreserved": true,
+    "externalBrowserLaunched": false
+  },
+  "nativeLongReader": {
+    "rows": 1500,
+    "htmlUtf16Units": 233428,
+    "controllerLoads": 1,
+    "documentLoads": 1,
+    "drags": 4,
+    "durationMs": 12446,
+    "scrollCallbacks": 678,
+    "maximumOffsetVp": 1443.0500614512212,
+    "closeDelayIncludingDriverMs": 1349,
+    "reloadsDuringScrolling": 0,
+    "target": "bounded x86 emulator"
+  },
+  "emulatorStopped": true,
+  "isolatedEmulatorAppRemoved": true,
+  "nativeTestSetupCorrection": "Initial test stopped before its fixture at an unsupported test-shell architecture query. Replaced with platform ABI API; final bounded run passed.",
+  "limitations": [
+    "No app battery or thermal measurements were made in this update; the real-email heat cause remains unconfirmed.",
+    "HTML still performs native layout, image decoding and scrolling.",
+    "Saved attempt persistence can fail; good downloaded bytes remain displayable and Retry stays available.",
+    "Unsupported or unresolved relative picture URLs remain blocked without being counted as planned failures.",
+    "Foreground transitions in the snapshot fixture were simulated; no production account was opened.",
+    "Swift tests were not rerun because native source/libraries are unchanged from 0.1.19.",
+    "AppGallery was not rebuilt."
+  ],
+  "installedDevices": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "versionCode": 100020,
+      "versionName": "0.1.20",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "5dfb16d7887fa79f2dc11d991334e1ce791ce27296e1bd5e7ce3698f93084161"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "versionCode": 100020,
+      "versionName": "0.1.20",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "5dfb16d7887fa79f2dc11d991334e1ce791ce27296e1bd5e7ce3698f93084161"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+module CHarmonyLogging {
+    header "logging.h"
+    export *
+}

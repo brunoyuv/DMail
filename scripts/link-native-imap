@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+"""Link the isolated IMAP compile probe. Do not co-load with the app's shared core."""
+from pathlib import Path
+import subprocess,json
+root=Path(__file__).resolve().parent.parent
+native=root/'.tools/command-line-tools/sdk/default/openharmony/native'
+sdk=root/'.tools/swift-ohos-sdk';out=root/'.tools/swift-probe/native-imap'
+build=out/'build/x86_64-unknown-linux-ohos/debug'
+objects=sorted(p for p in build.rglob('*.o') if any(part.endswith('.build') for part in p.parts))
+assert objects and (build/'Modules/IMAP.swiftmodule').exists()
+response=out/'objects.rsp';response.write_text('\n'.join(json.dumps(str(p)) for p in objects)+'\n')
+args=[str(native/'llvm/bin/clang'),'-target','x86_64-linux-ohos','--sysroot='+str(native/'sysroot'),'-shared',
+ '@'+str(response),str(sdk/'lib/swift/musl/x86_64/swiftrt.o')]
+for rel in ['lib/swift/musl','lib/swift/musl/x86_64','lib/swift/ohos','lib']:args+=['-L',str(sdk/rel)]
+for lib in ['Foundation','FoundationEssentials','FoundationInternationalization','_FoundationICU','swiftCore','swift_Concurrency',
+ 'swiftMusl','swiftSwiftOnoneSupport','swiftSynchronization','swift_StringProcessing','swift_RegexParser','swiftDispatch','dispatch','BlocksRuntime','fts','c++_shared','hilog_ndk.z','crypto','net_ssl']:
+ args+=['-l'+lib]
+args+=['-Wl,--no-undefined','-Wl,-soname,libThunderbirdIMAP.so','-Wl,-rpath,$ORIGIN','-o',str(out/'libThunderbirdIMAP.so')]
+subprocess.run(args,check=True)
+print('Linked',len(objects),'native objects with no undefined symbols:',out/'libThunderbirdIMAP.so')

@@ -1,0 +1,11 @@
+--- a/Sources/NIOSSL/PosixPort.swift
++++ b/Sources/NIOSSL/PosixPort.swift
+@@ -34,7 +34,7 @@
+ #error("unsupported os")
+ #endif
+ 
+-#if os(Android)
++#if os(Android) || THUNDERBIRD_HARMONYOS
+ internal typealias FILEPointer = OpaquePointer
+ #else
+ internal typealias FILEPointer = UnsafeMutablePointer<FILE>

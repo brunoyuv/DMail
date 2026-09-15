@@ -1,0 +1,69 @@
+{
+  "version": "0.1.5",
+  "versionCode": 100005,
+  "hostTests": 129,
+  "componentRegressions": 9,
+  "swiftHostTests": 52,
+  "nativeImap": {
+    "tests": 3,
+    "repeatedToggles": 16,
+    "conservativeFailureCases": 6,
+    "sessions": 22,
+    "violations": [],
+    "target": "MatePad MRO-W00 aarch64",
+    "messageBodyRequests": 0,
+    "optionalStatusRequests": 0,
+    "automaticRetries": 0
+  },
+  "nativeUnreadUI": {
+    "status": "partial",
+    "topFilterCycles": 3,
+    "serviceCallsAtTopCapture": 0,
+    "topUnreadMembers": [
+      "mail-00",
+      "mail-04",
+      "mail-38"
+    ],
+    "newestReadThreadMemberExcluded": true,
+    "topCaptureSha256": "46aee2e88e36246df4e200a9cbdd0cc8a7ed48e546574e260e1277cebe7815e3",
+    "remainingUnverified": [
+      "bottom-scroll cycles",
+      "native unread-thread opening"
+    ],
+    "detail": "Initial attempt failed in test-window startup. After fixture lifecycle correction, three top filter cycles and synthetic-marker screenshot passed. The longer scroll phase failed waiting for a fixture row; no full native UI pass claimed. No further device runs this round."
+  },
+  "builds": {
+    "armSigned": true,
+    "x86": true,
+    "sourceAndNativeParity": true,
+    "hapSha256": "7516386c3e7ff51bfdb4c0e260fef79d24493ca6e4d59f44188991f8731bfb6a"
+  },
+  "installations": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "target": "PURA_X_WIFI_TARGET_REDACTED",
+      "versionCode": 100005,
+      "versionName": "0.1.5",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "7516386c3e7ff51bfdb4c0e260fef79d24493ca6e4d59f44188991f8731bfb6a"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "target": "MATEPAD_SERIAL_REDACTED",
+      "versionCode": 100005,
+      "versionName": "0.1.5",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "7516386c3e7ff51bfdb4c0e260fef79d24493ca6e4d59f44188991f8731bfb6a"
+    }
+  ],
+  "privacy": {
+    "syntheticOnly": true,
+    "realAccountsAccessed": false,
+    "productionLaunched": false
+  },
+  "emulator": "stopped throughout"
+}

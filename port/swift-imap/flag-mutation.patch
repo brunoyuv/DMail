@@ -1,0 +1,16 @@
+--- a/Sources/IMAP/Message.swift
++++ b/Sources/IMAP/Message.swift
+@@ -15,4 +15,6 @@
+     public fileprivate(set) var flags: Set<Flag>
++    // Empty FLAGS is valid; a missing FLAGS attribute is not a verified snapshot.
++    public fileprivate(set) var flagsWereReceived = false
+     public fileprivate(set) var gmailLabels: Set<GmailLabel>
+     public fileprivate(set) var gmailMessageID: UInt64?
+     public fileprivate(set) var gmailThreadID: UInt64?
+@@ -160,5 +162,6 @@
+             case .flags(let flags):
+                 message.flags = flags
++                message.flagsWereReceived = true
+             case .gmailLabels(let gmailLabels):
+                 message.gmailLabels = gmailLabels
+             case .gmailMessageID(let gmailMessageID):

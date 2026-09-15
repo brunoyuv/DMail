@@ -1,0 +1,33 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+source "$ROOT/scripts/swift-target-env"
+./scripts/prepare-native-jmap
+./scripts/test-native-email build
+NATIVE="$ROOT/.tools/command-line-tools/sdk/default/openharmony/native"
+SDK="$SWIFT_TARGET_SDK"
+OUT="$ROOT/.tools/swift-probe/native-jmap${SWIFT_BUILD_SUFFIX}"
+COMMON=(-target ${SWIFT_TARGET} -sdk "$NATIVE/sysroot"
+  -resource-dir "$SDK/lib/swift" -I "$SDK/lib/swift/ohos" -I "$SDK/lib/swift/musl/SwiftMusl"
+  -I "$SDK/lib/swift/musl/${SWIFT_CPU}" -I "$ROOT/.tools/swift-probe/native-email${SWIFT_BUILD_SUFFIX}"
+  -I "$ROOT/port/swift-platform" -I "$OUT" -module-cache-path "$OUT/cache"
+  -parse-as-library -swift-version 6 -O -whole-module-optimization)
+"$ROOT/.tools/swift/usr/bin/swiftc" "${COMMON[@]}" -module-name HarmonyLogging -emit-object -emit-module \
+  -emit-module-path "$OUT/HarmonyLogging.swiftmodule" port/swift-platform/HarmonyLogging.swift -o "$OUT/HarmonyLogging.o"
+"$NATIVE/llvm/bin/clang" -target ${SWIFT_CLANG_TARGET} --sysroot="$NATIVE/sysroot" -fPIC -O2 \
+  -c port/swift-platform/CHarmonyLogging/logging.c -o "$OUT/logging.o"
+mapfile -d '' SOURCES < <(find "$ROOT/.tools/swift-probe/native-jmap/source/Core/Sources/JMAP" -name '*.swift' -print0 | sort -z)
+"$ROOT/.tools/swift/usr/bin/swiftc" "${COMMON[@]}" -module-name JMAP -module-link-name ThunderbirdJMAP \
+  -emit-object -emit-module -emit-module-path "$OUT/JMAP.swiftmodule" \
+  "${SOURCES[@]}" -o "$OUT/JMAP.o"
+# Standalone link check. prepare-native-app combines these objects with the
+# existing core, keeping one EmailAddress implementation in the HAP.
+"$NATIVE/llvm/bin/clang" -target ${SWIFT_CLANG_TARGET} --sysroot="$NATIVE/sysroot" \
+  -shared "$OUT/JMAP.o" "$OUT/HarmonyLogging.o" "$OUT/logging.o" \
+  "$ROOT/.tools/swift-probe/native-email${SWIFT_BUILD_SUFFIX}/EmailAddress.o" "$SDK/lib/swift/musl/${SWIFT_CPU}/swiftrt.o" \
+  -L "$SDK/lib/swift/musl" -L "$SDK/lib/swift/musl/${SWIFT_CPU}" -L "$SDK/lib/swift/ohos" -L "$SDK/lib" \
+  -lFoundationNetworking -lFoundation -lFoundationEssentials -lFoundationInternationalization -l_FoundationICU \
+  -lswiftCore -lswift_Concurrency -lswiftMusl -lswiftSynchronization -lswift_StringProcessing -lswift_RegexParser \
+  -lswiftDispatch -ldispatch -lBlocksRuntime -lfts -lxml2 -lhilog_ndk.z -Wl,--no-undefined \
+  -Wl,-soname,libThunderbirdJMAP.so -Wl,-rpath,'$ORIGIN' -o "$OUT/libThunderbirdJMAP.so"

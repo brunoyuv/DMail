@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+./scripts/prepare-swift-probe
+./scripts/prepare-native-jmap
+python3 - <<'PY'
+from pathlib import Path
+import shutil, subprocess
+root = Path.cwd()
+package = root / '.tools/swift-probe/host-jmap/package'
+package.mkdir(parents=True, exist_ok=True)
+shutil.copyfile(root / 'port/swift-jmap/Package.swift', package / 'Package.swift')
+for source, target in [
+    ('.tools/swift-probe/native-jmap/source/Core/Sources/JMAP', 'Sources/JMAP'),
+    ('.tools/swift-probe/package/Sources/EmailAddress', 'Sources/EmailAddress'),
+    ('.tools/swift-probe/native-jmap/source/Core/Tests/JMAPTests', 'Tests/JMAPTests')
+]: shutil.copytree(root / source, package / target, dirs_exist_ok=True)
+for patch in ['host-tests.patch', 'reader-tests.patch']:
+    subprocess.run(['patch', '--forward', '--force', '-p1', '-d', str(package)],
+                   input=(root / 'port/swift-jmap' / patch).read_text(), text=True, check=True)
+for source, target in [
+    ('port/swift-platform/HarmonyLogging.swift', 'Sources/HarmonyLogging/HarmonyLogging.swift'),
+    ('port/swift-platform/CHarmonyLogging/logging.h', 'Sources/CHarmonyLogging/logging.h'),
+    ('port/swift-platform/CHarmonyLogging/module.modulemap', 'Sources/CHarmonyLogging/module.modulemap'),
+    ('port/swift-jmap/host-logging.c', 'Sources/CHarmonyLogging/logging.c')
+]:
+    path = package / target; path.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(root / source, path)
+PY
+export SWIFTPM_MODULECACHE_OVERRIDE="$ROOT/.tools/swift-probe/host-jmap/module-cache"
+exec "$ROOT/.tools/swift/usr/bin/swift" test --package-path "$ROOT/.tools/swift-probe/host-jmap/package" \
+  --cache-path "$ROOT/.tools/swift-probe/host-jmap/cache" --config-path "$ROOT/.tools/swift-probe/config" \
+  --security-path "$ROOT/.tools/swift-probe/security" --disable-netrc --disable-sandbox -j 4

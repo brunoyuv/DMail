@@ -1,0 +1,74 @@
+#!/usr/bin/env bash
+# Bounded synthetic HTML-only diagnostic on the explicitly authorized MatePad.
+# Prepare signed test HAPs first. Never launch or inspect the production app.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+: "${HDC_TARGET:?Set HDC_TARGET to the authorized MatePad serial}"
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app-aarch64"
+[[ "$HDC_TARGET" == "${DMAIL_AUTHORIZED_MATEPAD_SERIAL:?Set the separately verified authorized MatePad serial}" ]]
+run_hdc() { timeout --foreground --kill-after=3s 30s "$HDC" "$@"; }
+OUT="$ROOT/.tools/matepad-html-theme"
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == aarch64 ]]
+[[ "$(run_hdc -t "$HDC_TARGET" shell param get const.product.model | tr -d '[:space:]')" == MRO-W00 ]]
+for hap in default/entry-default-signed.hap ohosTest/entry-ohosTest-signed.hap; do
+  [[ -f "$APP/entry/build/default/outputs/$hap" ]] || { echo 'Build signed test HAPs first.' >&2; exit 1; }
+done
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  find "$OUT" -maxdepth 1 -type f -exec mv -t "$PREVIOUS" {} +
+fi
+INSTALLED=false
+cleanup() {
+  local result=$?
+  trap - EXIT
+  for name in reader-light reader-dark quotes-dark quotes-light forward-light forward-dark; do
+    run_hdc -t "$HDC_TARGET" file recv "/data/local/tmp/html-theme-$name.png" "$OUT/$name.png" >/dev/null 2>&1 || true
+  done
+  if "$INSTALLED"; then run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true; fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-signed.hap"
+INSTALLED=true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-signed.hap"
+for name in reader-light reader-dark quotes-dark quotes-light forward-light forward-dark; do
+  run_hdc -t "$HDC_TARGET" shell rm -f "/data/local/tmp/html-theme-$name.png"
+done
+timeout --foreground --kill-after=5s 90s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/HtmlThemeRunner \
+  -s timeout 75000 | tee "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"
+for name in reader-light reader-dark quotes-dark quotes-light forward-light forward-dark; do
+  run_hdc -t "$HDC_TARGET" file recv "/data/local/tmp/html-theme-$name.png" "$OUT/$name.png" >/dev/null
+done
+python3 - "$OUT" <<'PY'
+from pathlib import Path
+import hashlib,json,re,sys
+from PIL import Image
+out=Path(sys.argv[1]); log=(out/'test.log').read_text()
+bounds={}
+for raw in re.findall(r'HTML_THEME_BOUNDS: (\{[^\r\n]+\})',log):
+    record=json.loads(raw); bounds[record['name']]=record['bounds']
+results={}
+patches=[(233,48,37),(56,171,100),(46,125,204)]
+for name in ['reader-light','reader-dark','quotes-dark','quotes-light','forward-light','forward-dark']:
+    box=bounds[name]
+    picture=Image.open(out/f'{name}.png').convert('RGB')
+    crop=picture.crop(tuple(round(box[k]) for k in ['left','top','right','bottom']))
+    pixels=list(crop.getdata()); count=len(pixels)
+    bright=sum(min(pixel)>235 for pixel in pixels)/count
+    original_colors=[sum(all(abs(pixel[i]-color[i])<=8 for i in range(3)) for pixel in pixels) for color in patches]
+    assert all(n>=100 for n in original_colors),(name,'original picture colors changed or picture is not visible',original_colors)
+    results[name]={'brightFraction':round(bright,4),'originalColorPixels':original_colors,
+                   'sha256':hashlib.sha256((out/f'{name}.png').read_bytes()).hexdigest()}
+for light,dark in [('reader-light','reader-dark'),('quotes-light','quotes-dark'),('forward-light','forward-dark')]:
+    assert results[light]['brightFraction']>.4,(light,'light page not visible',results[light])
+    assert results[dark]['brightFraction']<.15,(dark,'authored white HTML did not darken',results[dark])
+    assert results[dark]['brightFraction']<results[light]['brightFraction']*.35,(light,dark)
+(out/'result.json').write_text(json.dumps({'tests':1,'scope':'Isolated synthetic reader/reply and forward HTML, live app-only light/dark change, expanded quotes retained, original inline picture colors preserved','screenshots':results},indent=2)+'\n')
+print('PASS: native dark reply and forward HTML, expanded quotes, original picture colors, and light-mode restoration.')
+PY

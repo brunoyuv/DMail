@@ -1,0 +1,24 @@
+--- a/Sources/ImapAccountCore/String.swift
++++ b/Sources/ImapAccountCore/String.swift
+@@ -6,19 +6,11 @@
+ 
+ extension String {
+     func inlining(attachments: [EmailAttachment]) -> Self {
+-        var string: Self = self
+-        for attachment in attachments {
+-            string = string.inlining(attachment: attachment)
+-        }
+-        return string
++        inliningImages(attachments: attachments, limit: 2_000_000).html
+     }
+ 
+     func inlining(attachment: EmailAttachment) -> Self {
+-        var string: Self = self
+-        for link in attachment.links {
+-            string = string.replacingOccurrences(of: link, with: URL(attachment: attachment).absoluteString)
+-        }
+-        return string
++        inlining(attachments: [attachment])
+     }
+ 
+     typealias HTMLAttribute = (name: Self, value: Self)

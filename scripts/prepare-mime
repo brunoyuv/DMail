@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+"""Stage pinned original MIME sources with byte-preserving parsing adaptations."""
+from pathlib import Path
+import json,hashlib,shutil,subprocess,sys
+root=Path(__file__).resolve().parent.parent
+package=Path(sys.argv[1]);dest=package/'Sources/MIME';dest.mkdir(parents=True,exist_ok=True)
+for rel,expected in json.loads((root/'port/swift-mime/upstream-files.json').read_text())['files'].items():
+    source=root/'upstream/thunderbird-ios'/rel
+    assert hashlib.sha256(source.read_bytes()).hexdigest()==expected,rel
+    shutil.copy2(source,dest/source.name)
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)],input=(root/'port/swift-mime/harmonyos.patch').read_text(),text=True,check=True)
+shutil.copy2(root/'port/swift-mime/PartParsing.swift',dest/'PartParsing.swift')
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)],input=(root/'port/swift-mime/header-decoding.patch').read_text(),text=True,check=True)
+shutil.copy2(root/'port/swift-mime/HeaderDecoding.swift',dest/'HeaderDecoding.swift')
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)],input=(root/'port/swift-mime/html-entities.patch').read_text(),text=True,check=True)
+shutil.copy2(root/'port/swift-mime/AttachmentFilename.swift',dest/'AttachmentFilename.swift')
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)],input=(root/'port/swift-mime/attachment-filename.patch').read_text(),text=True,check=True)

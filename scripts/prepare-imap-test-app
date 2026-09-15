@@ -1,0 +1,455 @@
+#!/usr/bin/env python3
+"""Stage an isolated Internet-permitted HAP; never co-load duplicate Swift cores."""
+from pathlib import Path
+import json, shutil, hashlib, base64, datetime, os, subprocess
+from cryptography import x509
+from cryptography.hazmat.primitives import serialization
+root = Path(__file__).resolve().parent.parent
+cpu=os.environ.get('THUNDERBIRD_SWIFT_ARCH', 'x86_64')
+assert cpu in ['x86_64', 'aarch64']
+suffix='' if cpu=='x86_64' else '-aarch64'
+abi='x86_64' if cpu=='x86_64' else 'arm64-v8a'
+app=root/('.tools/imap-test-app'+suffix)
+production=root/('harmony' if cpu=='x86_64' else '.tools/device-app')
+# Hvigor retains removed imported libraries in native intermediates. Discard this
+# generated build when migrating from the earlier standalone IMAP diagnostic.
+old_build=app/'entry/build'
+if old_build.exists() and any(old_build.rglob('libThunderbirdIMAP.so')):
+    shutil.rmtree(old_build)
+def write(name, text):
+    p = app/name; p.parent.mkdir(parents=True, exist_ok=True); p.write_text(text)
+def data(name, value): write(name, json.dumps(value, indent=2)+'\n')
+def copy(source, name):
+    p = app/name; p.parent.mkdir(parents=True, exist_ok=True); shutil.copy2(root/source, p)
+for name in ['build-profile.json5','hvigorfile.ts','hvigor/hvigor-config.json5','oh-package.json5','entry/hvigorfile.ts']:
+    if name == 'build-profile.json5' and (app/name).exists():
+        # Keep local signing while adopting the canonical compile/target/minimum
+        # SDKs. Retaining the whole old profile silently kept older SDK builds.
+        subprocess.run([str(root/'.tools/runtime/node_modules/node/bin/node'), '-e', r"""
+const fs = require('fs');
+const root = process.argv[1], output = process.argv[2];
+const json5 = require(root + '/.tools/deveco/node_modules/json5/lib/index.js');
+const source = json5.parse(fs.readFileSync(root + '/harmony/build-profile.json5', 'utf8'));
+const current = json5.parse(fs.readFileSync(output, 'utf8'));
+for (const product of current.app.products) {
+  const canonical = source.app.products.find(value => value.name === product.name);
+  if (!canonical) throw new Error('No canonical SDK configuration for staged product');
+  for (const field of ['compileSdkVersion', 'targetSdkVersion', 'compatibleSdkVersion']) {
+    if (canonical[field] === undefined) delete product[field];
+    else product[field] = canonical[field];
+  }
+}
+fs.writeFileSync(output, JSON.stringify(current, null, 2) + '\n', { mode: 0o600 });
+fs.chmodSync(output, 0o600);
+""", str(root), str(app/name)], check=True)
+        continue
+    copy('harmony/'+name, name)
+data('AppScope/app.json5', {'app': {'bundleName':'org.thunderbird.harmony.imaptest','vendor':'D-Mail tests',
+    'versionCode':1,'versionName':'0.1.0','icon':'$media:app_icon','label':'$string:app_name'}})
+app_media = app/'AppScope/resources/base/media'
+shutil.rmtree(app_media, ignore_errors=True)
+shutil.copytree(root/'harmony/AppScope/resources/base/media', app_media)
+data('AppScope/resources/base/element/string.json', {'string':[{'name':'app_name','value':'D-Mail IMAP tests'}]})
+data('entry/oh-package.json5', {'name':'entry','version':'0.1.0','dependencies':{'libimaptest.so':'file:./src/main/cpp/types/libimaptest',
+    'libthunderbird.so':'file:./src/main/cpp/types/libthunderbird'}})
+for name in ['index.d.ts','oh-package.json5']:
+    copy('harmony/entry/src/main/cpp/types/libthunderbird/'+name,'entry/src/main/cpp/types/libthunderbird/'+name)
+copy('harmony/entry/src/main/cpp/napi_init.cpp','entry/src/main/cpp/napi_thunderbird.cpp')
+data('entry/src/main/cpp/types/libimaptest/oh-package.json5', {'name':'libimaptest.so','version':'0.1.0','types':'./index.d.ts'})
+write('entry/src/main/cpp/types/libimaptest/index.d.ts','export const request: (mode: string) => Promise<number>;\n')
+data('entry/build-profile.json5', {'apiType':'stageMode','buildOption':{'externalNativeOptions':{'path':'./src/main/cpp/CMakeLists.txt','abiFilters':[abi]},
+    'nativeLib':{'collectAllLibs':True,'debugSymbol':{'strip':False}}},'targets':[{'name':'default'},{'name':'ohosTest'}]})
+for source, name, kind, ability in [('main','entry','entry','EntryAbility'),('ohosTest','entry_test','feature','IMAPTestAbility')]:
+    module={'name':name,'type':kind,'deviceTypes':['phone','tablet'],'deliveryWithInstall':True,'installationFree':False,
+        'requestPermissions':[{'name':'ohos.permission.INTERNET'}],
+        'abilities':[{'name':ability,'srcEntry':f'./ets/abilities/{ability}.ets','exported':source=='main',
+            'startWindowIcon':'$media:app_icon','startWindowBackground':'$color:start_window_background'}]}
+    if source=='main':
+        module['mainElement']=ability
+        module['pages']='$profile:preview_test_pages'
+        # Exercise the actual WorkScheduler extension registration in this
+        # isolated bundle; the normal EntryAbility lifecycle stays synthetic.
+        production_module=json.loads((root/'harmony/entry/src/main/module.json5').read_text())['module']
+        module['extensionAbilities']=production_module.get('extensionAbilities', [])
+    if source=='ohosTest': module['pages']='$profile:test_pages'
+    data(f'entry/src/{source}/module.json5', {'module':module})
+    write(f'entry/src/{source}/ets/abilities/{ability}.ets', f"import {{ UIAbility }} from '@kit.AbilityKit';\nexport default class {ability} extends UIAbility {{}}\n")
+for folder in ['base','dark']:
+    copy('harmony/entry/src/main/resources/'+folder+'/element/color.json','entry/src/main/resources/'+folder+'/element/color.json')
+for folder in ['base','zh_CN']:
+    copy('harmony/entry/src/main/resources/'+folder+'/element/string.json','entry/src/main/resources/'+folder+'/element/string.json')
+shutil.copytree(root/'harmony/entry/src/main/ets/pages',app/'entry/src/main/ets/pages',dirs_exist_ok=True)
+for folder in ['mail','data','settings']:
+    shutil.copytree(root/'harmony/entry/src/main/ets'/folder,app/'entry/src/main/ets'/folder,dirs_exist_ok=True)
+shutil.copytree(root/'harmony/entry/src/main/ets/model',app/'entry/src/main/ets/model',dirs_exist_ok=True)
+# Native UI fixtures run in the isolated main HAP. Harmony's aa-test feature
+# context remaps named resources but cannot resolve its compiled 0x02 IDs on
+# this device; the main HAP uses the same numeric resource path as production.
+copy('port/swift-imap/PreviewTestAbility.ets','entry/src/main/ets/abilities/EntryAbility.ets')
+copy('harmony/entry/src/main/ets/abilities/MailCheckAbility.ets','entry/src/main/ets/abilities/MailCheckAbility.ets')
+copy('port/swift-imap/NavigationFixture.ets','entry/src/main/ets/pages/NavigationFixture.ets')
+copy('port/swift-imap/ReviewInboxFixture.ets','entry/src/main/ets/pages/ReviewInboxFixture.ets')
+copy('port/swift-imap/InboxLatencyFixture.ets','entry/src/main/ets/pages/InboxLatencyFixture.ets')
+copy('port/swift-imap/InboxIdleFixture.ets','entry/src/main/ets/pages/InboxIdleFixture.ets')
+copy('port/swift-imap/InboxIdleState.ets','entry/src/main/ets/support/InboxIdleState.ets')
+copy('port/swift-imap/InboxIdleTrace.ets','entry/src/main/ets/support/InboxIdleTrace.ets')
+copy('port/swift-imap/StoreScreenshotFixture.ets','entry/src/main/ets/pages/StoreScreenshotFixture.ets')
+copy('port/mail-corpus/store-newsletter.html','entry/src/main/resources/rawfile/store-newsletter.html')
+copy('port/mail-corpus/store-workshop.html','entry/src/main/resources/rawfile/store-workshop.html')
+copy('port/mail-corpus/store-workshop-reply.html','entry/src/main/resources/rawfile/store-workshop-reply.html')
+copy('port/swift-imap/NavigationClient.ets','entry/src/main/ets/support/NavigationClient.ets')
+copy('port/swift-imap/TestLoadingFixture.ets','entry/src/main/ets/pages/TestLoadingFixture.ets')
+copy('port/swift-smtp/HtmlThemeFixture.ets','entry/src/main/ets/pages/HtmlThemeFixture.ets')
+copy('port/swift-smtp/HtmlImageSizingFixture.ets','entry/src/main/ets/pages/HtmlImageSizingFixture.ets')
+copy('port/swift-smtp/HtmlLinkFixture.ets','entry/src/main/ets/pages/HtmlLinkFixture.ets')
+copy('port/swift-smtp/HtmlLinkState.ets','entry/src/main/ets/support/HtmlLinkState.ets')
+copy('port/swift-smtp/HtmlScrollPowerFixture.ets','entry/src/main/ets/pages/HtmlScrollPowerFixture.ets')
+copy('port/swift-smtp/HtmlScrollPowerState.ets','entry/src/main/ets/support/HtmlScrollPowerState.ets')
+copy('port/swift-smtp/HtmlPictureScrollFixture.ets','entry/src/main/ets/pages/HtmlPictureScrollFixture.ets')
+copy('port/swift-smtp/HtmlPictureScrollState.ets','entry/src/main/ets/support/HtmlPictureScrollState.ets')
+picture_scroll_folder=root/'port/swift-smtp/picture-scroll'
+picture_scroll_record=json.loads((picture_scroll_folder/'manifest.json').read_text())
+if picture_scroll_record['decoded_rgba_budget_bytes']!=28800000 or len(picture_scroll_record['images'])!=20:
+    raise RuntimeError('Synthetic picture scrolling image budget changed')
+for picture_scroll_image in picture_scroll_record['images']:
+    image_name=picture_scroll_image['name']
+    image_bytes=(picture_scroll_folder/image_name).read_bytes()
+    if hashlib.sha256(image_bytes).hexdigest()!=picture_scroll_image['sha256']:
+        raise RuntimeError('Synthetic picture scrolling image hash mismatch')
+    copy('port/swift-smtp/picture-scroll/'+image_name,'entry/src/main/resources/rawfile/picture-scroll/'+image_name)
+# Original 0.1.11 renderer/helper sources stay byte-for-byte in the fixture.
+# The generated isolated app only renames their module/component to co-load it
+# beside the current renderer. Neither source is copied into a shipping HAP.
+baseline_folder=root/'port/swift-smtp/baseline011'
+baseline_record=json.loads((baseline_folder/'source.json').read_text())
+for baseline_file in baseline_record['files']:
+    baseline_bytes=(baseline_folder/baseline_file['fixture']).read_bytes()
+    if hashlib.sha256(baseline_bytes).hexdigest()!=baseline_file['sha256']:
+        raise RuntimeError('Historical scrolling baseline source hash mismatch')
+baseline_renderer=(baseline_folder/'HtmlMail.ets').read_text()
+baseline_renderer=baseline_renderer.replace("'../mail/html/HtmlDocument'", "'../mail/html/HtmlDocument011'")
+baseline_renderer=baseline_renderer.replace('export struct HtmlMail {', 'export struct HtmlMail011 {')
+write('entry/src/main/ets/pages/HtmlMail011.ets',baseline_renderer)
+copy('port/swift-smtp/baseline011/HtmlDocument.ts','entry/src/main/ets/mail/html/HtmlDocument011.ts')
+# Freeze the installed 0.1.18 before comparing it with a new renderer. The
+# three-mode historical benchmark also retains this same installed baseline.
+baseline_018_folder=root/'port/swift-smtp/baseline018'
+baseline_018_record=json.loads((baseline_018_folder/'source.json').read_text())
+for baseline_file in baseline_018_record['files']:
+    baseline_bytes=(baseline_018_folder/baseline_file['fixture']).read_bytes()
+    if hashlib.sha256(baseline_bytes).hexdigest()!=baseline_file['sha256']:
+        raise RuntimeError('Installed scrolling baseline source hash mismatch')
+baseline_018_renderer=(baseline_018_folder/'HtmlMail.ets').read_text()
+baseline_018_renderer=baseline_018_renderer.replace("'../mail/html/HtmlDocument'", "'../mail/html/HtmlDocument018'")
+baseline_018_renderer=baseline_018_renderer.replace('export struct HtmlMail {', 'export struct HtmlMail018 {')
+write('entry/src/main/ets/pages/HtmlMail018.ets',baseline_018_renderer)
+copy('port/swift-smtp/baseline018/HtmlDocument.ts','entry/src/main/ets/mail/html/HtmlDocument018.ts')
+# Separate diagnostic variant isolates renderer mode and intrinsic document
+# height; the production component and its scrolling-header contract are intact.
+async_renderer=(baseline_018_folder/'HtmlMail.ets').read_text().replace("'../mail/html/HtmlDocument'", "'../mail/html/HtmlDocument018'")
+for old,new in [
+    ('export struct HtmlMail {','export struct HtmlMailAsyncViewport {'),
+    ('renderMode: RenderMode.SYNC_RENDER','renderMode: RenderMode.ASYNC_RENDER'),
+    ('this.fitContent ? WebLayoutMode.FIT_CONTENT : WebLayoutMode.NONE','WebLayoutMode.NONE')]:
+    if async_renderer.count(old)!=1: raise RuntimeError('Async viewport diagnostic stage no longer matches renderer')
+    async_renderer=async_renderer.replace(old,new,1)
+write('entry/src/main/ets/pages/HtmlMailAsyncViewport.ets',async_renderer)
+copy('port/swift-smtp/PictureRefreshFixture.ets','entry/src/main/ets/pages/PictureRefreshFixture.ets')
+copy('port/swift-smtp/PictureRefreshState.ets','entry/src/main/ets/support/PictureRefreshState.ets')
+copy('port/swift-smtp/PictureRefreshTrace.ets','entry/src/main/ets/support/PictureRefreshTrace.ets')
+copy('port/swift-smtp/StaticPictureFixture.ets','entry/src/main/ets/pages/StaticPictureFixture.ets')
+copy('port/swift-smtp/StaticPictureState.ets','entry/src/main/ets/support/StaticPictureState.ets')
+copy('port/swift-smtp/StaticPictureTrace.ets','entry/src/main/ets/support/StaticPictureTrace.ets')
+copy('port/swift-smtp/picture-refresh.png','entry/src/main/resources/rawfile/picture-refresh.png')
+copy('port/swift-smtp/picture-refresh-replacement.png','entry/src/main/resources/rawfile/picture-refresh-replacement.png')
+
+# Isolated diagnostics use only fixed stage names. Never instrument shipping HAPs
+# or emit resource URLs, account identities, or message contents.
+# The previous picture-refresh entry point now exercises the static snapshot
+# fixture. Instrumentation is confined to this generated test application.
+if any(os.environ.get(flag) == '1' for flag in ['DMAIL_STATIC_PICTURE_TRACE', 'DMAIL_PICTURE_REFRESH_TRACE']):
+    renderer = app/'entry/src/main/ets/pages/HtmlMail.ets'
+    source = renderer.read_text()
+    source = "import { StaticPictureState } from '../support/StaticPictureState';\n" + source
+    stages = [
+        ('export struct HtmlMail {', 'export struct HtmlMail {\n  private readonly staticPictureScene: number = StaticPictureState.scene;'),
+        ('  private attachSnapshot(snapshot: HtmlReaderSnapshot): void {', '  private attachSnapshot(snapshot: HtmlReaderSnapshot): void {\n    StaticPictureState.recordMount(this.staticPictureScene);'),
+        ('  private document(snapshot: HtmlReaderSnapshot): string {', '  private document(snapshot: HtmlReaderSnapshot): string {\n    StaticPictureState.recordDocument(this.staticPictureScene);')
+    ]
+    for old, new in stages:
+        if source.count(old) != 1: raise RuntimeError('Static snapshot diagnostic no longer matches renderer')
+        source = source.replace(old, new, 1)
+    renderer.write_text(source)
+    for relative, import_path, anchor, counter in [
+        ('mail/MailBodySync.ets', '../support/StaticPictureTrace', '        plan = prepareStaticMailHtml(', 'recordScan'),
+        ('data/PictureSnapshot.ets', '../support/StaticPictureTrace', '  const key = JSON.stringify([accountId, messageKey]);', 'recordBatch')]:
+        path = app/'entry/src/main/ets'/relative
+        text = path.read_text()
+        if text.count(anchor) != 1: raise RuntimeError('Sync preparation diagnostic no longer matches')
+        text = f"import {{ StaticPictureTrace }} from '{import_path}';\n" + text
+        path.write_text(text.replace(anchor, f'  StaticPictureTrace.{counter}();\n' + anchor, 1))
+
+if os.environ.get('DMAIL_INBOX_IDLE_TRACE') == '1':
+    for relative, anchor, counter in [
+        ('mail/MailBodySync.ets', '        plan = prepareStaticMailHtml(', 'recordScan'),
+        ('mail/MailMessageLoader.ets', '          const plan = prepareStaticMailHtml(', 'recordScan'),
+        ('data/PictureSnapshot.ets', '  const key = JSON.stringify([accountId, messageKey]);', 'recordBatch')]:
+        path = app/'entry/src/main/ets'/relative
+        text = path.read_text()
+        if text.count(anchor) != 1: raise RuntimeError('Inbox idle scan diagnostic no longer matches')
+        text = "import { InboxIdleTrace } from '../support/InboxIdleTrace';\n" + text
+        path.write_text(text.replace(anchor, f'  InboxIdleTrace.{counter}();\n' + anchor, 1))
+    path = app/'entry/src/main/ets/mail/MailMessageLoader.ets'
+    text = path.read_text()
+    complete = '    return { mail: body.mail, document: saved.document };'
+    if text.count(complete) != 1: raise RuntimeError('On-demand completion diagnostic no longer matches')
+    path.write_text(text.replace(complete, '    InboxIdleTrace.recordComplete(request.emailId);\n' + complete, 1))
+    path = app/'entry/src/main/ets/data/MailSyncStore.ets'
+    text = path.read_text()
+    query = 'const rows = await this.db.querySql('
+    if text.count(query) < 3: raise RuntimeError('Inbox idle query diagnostic no longer matches')
+    text = "import { InboxIdleTrace } from '../support/InboxIdleTrace';\n" + text
+    text = text.replace(query, 'InboxIdleTrace.recordQuery();\n      ' + query)
+    complete = '''await this.db.executeSql("UPDATE mail_sync_jobs SET stage = 'done', attempts = 0, retry_at = 0 WHERE account_id = ? AND email_id = ? AND stage = 'pictures' AND EXISTS (SELECT 1 FROM accounts WHERE id = ? AND status = 'ready')", [accountId, emailId, accountId]);'''
+    if text.count(complete) != 1: raise RuntimeError('Inbox idle completion diagnostic no longer matches')
+    path.write_text(text.replace(complete, complete + '\n      InboxIdleTrace.recordComplete(emailId);', 1))
+    path = app/'entry/src/main/ets/pages/ConnectedMail.ets'
+    text = path.read_text()
+    visibility = '  private inboxVisibilityChanged(visible: boolean): void {'
+    if text.count(visibility) != 1: raise RuntimeError('Inbox visibility diagnostic no longer matches')
+    text = "import { InboxIdleTrace } from '../support/InboxIdleTrace';\n" + text
+    path.write_text(text.replace(visibility, visibility + '\n    InboxIdleTrace.recordInboxVisibility(visible);', 1))
+
+if os.environ.get('DMAIL_HTML_LINK_TRACE') == '1':
+    renderer = app/'entry/src/main/ets/pages/HtmlMail.ets'
+    source = "import { HtmlLinkState } from '../support/HtmlLinkState';\n" + renderer.read_text()
+    stages = [
+        ('  private attachSnapshot(snapshot: HtmlReaderSnapshot): void {', '  private attachSnapshot(snapshot: HtmlReaderSnapshot): void {\n    HtmlLinkState.recordControllerLoad();'),
+        ('  private document(snapshot: HtmlReaderSnapshot): string {', '  private document(snapshot: HtmlReaderSnapshot): string {\n    HtmlLinkState.recordDocument();')
+    ]
+    for old, new in stages:
+        if source.count(old) != 1: raise RuntimeError('HTML link diagnostic no longer matches renderer')
+        source = source.replace(old, new, 1)
+    renderer.write_text(source)
+
+# These counters have identical ownership/call overhead in both A/B modes and
+# run only in the generated isolated app, never production. No timer is added.
+if os.environ.get('DMAIL_HTML_SCROLL_POWER_TRACE') == '1':
+    if any(os.environ.get(flag)=='1' for flag in ['DMAIL_PICTURE_REFRESH_TRACE','DMAIL_STATIC_PICTURE_TRACE','DMAIL_HTML_LINK_TRACE']):
+        raise RuntimeError('Scroll power counters must run without unrelated renderer tracing')
+    for renderer_name, struct_name, controller_call in [
+        ('HtmlMail011.ets','HtmlMail011','this.controller.refresh();'),
+        ('HtmlMail018.ets','HtmlMail018','this.controller.loadUrl(this.documentUrl);'),
+        ('HtmlMail.ets','HtmlMail','this.controller.loadUrl(this.documentUrl);'),
+        ('HtmlMailAsyncViewport.ets','HtmlMailAsyncViewport','this.controller.loadUrl(this.documentUrl);')]:
+        renderer_path=app/'entry/src/main/ets/pages'/renderer_name
+        renderer_source=renderer_path.read_text()
+        renderer_source="import { HtmlScrollPowerState } from '../support/HtmlScrollPowerState';\n"+renderer_source
+        struct_header='export struct '+struct_name+' {'
+        if renderer_source.count(struct_header)!=1: raise RuntimeError('Scrolling diagnostic component no longer matches')
+        renderer_source=renderer_source.replace(struct_header,struct_header+'\n  private readonly powerScene: number = HtmlScrollPowerState.scene;\n  private readonly powerMode: string = HtmlScrollPowerState.mode;',1)
+        stages=[
+            ('  private document(): string {', '  private document(): string {\n    HtmlScrollPowerState.recordDocument(this.powerMode, this.powerScene);'),
+            (controller_call,'HtmlScrollPowerState.recordControllerLoad(this.powerMode, this.powerScene); '+controller_call)]
+        if struct_name == 'HtmlMail':
+            stages = [
+                ('  private document(snapshot: HtmlReaderSnapshot): string {', '  private document(snapshot: HtmlReaderSnapshot): string {\n    HtmlScrollPowerState.recordDocument(this.powerMode, this.powerScene);'),
+                ('  private attachSnapshot(snapshot: HtmlReaderSnapshot): void {', '  private attachSnapshot(snapshot: HtmlReaderSnapshot): void {\n    HtmlScrollPowerState.recordControllerLoad(this.powerMode, this.powerScene);')]
+        for old,new in stages:
+            if renderer_source.count(old)!=1: raise RuntimeError('Scrolling diagnostic stage no longer matches renderer')
+            renderer_source=renderer_source.replace(old,new,1)
+        if struct_name=='HtmlMailAsyncViewport':
+            scroll_anchor='      .onControllerAttached(() => this.attachController())'
+            if renderer_source.count(scroll_anchor)!=1: raise RuntimeError('Async viewport scroll stage no longer matches renderer')
+            renderer_source=renderer_source.replace(scroll_anchor,
+                '      .onScroll((event) => HtmlScrollPowerState.recordScroll(this.powerMode, this.powerScene, event.yOffset))\n'+scroll_anchor,1)
+        if struct_name in ['HtmlMail018','HtmlMail']:
+            renderer_source="import { HtmlPictureScrollState } from '../support/HtmlPictureScrollState';\n"+renderer_source
+            picture_stages=[
+                ('    accountId: string, messageKey: string, url: string): Promise<void> {',
+                 '    accountId: string, messageKey: string, url: string): Promise<void> {\n    HtmlPictureScrollState.record(this.powerScene, "resource", url);'),
+                ('      const result = await cache.loadWithStatus(accountId, messageKey, url);',
+                 '      HtmlPictureScrollState.record(this.powerScene, "cache", url);\n      const result = await cache.loadWithStatus(accountId, messageKey, url);')]
+            if struct_name == 'HtmlMail':
+                picture_stages = [
+                    ('    const url = request.getRequestUrl();', '    const url = request.getRequestUrl();\n    if (!request.isMainFrame()) { HtmlPictureScrollState.record(this.powerScene, "resource", url); }'),
+                    ('        result = await loadPictureSnapshot(cache, account, message, plan.pictures.map(picture => picture.url), retry);',
+                     '        for (const picture of plan.pictures) { HtmlPictureScrollState.record(this.powerScene, "cache", picture.url); }\n        result = await loadPictureSnapshot(cache, account, message, plan.pictures.map(picture => picture.url), retry);')]
+            for old,new in picture_stages:
+                if renderer_source.count(old)!=1: raise RuntimeError('Picture scrolling counter no longer matches renderer')
+                renderer_source=renderer_source.replace(old,new,1)
+        renderer_path.write_text(renderer_source)
+
+data('entry/src/main/resources/base/profile/preview_test_pages.json',{'src':['pages/TestLoadingFixture','pages/NavigationFixture','pages/ReviewInboxFixture','pages/InboxLatencyFixture','pages/InboxIdleFixture','pages/HtmlThemeFixture','pages/HtmlImageSizingFixture','pages/HtmlLinkFixture','pages/HtmlScrollPowerFixture','pages/HtmlPictureScrollFixture','pages/PictureRefreshFixture','pages/StaticPictureFixture','pages/StoreScreenshotFixture']})
+copy('port/swift-imap/MailboxFixture.ets','entry/src/ohosTest/ets/pages/MailboxFixture.ets')
+copy('port/swift-imap/NavigationFixture.ets','entry/src/ohosTest/ets/pages/NavigationFixture.ets')
+copy('port/swift-imap/NavigationClient.ets','entry/src/ohosTest/ets/support/NavigationClient.ets')
+copy('port/swift-imap/NavigationTestSession.ets','entry/src/ohosTest/ets/support/NavigationTestSession.ets')
+copy('port/swift-imap/Navigation.test.ets','entry/src/ohosTest/ets/test/Navigation.test.ets')
+copy('port/swift-imap/ConversationNavigation.test.ets','entry/src/ohosTest/ets/test/ConversationNavigation.test.ets')
+copy('port/swift-imap/PreviewLayout.test.ets','entry/src/ohosTest/ets/test/PreviewLayout.test.ets')
+copy('port/swift-imap/UnreadFilter.test.ets','entry/src/ohosTest/ets/test/UnreadFilter.test.ets')
+copy('port/swift-imap/InboxCheck.test.ets','entry/src/ohosTest/ets/test/InboxCheck.test.ets')
+copy('port/swift-imap/MessagePreview.test.ets','entry/src/ohosTest/ets/test/MessagePreview.test.ets')
+copy('port/swift-imap/InboxWatch.test.ets','entry/src/ohosTest/ets/test/InboxWatch.test.ets')
+copy('port/swift-imap/SwipeActions.test.ets','entry/src/ohosTest/ets/test/SwipeActions.test.ets')
+copy('port/swift-imap/ComposeSettings.test.ets','entry/src/ohosTest/ets/test/ComposeSettings.test.ets')
+copy('port/swift-imap/ComposeAttachments.test.ets','entry/src/ohosTest/ets/test/ComposeAttachments.test.ets')
+copy('port/swift-imap/ComposeAttachmentsRunner.ets','entry/src/ohosTest/ets/testrunner/ComposeAttachmentsRunner.ets')
+copy('port/swift-imap/NotificationPlatform.test.ets','entry/src/ohosTest/ets/test/NotificationPlatform.test.ets')
+copy('port/swift-imap/NotificationPlatformRunner.ets','entry/src/ohosTest/ets/testrunner/NotificationPlatformRunner.ets')
+copy('port/swift-imap/UnreadBadge.test.ets','entry/src/ohosTest/ets/test/UnreadBadge.test.ets')
+copy('port/swift-imap/UnreadBadgeRunner.ets','entry/src/ohosTest/ets/testrunner/UnreadBadgeRunner.ets')
+copy('port/swift-imap/InboxAutomaticUI.test.ets','entry/src/ohosTest/ets/test/InboxAutomaticUI.test.ets')
+copy('port/swift-imap/InboxAutomaticUIRunner.ets','entry/src/ohosTest/ets/testrunner/InboxAutomaticUIRunner.ets')
+copy('port/swift-imap/InboxPresentation.test.ets','entry/src/ohosTest/ets/test/InboxPresentation.test.ets')
+copy('port/swift-imap/InboxPresentationRunner.ets','entry/src/ohosTest/ets/testrunner/InboxPresentationRunner.ets')
+copy('port/swift-imap/ReviewInbox.test.ets','entry/src/ohosTest/ets/test/ReviewInbox.test.ets')
+copy('port/swift-imap/ReviewInboxRunner.ets','entry/src/ohosTest/ets/testrunner/ReviewInboxRunner.ets')
+copy('port/swift-imap/InboxLatency.test.ets','entry/src/ohosTest/ets/test/InboxLatency.test.ets')
+copy('port/swift-imap/InboxLatencyRunner.ets','entry/src/ohosTest/ets/testrunner/InboxLatencyRunner.ets')
+copy('port/swift-imap/ReaderRecovery.test.ets','entry/src/ohosTest/ets/test/ReaderRecovery.test.ets')
+copy('port/swift-imap/ReaderRecoveryRunner.ets','entry/src/ohosTest/ets/testrunner/ReaderRecoveryRunner.ets')
+copy('port/swift-imap/StoreScreenshots.test.ets','entry/src/ohosTest/ets/test/StoreScreenshots.test.ets')
+copy('port/swift-imap/StoreScreenshotsRunner.ets','entry/src/ohosTest/ets/testrunner/StoreScreenshotsRunner.ets')
+copy('port/swift-imap/UnreadCompatibility.test.ets','entry/src/ohosTest/ets/test/UnreadCompatibility.test.ets')
+copy('harmony/entry/src/ohosTest/ets/test/LastAccount.test.ets','entry/src/ohosTest/ets/test/LastAccount.test.ets')
+copy('harmony/entry/src/ohosTest/ets/support/MailOperationsAssertions.ets','entry/src/ohosTest/ets/support/MailOperationsAssertions.ets')
+copy('port/swift-imap/MailboxGestures.test.ets','entry/src/ohosTest/ets/test/MailboxGestures.test.ets')
+copy('port/swift-imap/AccountCore.test.ets','entry/src/ohosTest/ets/test/AccountCore.test.ets')
+copy('port/swift-imap/AccountFixture.ets','entry/src/ohosTest/ets/pages/AccountFixture.ets')
+copy('port/swift-imap/IMAPTestAbility.ets','entry/src/ohosTest/ets/abilities/IMAPTestAbility.ets')
+copy('port/swift-imap/TestLoadingFixture.ets','entry/src/ohosTest/ets/pages/TestLoadingFixture.ets')
+data('entry/src/ohosTest/resources/base/profile/test_pages.json',{'src':['pages/AccountFixture','pages/MailboxFixture','pages/NavigationFixture','pages/MailFeaturesFixture','pages/HtmlConsentFixture','pages/HtmlThemeFixture','pages/TestLoadingFixture','pages/DiscoveryFixture']})
+certificate=x509.load_pem_x509_certificate((root/'.tools/imap-test-certs/server.crt').read_bytes())
+spki=certificate.public_key().public_bytes(serialization.Encoding.DER,serialization.PublicFormat.SubjectPublicKeyInfo)
+pin=base64.b64encode(hashlib.sha256(spki).digest()).decode()
+data('entry/src/main/resources/base/profile/network_config.json',{'network-security-config':{
+    'base-config':{'cleartextTrafficPermitted':False},'domain-config':[{
+        'domains':[{'name':'localhost','include-subdomains':False}],
+        'trust-anchors':[{'certificates':'/data/storage/el2/base/files/native-network-ca'}],
+        'pin-set':{'expiration':str(datetime.date.today()+datetime.timedelta(days=7)),
+                   'pin':[{'digest-algorithm':'sha256','digest':pin}]}},
+        # The picture retry fixture is an HTTP server inside the emulator.
+        # Keep all other cleartext traffic blocked and localhost TLS pinned.
+        {'domains':[{'name':'127.0.0.1','include-subdomains':False}],
+         'cleartextTrafficPermitted':True}]},
+    'trust-global-user-ca':False,'trust-current-user-ca':False})
+copy('.tools/imap-test-certs/root.crt','entry/src/main/resources/rawfile/root.crt')
+runner=(root/'port/network-tests/NetworkTestRunner.ets').read_text().replace('NetworkTestRunner','IMAPTestRunner').replace('../test/Network.test','../test/IMAP.test')
+fixtures=sorted((root/'upstream/thunderbird-ios/Core/Tests/AccountTests/Resources').glob('*.eml'))
+for fixture in fixtures: copy(str(fixture.relative_to(root)),'entry/src/main/resources/rawfile/mime/'+fixture.name)
+runner=runner.replace('    const tests = await import', '''    const fixtureFolder = `${context.filesDir}/mime-fixtures`;
+    if (!fs.accessSync(fixtureFolder)) { fs.mkdirSync(fixtureFolder, true); }
+    for (const name of '''+json.dumps([p.name for p in fixtures])+''') {
+      const bytes = await context.createModuleContext('entry').resourceManager.getRawFileContent(`mime/${name}`);
+      const target = fs.openSync(`${fixtureFolder}/${name}`, fs.OpenMode.CREATE | fs.OpenMode.WRITE_ONLY | fs.OpenMode.TRUNC);
+      try { fs.writeSync(target.fd, bytes.buffer); } finally { fs.closeSync(target); }
+    }
+    const tests = await import''')
+write('entry/src/ohosTest/ets/testrunner/IMAPTestRunner.ets',runner)
+write('entry/src/ohosTest/ets/testrunner/MailboxGesturesRunner.ets', runner.replace('IMAPTestRunner','MailboxGesturesRunner').replace('../test/IMAP.test','../test/MailboxGestures.test'))
+write('entry/src/ohosTest/ets/test/CombinedNavigation.test.ets', "import ui from './Navigation.test';\nimport conversation from './ConversationNavigation.test';\nimport storage from './LastAccount.test';\nexport default function tests(): void { ui(); conversation(); storage(); }\n")
+write('entry/src/ohosTest/ets/testrunner/NavigationRunner.ets', runner.replace('IMAPTestRunner','NavigationRunner').replace('../test/IMAP.test','../test/CombinedNavigation.test'))
+write('entry/src/ohosTest/ets/testrunner/ConversationNavigationRunner.ets', runner.replace('IMAPTestRunner','ConversationNavigationRunner').replace('../test/IMAP.test','../test/ConversationNavigation.test'))
+write('entry/src/ohosTest/ets/testrunner/PreviewLayoutRunner.ets', runner.replace('IMAPTestRunner','PreviewLayoutRunner').replace('../test/IMAP.test','../test/PreviewLayout.test'))
+write('entry/src/ohosTest/ets/testrunner/UnreadFilterRunner.ets', runner.replace('IMAPTestRunner','UnreadFilterRunner').replace('../test/IMAP.test','../test/UnreadFilter.test'))
+write('entry/src/ohosTest/ets/testrunner/SwipeActionsRunner.ets', runner.replace('IMAPTestRunner','SwipeActionsRunner').replace('../test/IMAP.test','../test/SwipeActions.test'))
+write('entry/src/ohosTest/ets/test/SwipeActionsEmulator.test.ets', "import swipe from './SwipeActions.test';\nexport default function tests(): void { swipe(true); }\n")
+write('entry/src/ohosTest/ets/testrunner/SwipeActionsEmulatorRunner.ets', runner.replace('IMAPTestRunner','SwipeActionsEmulatorRunner').replace('../test/IMAP.test','../test/SwipeActionsEmulator.test'))
+write('entry/src/ohosTest/ets/testrunner/ComposeSettingsRunner.ets', runner.replace('IMAPTestRunner','ComposeSettingsRunner').replace('../test/IMAP.test','../test/ComposeSettings.test').replace('    const context =', "    await abilityDelegatorRegistry.getAbilityDelegator().print('COMPOSE_SETTINGS_STAGE: runner setup started\\n');\n    const context ="))
+write('entry/src/ohosTest/ets/testrunner/UnreadCompatibilityRunner.ets', runner.replace('IMAPTestRunner','UnreadCompatibilityRunner').replace('../test/IMAP.test','../test/UnreadCompatibility.test'))
+write('entry/src/ohosTest/ets/testrunner/InboxCheckRunner.ets', runner.replace('IMAPTestRunner','InboxCheckRunner').replace('../test/IMAP.test','../test/InboxCheck.test'))
+write('entry/src/ohosTest/ets/testrunner/MessagePreviewRunner.ets', runner.replace('IMAPTestRunner','MessagePreviewRunner').replace('../test/IMAP.test','../test/MessagePreview.test'))
+write('entry/src/ohosTest/ets/testrunner/InboxWatchRunner.ets', runner.replace('IMAPTestRunner','InboxWatchRunner').replace('../test/IMAP.test','../test/InboxWatch.test'))
+write('entry/src/ohosTest/ets/test/CombinedMail.test.ets', "import smtp from './SMTP.test';\nimport ui from './MailFeatures.test';\nimport reader from './ReaderCore.test';\nexport default function tests(): void { smtp(); reader(); ui(); }\n")
+write('entry/src/ohosTest/ets/testrunner/CombinedMailRunner.ets', runner.replace('IMAPTestRunner','CombinedMailRunner').replace('../test/IMAP.test','../test/CombinedMail.test'))
+copy('port/swift-jmap/ReaderCore.test.ets','entry/src/ohosTest/ets/test/ReaderCore.test.ets')
+copy('port/swift-smtp/SMTP.test.ets','entry/src/ohosTest/ets/test/SMTP.test.ets')
+copy('port/swift-smtp/SenderIdentity.test.ets','entry/src/ohosTest/ets/test/SenderIdentity.test.ets')
+write('entry/src/ohosTest/ets/testrunner/SenderIdentityRunner.ets', runner.replace('IMAPTestRunner','SenderIdentityRunner').replace('../test/IMAP.test','../test/SenderIdentity.test'))
+copy('port/swift-smtp/SentCopy.test.ets','entry/src/ohosTest/ets/test/SentCopy.test.ets')
+write('entry/src/ohosTest/ets/testrunner/SentCopyRunner.ets', runner.replace('IMAPTestRunner','SentCopyRunner').replace('../test/IMAP.test','../test/SentCopy.test'))
+copy('port/mail-corpus/Corpus.test.ets','entry/src/ohosTest/ets/test/Corpus.test.ets')
+copy('port/mail-corpus/Attachments.test.ets','entry/src/ohosTest/ets/test/Attachments.test.ets')
+copy('port/mail-corpus/Layout.test.ets','entry/src/ohosTest/ets/test/Layout.test.ets')
+write('entry/src/ohosTest/ets/testrunner/CorpusRunner.ets', runner.replace('IMAPTestRunner','CorpusRunner').replace('../test/IMAP.test','../test/Corpus.test'))
+write('entry/src/ohosTest/ets/testrunner/AttachmentsRunner.ets', runner.replace('IMAPTestRunner','AttachmentsRunner').replace('../test/IMAP.test','../test/Attachments.test'))
+write('entry/src/ohosTest/ets/testrunner/LayoutRunner.ets', runner.replace('IMAPTestRunner','LayoutRunner').replace('../test/IMAP.test','../test/Layout.test'))
+copy('port/swift-autoconfiguration/Discovery.test.ets','entry/src/ohosTest/ets/test/Discovery.test.ets')
+copy('port/swift-autoconfiguration/BrowserOAuth.test.ets','entry/src/ohosTest/ets/test/BrowserOAuth.test.ets')
+copy('port/swift-autoconfiguration/LoopbackOAuth.test.ets','entry/src/ohosTest/ets/test/LoopbackOAuth.test.ets')
+copy('port/swift-autoconfiguration/OAuthStorage.test.ets','entry/src/ohosTest/ets/test/OAuthStorage.test.ets')
+copy('port/swift-autoconfiguration/OAuthAccount.test.ets','entry/src/ohosTest/ets/test/OAuthAccount.test.ets')
+write('entry/src/ohosTest/ets/test/CombinedOAuthStorage.test.ets', "import storage from './OAuthStorage.test';\nimport accounts from './OAuthAccount.test';\nexport default function tests(): void { storage(); accounts(); }\n")
+write('entry/src/ohosTest/ets/testrunner/OAuthStorageRunner.ets', runner.replace('IMAPTestRunner','OAuthStorageRunner').replace('../test/IMAP.test','../test/CombinedOAuthStorage.test'))
+write('entry/src/ohosTest/ets/test/CombinedOAuth.test.ets', "import bridge from './BrowserOAuth.test';\nimport loopback from './LoopbackOAuth.test';\nexport default function tests(): void { bridge(); loopback(); }\n")
+write('entry/src/ohosTest/ets/testrunner/BrowserOAuthRunner.ets', runner.replace('IMAPTestRunner','BrowserOAuthRunner').replace('../test/IMAP.test','../test/CombinedOAuth.test'))
+copy('port/swift-autoconfiguration/DiscoveryFixture.ets','entry/src/ohosTest/ets/pages/DiscoveryFixture.ets')
+write('entry/src/ohosTest/ets/testrunner/DiscoveryRunner.ets', runner.replace('IMAPTestRunner','DiscoveryRunner').replace('../test/IMAP.test','../test/Discovery.test'))
+copy('port/swift-smtp/MailFeatures.test.ets','entry/src/ohosTest/ets/test/MailFeatures.test.ets')
+copy('port/swift-smtp/MailFeaturesFixture.ets','entry/src/ohosTest/ets/pages/MailFeaturesFixture.ets')
+copy('port/swift-smtp/HtmlConsentFixture.ets','entry/src/ohosTest/ets/pages/HtmlConsentFixture.ets')
+copy('port/swift-smtp/HtmlThemeFixture.ets','entry/src/ohosTest/ets/pages/HtmlThemeFixture.ets')
+copy('port/swift-smtp/HtmlTheme.test.ets','entry/src/ohosTest/ets/test/HtmlTheme.test.ets')
+copy('port/swift-smtp/HtmlImageSizing.test.ets','entry/src/ohosTest/ets/test/HtmlImageSizing.test.ets')
+copy('port/swift-smtp/HtmlImageSizingRunner.ets','entry/src/ohosTest/ets/testrunner/HtmlImageSizingRunner.ets')
+copy('port/swift-smtp/HtmlLink.test.ets','entry/src/ohosTest/ets/test/HtmlLink.test.ets')
+copy('port/swift-smtp/HtmlLinkRunner.ets','entry/src/ohosTest/ets/testrunner/HtmlLinkRunner.ets')
+copy('port/swift-smtp/HtmlScrollPower.test.ets','entry/src/ohosTest/ets/test/HtmlScrollPower.test.ets')
+copy('port/swift-smtp/HtmlScrollPowerRunner.ets','entry/src/ohosTest/ets/testrunner/HtmlScrollPowerRunner.ets')
+copy('port/swift-smtp/HtmlPictureScroll.test.ets','entry/src/ohosTest/ets/test/HtmlPictureScroll.test.ets')
+copy('port/swift-smtp/HtmlPictureScrollRunner.ets','entry/src/ohosTest/ets/testrunner/HtmlPictureScrollRunner.ets')
+copy('port/swift-smtp/PictureRefresh.test.ets','entry/src/ohosTest/ets/test/PictureRefresh.test.ets')
+copy('port/swift-smtp/PictureRefreshRunner.ets','entry/src/ohosTest/ets/testrunner/PictureRefreshRunner.ets')
+copy('port/swift-smtp/StaticPicture.test.ets','entry/src/ohosTest/ets/test/StaticPicture.test.ets')
+copy('port/swift-smtp/StaticPictureRunner.ets','entry/src/ohosTest/ets/testrunner/StaticPictureRunner.ets')
+copy('port/swift-imap/InboxIdle.test.ets','entry/src/ohosTest/ets/test/InboxIdle.test.ets')
+copy('port/swift-imap/InboxIdleRunner.ets','entry/src/ohosTest/ets/testrunner/InboxIdleRunner.ets')
+copy('port/swift-imap/SyncSession.test.ets','entry/src/ohosTest/ets/test/SyncSession.test.ets')
+copy('port/swift-imap/SyncSessionRunner.ets','entry/src/ohosTest/ets/testrunner/SyncSessionRunner.ets')
+copy('port/swift-smtp/PictureTransportFixture.ets','entry/src/main/ets/support/PictureTransportFixture.ets')
+copy('port/swift-smtp/PictureTransport.test.ets','entry/src/ohosTest/ets/test/PictureTransport.test.ets')
+copy('port/swift-smtp/PictureTransportRunner.ets','entry/src/ohosTest/ets/testrunner/PictureTransportRunner.ets')
+copy('port/swift-smtp/picture-refresh.png','entry/src/main/resources/rawfile/picture-transport.png')
+for extension in ['jpeg','gif','webp']:
+    copy('port/swift-smtp/picture-transport.'+extension,'entry/src/main/resources/rawfile/picture-transport.'+extension)
+write('entry/src/ohosTest/ets/testrunner/HtmlThemeRunner.ets', runner.replace('IMAPTestRunner','HtmlThemeRunner').replace('../test/IMAP.test','../test/HtmlTheme.test'))
+write('entry/src/ohosTest/ets/testrunner/SMTPTestRunner.ets', runner.replace('IMAPTestRunner','SMTPTestRunner').replace('../test/IMAP.test','../test/SMTP.test'))
+write('entry/src/ohosTest/ets/testrunner/MailFeaturesRunner.ets', runner.replace('IMAPTestRunner','MailFeaturesRunner').replace('../test/IMAP.test','../test/MailFeatures.test'))
+copy('port/swift-imap/StorageReview.test.ets','entry/src/ohosTest/ets/test/StorageReview.test.ets')
+copy('port/swift-imap/StorageReviewRunner.ets','entry/src/ohosTest/ets/testrunner/StorageReviewRunner.ets')
+copy('port/swift-imap/IMAP.test.ets','entry/src/ohosTest/ets/test/IMAP.test.ets')
+copy('port/swift-imap/OAuthImap.test.ets','entry/src/ohosTest/ets/test/OAuthImap.test.ets')
+copy('port/swift-smtp/OAuthSmtp.test.ets','entry/src/ohosTest/ets/test/OAuthSmtp.test.ets')
+write('entry/src/ohosTest/ets/test/MailOAuth.test.ets', "import imap from './OAuthImap.test';\nimport smtp from './OAuthSmtp.test';\nexport default function tests(): void { imap(); smtp(); }\n")
+write('entry/src/ohosTest/ets/testrunner/MailOAuthRunner.ets', runner.replace('IMAPTestRunner','MailOAuthRunner').replace('../test/IMAP.test','../test/MailOAuth.test'))
+write('entry/src/ohosTest/ets/testrunner/OAuthImapRunner.ets', runner.replace('IMAPTestRunner','OAuthImapRunner').replace('../test/IMAP.test','../test/OAuthImap.test'))
+copy('port/swift-imap/napi_imap.cpp','entry/src/main/cpp/napi_imap.cpp')
+# Clear only the generated test-app library directory, including the earlier
+# standalone diagnostic. Both protocols must resolve through the shipping core.
+libraries=app/f'entry/libs/{abi}'
+if libraries.exists(): shutil.rmtree(libraries)
+for p in (production/f'entry/libs/{abi}').iterdir():
+    if '.so' in p.name: copy(str(p.relative_to(root)), f'entry/libs/{abi}/'+p.name)
+copy(f'.tools/swift-probe/native-imap{suffix}/libIMAPProbe.so',f'entry/libs/{abi}/libIMAPProbe.so')
+write('entry/src/main/cpp/CMakeLists.txt','''cmake_minimum_required(VERSION 3.5.0)
+project(imap_test)
+set(CMAKE_CXX_STANDARD 17)
+add_library(IMAPProbe SHARED IMPORTED)
+set_target_properties(IMAPProbe PROPERTIES IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/../../../libs/${OHOS_ARCH}/libIMAPProbe.so")
+add_library(imaptest SHARED napi_imap.cpp)
+target_link_libraries(imaptest PUBLIC IMAPProbe libace_napi.z.so libhilog_ndk.z.so)
+target_link_options(imaptest PRIVATE "-Wl,--no-undefined")
+add_library(ThunderbirdCore SHARED IMPORTED)
+set_target_properties(ThunderbirdCore PROPERTIES IMPORTED_LOCATION "${CMAKE_CURRENT_SOURCE_DIR}/../../../libs/${OHOS_ARCH}/libThunderbirdCore.so")
+add_library(thunderbird SHARED napi_thunderbird.cpp)
+target_link_libraries(thunderbird PUBLIC ThunderbirdCore libace_napi.z.so)
+target_link_options(thunderbird PRIVATE "-Wl,--no-undefined")
+''')
+print('Prepared IMAP test app:', app)
+
+copy('port/swift-imap/MailboxLoading.test.ets','entry/src/ohosTest/ets/test/MailboxLoading.test.ets')
+write('entry/src/ohosTest/ets/testrunner/MailboxLoadingRunner.ets', runner.replace('IMAPTestRunner','MailboxLoadingRunner').replace('../test/IMAP.test','../test/MailboxLoading.test'))
+copy('port/swift-imap/Encoding.test.ets','entry/src/ohosTest/ets/test/Encoding.test.ets')
+write('entry/src/ohosTest/ets/testrunner/EncodingRunner.ets', runner.replace('IMAPTestRunner','EncodingRunner').replace('../test/IMAP.test','../test/Encoding.test'))

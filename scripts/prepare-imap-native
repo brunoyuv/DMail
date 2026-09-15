@@ -1,0 +1,41 @@
+#!/usr/bin/env python3
+"""Stage the original client with the actual HarmonyOS logging adapter."""
+from pathlib import Path
+import shutil,subprocess,json,hashlib
+root=Path(__file__).resolve().parent.parent
+subprocess.run([str(root/'scripts/prepare-imap-host')],check=True)
+subprocess.run([str(root/'scripts/prepare-imap-dependencies'),'--native'],check=True)
+package=root/'.tools/swift-probe/native-imap/package';package.mkdir(parents=True,exist_ok=True)
+for name in ['IMAP','SMTP','MIME','EmailAddress']:
+    shutil.copytree(root/'.tools/swift-probe/host-imap/package/Sources'/name,package/'Sources'/name,dirs_exist_ok=True)
+logging=package/'Sources/HarmonyLogging';logging.mkdir(exist_ok=True)
+# Remove the previous host-only probe sink, if present.
+(logging/'Logger.swift').unlink(missing_ok=True)
+shutil.copy2(root/'port/swift-platform/HarmonyLogging.swift',logging/'HarmonyLogging.swift')
+shutil.copytree(root/'port/swift-platform/CHarmonyLogging',package/'Sources/CHarmonyLogging',dirs_exist_ok=True)
+s=(root/'port/swift-imap/Package.swift').read_text().replace('imap-dependencies/','imap-native-dependencies/')
+s=s.replace('.target(name: "HarmonyLogging"),', '.target(name: "HarmonyLogging", dependencies: ["CHarmonyLogging"]),\n        .target(name: "CHarmonyLogging", publicHeadersPath: "."),')
+s=s.replace('        .testTarget(name: "IMAPTests", dependencies: ["IMAP"])','')
+s=s.replace('        .testTarget(name: "SMTPTests", dependencies: ["SMTP", .product(name: "NIO", package: "swift-nio")]),','')
+s=s.replace('    ])', '        .target(name: "IMAPProbe", dependencies: ["IMAP", "ImapAccountCore", "MIME", .product(name: "NIOSSL", package: "swift-nio-ssl")]),\n    ])')
+s=s.replace('    ])', '''        .target(name: "CHarmonyIMAPTrust", publicHeadersPath: "."),
+        .target(name: "ImapAccountCore", dependencies: ["SMTP", "IMAP", "MIME", "EmailAddress", "CHarmonyIMAPTrust",
+            .product(name: "NIO", package: "swift-nio"), .product(name: "NIOSSL", package: "swift-nio-ssl")]),
+    ])''')
+account=package/'Sources/ImapAccountCore';account.mkdir(exist_ok=True)
+for name in ['ImapModels.swift','ImapTrust.swift','ImapAccountCore.swift','SmtpAccountCore.swift']:
+    shutil.copy2(root/'port/swift-imap'/name,account/name)
+manifest=json.loads((root/'port/swift-accountbody/upstream-files.json').read_text())
+for relative,expected in manifest['files'].items():
+    source=root/'upstream/thunderbird-ios'/relative
+    assert hashlib.sha256(source.read_bytes()).hexdigest()==expected,relative
+    shutil.copy2(source,account/source.name)
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)],input=(root/'port/swift-accountbody/body-adapter.patch').read_text(),text=True,check=True)
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)],input=(root/'port/swift-accountbody/inline-images.patch').read_text(),text=True,check=True)
+shutil.copy2(root/'port/swift-accountbody/InlineImages.swift',account/'InlineImages.swift')
+shutil.copytree(root/'port/swift-imap/CHarmonyIMAPTrust',package/'Sources/CHarmonyIMAPTrust',dirs_exist_ok=True)
+probe=package/'Sources/IMAPProbe';probe.mkdir(exist_ok=True)
+shutil.copy2(root/'port/swift-imap/IMAPProbe.swift',probe/'IMAPProbe.swift')
+(package/'Package.swift').write_text(s)
+shutil.copy2(root/'port/swift-imap/Package.resolved',package/'Package.resolved')
+print(package)

@@ -1,0 +1,110 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+NODE="$ROOT/.tools/runtime/node_modules/node/bin/node"
+if [[ "${1:-device}" == build ]]; then
+  exec "$ROOT/scripts/test-native-app" build
+fi
+[[ "${1:-device}" == device ]] || { echo 'Usage: scripts/test-device [build|device]' >&2; exit 2; }
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" != 1 ]]; then
+  exec "$ROOT/scripts/with-test-emulator" "$0" device
+fi
+DEVICE=127.0.0.1:5555
+
+# Run only prepared historical prototype and account UI tests. Build separately
+# while the emulator is stopped. The wrapper always stops it on exit.
+"$HDC" -t "$DEVICE" shell echo thunderbird-device-test-ready | grep -q thunderbird-device-test-ready
+if "$HDC" fport ls | grep -Eq 'tcp:955[56] '; then
+  echo 'Test ports 9555/9556 are already forwarded. Remove those forwards before testing.' >&2
+  exit 1
+fi
+
+TEST_TMP="$(mktemp -d "$ROOT/.tools/jmap-device.XXXXXX")"
+FIXTURE_PID=''
+FORWARD_HTTP=false
+FORWARD_TLS=false
+UITEST_PREVIOUS="$($HDC -t "$DEVICE" shell param get persist.ace.testmode.enabled | tr -d '\r\n')"
+if [[ "$UITEST_PREVIOUS" != 1 ]]; then UITEST_PREVIOUS=0; fi
+UITEST_CHANGED=false
+cleanup() {
+  "$HDC" -t "$DEVICE" shell hilog -x > .tools/jmap-device-hilog.log 2>&1 || true
+  if "$UITEST_CHANGED"; then "$HDC" -t "$DEVICE" shell param set persist.ace.testmode.enabled "$UITEST_PREVIOUS" >/dev/null 2>&1 || true; fi
+  if "$FORWARD_HTTP"; then "$HDC" -t "$DEVICE" fport rm tcp:9555 tcp:9555 >/dev/null 2>&1 || true; fi
+  if "$FORWARD_TLS"; then "$HDC" -t "$DEVICE" fport rm tcp:9556 tcp:9556 >/dev/null 2>&1 || true; fi
+  if [[ -n "$FIXTURE_PID" ]]; then kill "$FIXTURE_PID" 2>/dev/null || true; wait "$FIXTURE_PID" 2>/dev/null || true; fi
+  rm -f "$TEST_TMP/key.pem" "$TEST_TMP/cert.pem"
+  rmdir "$TEST_TMP" 2>/dev/null || true
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+
+openssl req -x509 -newkey rsa:2048 -nodes -keyout "$TEST_TMP/key.pem" -out "$TEST_TMP/cert.pem" \
+  -days 1 -subj /CN=localhost -addext subjectAltName=IP:127.0.0.1 >/dev/null 2>&1
+"$NODE" tests/jmap-fixture.cjs "$TEST_TMP/key.pem" "$TEST_TMP/cert.pem" > .tools/jmap-fixture.log 2>&1 &
+FIXTURE_PID=$!
+READY=false
+for _ in {1..50}; do
+  kill -0 "$FIXTURE_PID" 2>/dev/null || { cat .tools/jmap-fixture.log >&2; exit 1; }
+  if curl --fail --silent http://127.0.0.1:9555/health >/dev/null; then READY=true; break; fi
+  sleep 0.2
+done
+"$READY" || { echo 'Local fixture did not start.' >&2; exit 1; }
+kill -0 "$FIXTURE_PID"
+"$HDC" -t "$DEVICE" rport tcp:9555 tcp:9555 | grep -q 'Forwardport result:OK'
+FORWARD_HTTP=true
+"$HDC" -t "$DEVICE" rport tcp:9556 tcp:9556 | grep -q 'Forwardport result:OK'
+FORWARD_TLS=true
+"$HDC" -t "$DEVICE" shell param set persist.ace.testmode.enabled 1
+UITEST_CHANGED=true
+"$HDC" -t "$DEVICE" install \
+  harmony/entry/build/default/outputs/default/entry-default-unsigned.hap \
+  harmony/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap
+"$HDC" -t "$DEVICE" shell rm -f /data/local/tmp/thunderbird-connected-fixture.png /data/local/tmp/thunderbird-archive-fixture.png /data/local/tmp/thunderbird-offline-fixture.png
+"$HDC" -t "$DEVICE" shell aa test -b org.thunderbird.harmony.dev -m entry_test \
+  -s unittest /ets/testrunner/OpenHarmonyTestRunner -s timeout 60000 \
+  | tee .tools/jmap-device-test.log
+curl --fail --silent http://127.0.0.1:9555/stats > .tools/jmap-fixture-stats.json
+grep -q 'Tests run: 15, Failure: 0, Error: 0, Pass: 15, Ignore: 0' .tools/jmap-device-test.log
+"$HDC" -t "$DEVICE" file recv /data/local/tmp/thunderbird-connected-fixture.png docs/screenshots/connected-message-fixture.png
+"$HDC" -t "$DEVICE" file recv /data/local/tmp/thunderbird-archive-fixture.png docs/screenshots/connected-archive-fixture.png
+"$HDC" -t "$DEVICE" file recv /data/local/tmp/thunderbird-offline-fixture.png docs/screenshots/connected-offline-fixture.png
+"$NODE" - <<'JS'
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const stats = JSON.parse(fs.readFileSync('.tools/jmap-fixture-stats.json', 'utf8'));
+assert.deepEqual(stats.apiCalls, ['Mailbox/get', 'Email/query', 'Email/get', 'Email/get',
+  'Mailbox/get', 'Email/set', 'Email/get', 'Mailbox/get', 'Email/set',
+  'Mailbox/get', 'Email/query', 'Email/get', 'Email/get',
+  ...Array(4).fill(['Email/set', 'Email/get', 'Mailbox/get']).flat(),
+  'Email/set', 'Email/get', 'Mailbox/get',
+  'Mailbox/get', 'Email/get', 'Email/set', 'Email/query', 'Mailbox/get', 'Email/get',
+  'Mailbox/get', 'Email/get', 'Email/set', 'Email/query', 'Email/get', 'Mailbox/get', 'Email/get',
+  'Email/get', 'Mailbox/get']);
+assert.deepEqual(stats.patches, [
+  { 'keywords/$seen': true }, { 'keywords/$flagged': true },
+  { 'keywords/$seen': null }, { 'keywords/$flagged': null }, { 'keywords/$flagged': true },
+  { 'mailboxIds/inbox': null, 'mailboxIds/archive': true }, { 'mailboxIds/inbox': true, 'mailboxIds/archive': null }
+]);
+assert.deepEqual(stats.mailboxIds, { label: true, inbox: true }, 'archive/undo must preserve the existing label');
+assert.equal(stats.lostWriteResponses, 1, 'lost acknowledgement must not replay the write');
+assert.equal(stats.draftCreates.length, 2, 'each explicit draft attempt must create only once');
+assert.equal(stats.lostDraftResponses, 1);
+for (const draft of stats.draftCreates) {
+  assert.deepEqual(draft.mailboxIds, { drafts: true });
+  assert.deepEqual(draft.keywords, { $draft: true, $seen: true });
+  assert.equal(draft.subject, 'Native draft 鸿蒙 📬');
+  assert.equal(draft.bodyValues.body.value, 'Saved draft 鸿蒙 📬\nSecond line');
+  assert.deepEqual(draft.cc, [{ name: '', email: 'cc@example.com' }]);
+  assert.deepEqual(draft.bcc, [{ name: '', email: 'bcc@example.com' }]);
+  assert.deepEqual(draft.inReplyTo, ['parent@example.com']);
+  assert.deepEqual(draft.references, ['root@example.com', 'parent@example.com']);
+}
+assert.ok(!stats.apiCalls.some(method => method.startsWith('EmailSubmission/')), 'draft creation must not submit mail');
+assert.ok(stats.offlineReads >= 3, 'reopened account, list and reader must encounter the unavailable server');
+assert.equal(stats.offlineApiRequests, 0, 'cached screens must not attempt API writes while discovery is unavailable');
+assert.equal(stats.redirectFollowed, 0);
+assert.ok(stats.tlsRejected >= 1, 'TLS handshake must reach the fixture and be rejected');
+process.stdout.write('PASS: native test results and fixture-side evidence agree.\n');
+JS

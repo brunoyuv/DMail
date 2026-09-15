@@ -1,0 +1,47 @@
+--- a/Tests/JMAPTests/EmailTests.swift
++++ b/Tests/JMAPTests/EmailTests.swift
+@@ -49,6 +49,8 @@
+         #expect(
+             emails[0].textBody == [
+                 Email.BodyPart(
++                    partID: "1",
++                    blobID: "Ge29e799be812d61f901ddc554ebe7745da2703cc",
+                     size: 34212,
+                     type: "text/html",
+                     charset: "UTF-8"
+@@ -57,6 +59,8 @@
+         #expect(
+             emails[0].htmlBody == [
+                 Email.BodyPart(
++                    partID: "1",
++                    blobID: "Ge29e799be812d61f901ddc554ebe7745da2703cc",
+                     size: 34212,
+                     type: "text/html",
+                     charset: "UTF-8"
+@@ -65,6 +69,8 @@
+         #expect(
+             emails[0].attachments == [
+                 Email.BodyPart(
++                    partID: "1",
++                    blobID: "Gd1d973a81058fbd90d16918d75a941fa1d9c262f",
+                     size: 192428,
+                     name: "test-invoice.zip",
+                     type: "application/zip",
+@@ -116,6 +122,8 @@
+         #expect(
+             emails[1].textBody == [
+                 Email.BodyPart(
++                    partID: "1",
++                    blobID: "G961fff2a35fd69ad74313cfdb1883769d38857e7",
+                     size: 144,
+                     type: "text/plain",
+                     charset: "UTF-8"
+@@ -124,6 +132,8 @@
+         #expect(
+             emails[1].htmlBody == [
+                 Email.BodyPart(
++                    partID: "2",
++                    blobID: "G6076f35db56ef3522d50ac3140e75e5ba5bc9b84",
+                     size: 332,
+                     type: "text/html",
+                     charset: "UTF-8"

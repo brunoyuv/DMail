@@ -1,0 +1,8 @@
+{
+  "revision": "61c78d9ebe39ac5b61f31fce371bdfe8c001f7bf",
+  "files": {
+    "Core/Sources/Account/EmailBody.swift": "f2a351b8d63461d9da0ec2a176bddc37d7123f5c2d61291d2d0e1512574d81d4",
+    "Core/Sources/Account/EmailAttachment.swift": "b9587daf91aee5bc066b0117cbb16477d518483e0ce95772154289633894f6ef",
+    "Core/Sources/Account/String.swift": "1999e260ad6bb85c9df7a784f65f8cba1b6cddf796c1a1fda88c0e5f0c8dfd45"
+  }
+}

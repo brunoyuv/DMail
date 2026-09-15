@@ -1,0 +1,317 @@
+{
+  "version": "0.1.4",
+  "versionCode": 100004,
+  "hostTests": 120,
+  "swiftFocusedTests": 7,
+  "sentNative": {
+    "tests": 6,
+    "syntheticSmtpSubmissions": 8,
+    "sentMetadataConnections": 10,
+    "violations": [],
+    "target": "MatePad MRO-W00 aarch64"
+  },
+  "htmlTheme": {
+    "tests": 1,
+    "scope": "Isolated synthetic reader/reply and forward HTML, live app-only light/dark change, expanded quotes retained, original inline picture colors preserved",
+    "screenshots": {
+      "reader-light": {
+        "brightFraction": 0.9779,
+        "originalColorPixels": [
+          21708,
+          21546,
+          21546
+        ],
+        "sha256": "b8119df7350daf318c18fcb35aafa506f6309bf1751f1004062d6b1af5e35cfa"
+      },
+      "reader-dark": {
+        "brightFraction": 0.009,
+        "originalColorPixels": [
+          21708,
+          21546,
+          21546
+        ],
+        "sha256": "07c7f4a93a313d3f512138486464604e867e55094d69ada57625763366660cb0"
+      },
+      "quotes-dark": {
+        "brightFraction": 0.009,
+        "originalColorPixels": [
+          21708,
+          21546,
+          21546
+        ],
+        "sha256": "33f2234b82e15a705066bea2c3f0ef37dfad8c62659b91fb92e185e67cd5ede3"
+      },
+      "quotes-light": {
+        "brightFraction": 0.975,
+        "originalColorPixels": [
+          21708,
+          21546,
+          21546
+        ],
+        "sha256": "2778710552c3749fcff3a4cbfdc62dc585c6edb40b41c2598c3b7ed932ac2644"
+      },
+      "forward-light": {
+        "brightFraction": 0.9727,
+        "originalColorPixels": [
+          21708,
+          21546,
+          21546
+        ],
+        "sha256": "9a635f8e8986df063de4d8afd484e9e603f309b6ad2da455a157c5d5e1e37584"
+      },
+      "forward-dark": {
+        "brightFraction": 0.0112,
+        "originalColorPixels": [
+          21708,
+          21546,
+          21546
+        ],
+        "sha256": "c57e9db83b4955519b7d0be02e9a3d84a5230de6ac7add2f2863cb7f63947ddb"
+      }
+    },
+    "hostFixtureModuleIssue": "Resolved by rendering shipping UI in isolated main ability; native numeric colors asserted in light and dark."
+  },
+  "previewLayout": {
+    "tests": 1,
+    "scope": "Native inbox title and 44 vp actions on one row, retained tablet inbox beside HTML reader, composer, both app-window orientations, synthetic encrypted cache only with zero service calls",
+    "screenshots": {
+      "landscape-inbox": {
+        "name": "landscape-inbox",
+        "width": 2800,
+        "height": 1840,
+        "density": 2.25,
+        "sha256": "b6b0af4af45b9e8584277e81de1efa12269cae4560f76633df44a380f8048483"
+      },
+      "landscape-reader": {
+        "name": "landscape-reader",
+        "width": 2800,
+        "height": 1840,
+        "density": 2.25,
+        "sha256": "7f2ae537abb2d96990e5e33622b6ccb8f5df0de8db40d04e4ddc769d961311c9"
+      },
+      "landscape-composer": {
+        "name": "landscape-composer",
+        "width": 2800,
+        "height": 1840,
+        "density": 2.25,
+        "sha256": "25226a6f198bb66f90fe97861c8c01008f543afba2954f18a0856fd4b6a272a9"
+      },
+      "portrait-inbox": {
+        "name": "portrait-inbox",
+        "width": 1840,
+        "height": 2800,
+        "density": 2.25,
+        "sha256": "01d7480f5d7d67187721ecadf468db7f2c2c6a7f1bbccd155f1eff6e8bab04a7"
+      },
+      "portrait-reader": {
+        "name": "portrait-reader",
+        "width": 1840,
+        "height": 2800,
+        "density": 2.25,
+        "sha256": "322ff5f97dbc7ddd03ff1b8ba908a5b4852c11a0c505c7716396a93baaccffcf"
+      },
+      "portrait-composer": {
+        "name": "portrait-composer",
+        "width": 1840,
+        "height": 2800,
+        "density": 2.25,
+        "sha256": "8e25156fb947157582484d77d7d0e29ce25a7ec00defab917e5b517cc6afa289"
+      }
+    },
+    "titleBounds": [
+      {
+        "orientation": "landscape",
+        "density": 2.25,
+        "title": {
+          "bottom": 278,
+          "displayId": 0,
+          "left": 45,
+          "right": 765,
+          "top": 185
+        },
+        "compose": {
+          "bottom": 281,
+          "displayId": 0,
+          "left": 801,
+          "right": 900,
+          "top": 182
+        },
+        "mailboxes": {
+          "bottom": 281,
+          "displayId": 0,
+          "left": 936,
+          "right": 1035,
+          "top": 182
+        }
+      },
+      {
+        "orientation": "portrait",
+        "density": 2.25,
+        "title": {
+          "bottom": 278,
+          "displayId": 0,
+          "left": 45,
+          "right": 421,
+          "top": 185
+        },
+        "compose": {
+          "bottom": 281,
+          "displayId": 0,
+          "left": 457,
+          "right": 556,
+          "top": 182
+        },
+        "mailboxes": {
+          "bottom": 281,
+          "displayId": 0,
+          "left": 592,
+          "right": 691,
+          "top": 182
+        }
+      }
+    ],
+    "splitBounds": [
+      {
+        "orientation": "landscape",
+        "density": 2.25,
+        "inbox": {
+          "bottom": 1778,
+          "displayId": 0,
+          "left": 0,
+          "right": 1080,
+          "top": 431
+        },
+        "reader": {
+          "bottom": 1778,
+          "displayId": 0,
+          "left": 1081,
+          "right": 2800,
+          "top": 263
+        }
+      },
+      {
+        "orientation": "portrait",
+        "density": 2.25,
+        "inbox": {
+          "bottom": 2738,
+          "displayId": 0,
+          "left": 0,
+          "right": 736,
+          "top": 431
+        },
+        "reader": {
+          "bottom": 2738,
+          "displayId": 0,
+          "left": 737,
+          "right": 1840,
+          "top": 263
+        }
+      }
+    ],
+    "rowBounds": [
+      {
+        "orientation": "landscape",
+        "density": 2.25,
+        "first": {
+          "bottom": 705,
+          "displayId": 0,
+          "left": 0,
+          "right": 1080,
+          "top": 431
+        },
+        "unread": {
+          "bottom": 935,
+          "displayId": 0,
+          "left": 0,
+          "right": 1080,
+          "top": 707
+        },
+        "marker": {
+          "bottom": 899,
+          "displayId": 0,
+          "left": 0,
+          "right": 7,
+          "top": 743
+        },
+        "blueFraction": 0.9853
+      },
+      {
+        "orientation": "portrait",
+        "density": 2.25,
+        "first": {
+          "bottom": 705,
+          "displayId": 0,
+          "left": 0,
+          "right": 736,
+          "top": 431
+        },
+        "unread": {
+          "bottom": 981,
+          "displayId": 0,
+          "left": 0,
+          "right": 736,
+          "top": 707
+        },
+        "marker": {
+          "bottom": 945,
+          "displayId": 0,
+          "left": 0,
+          "right": 7,
+          "top": 743
+        },
+        "blueFraction": 0.9887
+      }
+    ],
+    "regression": "Unread marker uses measured finite text-row height; final bounds and visible blue pixels pass in both orientations."
+  },
+  "productionArtifact": {
+    "target": "aarch64-unknown-linux-ohos",
+    "hap": ".tools/device-app/entry/build/default/outputs/default/entry-default-signed.hap",
+    "hapSha256": "9ea016777307098b88df890e166fbe3633aa3a5342310a1bde74225d5a0d5ed0",
+    "signedArtifact": true,
+    "deviceExecutionVerified": false,
+    "libraries": {
+      "libBlocksRuntime.so": "3db890900a413f4d996f0b476b3eeed8caf68cfbe35004c2a754763ad8b5ae95",
+      "libFoundation.so": "df1ed03407516f0c41f3276a92bb54a9d0562f05569c14e3dbd60780a1f355da",
+      "libFoundationEssentials.so": "88beb0c95755d135eabb0a26ca87afe9a57f2ce557b565c387bb262670e44fba",
+      "libFoundationInternationalization.so": "5c31544d1945cb999bcf02c676bf8fbdd78867cb46365397b6e2fdc5dacef62e",
+      "libFoundationNetworking.so": "03b7cf0dc7a05da8cba224e7658569ffce3f9deb58c52ac2edede0fb11cf0e3d",
+      "libFoundationXML.so": "9c780d208c79f0dccea52fc0154cae4d163810bdd9edfea7f21100abf63a7c8d",
+      "libThunderbirdCore.so": "1218e7f955c0683dc018e7d4849da4c30effd48136d79d4f235e9181f6da215b",
+      "lib_FoundationICU.so": "a7149cfe358dbea269b75d924f7acbef4445de377a8c0be624d1c5d816b2d2de",
+      "libc++_shared.so": "cf2ea887af365557f4ad258c62631a4f92f902b4b79203a2185dba10efe19e62",
+      "libcrypto.so.3": "583023538ebcbd8a04fad69dc214b6c15bacf0d431cdb879e26392250d64abbe",
+      "libcurl.so.4": "d99cbf616a79220f6f18151ae54fd630fbf58c6adfe8c3d05e54b3d61fb79931",
+      "libdispatch.so": "d7b7304ca6152b46c5ecbb746cf54da6532ea4d11fcdb5bee7ef536a3293f832",
+      "libfts.so": "b3109ef91e6119c47adf95a09ca5ddf6f54348f64f744508e852709a6ebe51da",
+      "libssl.so.3": "3b884cefcc97def6282a8e7374f8fcbc138b5faa6e9b2d5e6e9bff4d5508a531",
+      "libswiftCore.so": "cb78733db77fbc742633882f8f8d8dba585c41207dd05aced6a24ce4579374fd",
+      "libswiftDispatch.so": "53b2248f5e9e9fd14991c0fe70f418b2767701bbf48e104e05242e94803241a7",
+      "libswiftMusl.so": "d959b823a185661890e57a0bb0f2aad631631b9b16dc17825b9a149e5ee423a8",
+      "libswiftSwiftOnoneSupport.so": "422a7cf4c82a2c81d01489cd55cfa90346aeeae950bed1ff7508e94bdfcadb65",
+      "libswiftSynchronization.so": "6f503892b3014820e720930957511f02fb2af83add8644566ea86865db204682",
+      "libswift_Concurrency.so": "45d8f1dcec8b94644a376d18702fbae1d4be145cd1fb7005afa07fd8df489774",
+      "libswift_RegexParser.so": "ca398af367915111c6b0d4c44a01c594651cb2964267a9a23d50813a35996d70",
+      "libswift_StringProcessing.so": "7b60f54ac6181a3772e1b441d8293c857b9cf11dcb3deedb76f0cad18076c777",
+      "libthunderbird.so": "e7bf034a839db5d19a5780b3525671dbf3ac652faf9b7199c58cebcdd4a355a7",
+      "libxml2.so.16": "ed8f17eca668a93794659eb188aba48a68a245c39a5083cda4ccd2bb796b422c"
+    }
+  },
+  "productionLaunched": false,
+  "realMailAccessed": false,
+  "emulator": "stopped; not started this round",
+  "installation": {
+    "matepad": {
+      "device": "MatePad MRO-W00",
+      "target": "MATEPAD_SERIAL_REDACTED",
+      "versionCode": 100004,
+      "versionName": "0.1.4",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "9ea016777307098b88df890e166fbe3633aa3a5342310a1bde74225d5a0d5ed0"
+    },
+    "puraX": "Not connected; previous 0.1.3 remains installed."
+  },
+  "screenshotsVisuallyReviewed": true,
+  "syntheticAppRemoved": true
+}

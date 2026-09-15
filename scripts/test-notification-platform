@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+# One compact OS notification/scheduler gate, restricted to the isolated emulator app.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+[[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 && "${HDC_TARGET:-}" == 127.0.0.1:5555 ]]
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app"
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == x86_64 ]]
+for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+  [[ -f "$APP/entry/build/default/outputs/$hap" ]] || { echo 'Build both isolated notification test HAPs first.' >&2; exit 1; }
+done
+OUT="$ROOT/.tools/emulator-notification-platform"
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  find "$OUT" -maxdepth 1 -type f -exec mv -t "$PREVIOUS" {} +
+fi
+INSTALLED=false
+cleanup() {
+  local result=$?
+  trap - EXIT
+  # Preserve the fixture's failure capture before removing the isolated bundle.
+  if "$INSTALLED" && [[ "$result" != 0 ]]; then
+    run_hdc -t "$HDC_TARGET" file recv /data/local/tmp/notification-platform-failure.png "$OUT/failure.png" >/dev/null 2>&1 || true
+  fi
+  # Removing only this isolated bundle also clears its notification permission,
+  # synthetic data and any scheduled work left by an interrupted assertion.
+  if "$INSTALLED"; then run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true; fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+run_hdc -t "$HDC_TARGET" shell rm -f /data/local/tmp/notification-platform-failure.png
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+INSTALLED=true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+timeout --foreground --kill-after=5s 55s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/NotificationPlatformRunner \
+  -s timeout 50000 | tee "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"
+grep -q 'NOTIFICATION_PLATFORM_RESULT: unread dots, permission entry, composer-safe banner, OS permission, banner-capable slot, private alert, badge set-clear and persisted schedule passed; account remains off, zero mail service calls' "$OUT/test.log"
+python3 - "$OUT" <<'PY'
+from pathlib import Path
+import json,sys
+out=Path(sys.argv[1])
+(out/'result.json').write_text(json.dumps({'tests':1,'passed':1,
+    'scope':'Cached unread account/mailbox/header dots and mark-read/unread header updates; visible notification opt-in; foreground banner dismissal preserves composer; isolated OS notification permission, LEVEL_HIGH social slot, private alert/cancellation, launcher badge 1 then 0, persisted two-hour schedule removal; account stays off, zero mail service calls, no production notifications read',
+    'limits':'Badge getter verifies OS count even if launcher presentation is disabled; slot level verifies banner-capable delivery, not a captured banner or launcher image.'},indent=2)+'\n')
+print('PASS: native notification permission, banner-capable slot, private alert, badge set-clear and background schedule.')
+PY

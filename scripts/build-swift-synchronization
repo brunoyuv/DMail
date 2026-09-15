@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT/scripts/swift-target-env"
+cd "$ROOT"
+NATIVE="$ROOT/.tools/command-line-tools/sdk/default/openharmony/native"
+RUNTIME="$SWIFT_TARGET_SDK/lib/swift"
+SOURCE="$ROOT/.tools/swift-runtime-source/stdlib/public/Synchronization"
+mkdir -p .tools/swift-ohos-synchronization${SWIFT_BUILD_SUFFIX}
+for name in AtomicIntegers AtomicStorage; do
+  .tools/swift-runtime-source/utils/gyb --line-directive '' "$SOURCE/Atomics/$name.swift.gyb" \
+    -o ".tools/swift-ohos-synchronization${SWIFT_BUILD_SUFFIX}/$name.swift"
+done
+.tools/swift/usr/bin/swiftc -target ${SWIFT_TARGET} \
+  -sdk "$NATIVE/sysroot" -resource-dir "$RUNTIME" -I "$RUNTIME/musl/SwiftMusl" \
+  -module-cache-path "$ROOT/.tools/swift-probe/synchronization-cache${SWIFT_BUILD_SUFFIX}" \
+  @.tools/swift-ohos-runtime${SWIFT_BUILD_SUFFIX}/availability-macros.rsp \
+  -enable-builtin-module -enable-experimental-feature RawLayout \
+  -enable-experimental-feature StaticExclusiveOnly -enable-experimental-feature Extern \
+  -strict-memory-safety -parse-as-library -O -module-name Synchronization \
+  -module-link-name swiftSynchronization -emit-object -emit-module \
+  -emit-module-path .tools/swift-ohos-synchronization${SWIFT_BUILD_SUFFIX}/Synchronization.swiftmodule \
+  "$SOURCE"/Atomics/*.swift "$SOURCE/Cell.swift" \
+  "$SOURCE/Mutex/LinuxImpl.swift" "$SOURCE/Mutex/Mutex.swift" "$SOURCE/Mutex/SpinLoopHint.swift" \
+  .tools/swift-ohos-synchronization${SWIFT_BUILD_SUFFIX}/AtomicIntegers.swift \
+  .tools/swift-ohos-synchronization${SWIFT_BUILD_SUFFIX}/AtomicStorage.swift \
+  -whole-module-optimization -o .tools/swift-ohos-synchronization${SWIFT_BUILD_SUFFIX}/Synchronization.o
+"$NATIVE/llvm/bin/clang" -target ${SWIFT_CLANG_TARGET} --sysroot="$NATIVE/sysroot" \
+  -shared .tools/swift-ohos-synchronization${SWIFT_BUILD_SUFFIX}/Synchronization.o "$RUNTIME/musl/${SWIFT_CPU}/swiftrt.o" \
+  -L "$RUNTIME/musl/${SWIFT_CPU}" -lswiftCore -lswiftMusl -lswift_Concurrency \
+  -Wl,--no-undefined -Wl,-soname,libswiftSynchronization.so \
+  -o "$RUNTIME/musl/${SWIFT_CPU}/libswiftSynchronization.so"
+mkdir -p "$RUNTIME/musl/Synchronization.swiftmodule"
+cp .tools/swift-ohos-synchronization${SWIFT_BUILD_SUFFIX}/Synchronization.swiftmodule \
+  "$RUNTIME/musl/Synchronization.swiftmodule/${SWIFT_TARGET}.swiftmodule"

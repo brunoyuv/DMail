@@ -1,0 +1,17 @@
+{
+  "version": "0.1.18",
+  "versionCode": 100018,
+  "purpose": "Frozen installed renderer baseline for isolated synthetic picture scrolling comparisons; excluded from shipping source.",
+  "files": [
+    {
+      "path": "harmony/entry/src/main/ets/pages/HtmlMail.ets",
+      "fixture": "HtmlMail.ets",
+      "sha256": "794fd984bc350831f0b819742b387b72233f239e104dcdee100a2c3ff5e0a3ee"
+    },
+    {
+      "path": "harmony/entry/src/main/ets/mail/html/HtmlDocument.ts",
+      "fixture": "HtmlDocument.ts",
+      "sha256": "b855fefde2327cc9b6a0bd414de4a6603da6595f1d14ea9352edf75b879e499d"
+    }
+  ]
+}

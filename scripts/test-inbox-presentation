@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+# Native gestures touch only synthetic mail in the isolated emulator bundle.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+[[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 && "${HDC_TARGET:-}" == 127.0.0.1:5555 ]]
+case "${DMAIL_PRESENTATION_SCREEN:-}" in pura-main|matepad-landscape) ;; *) exit 2;; esac
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app"
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == x86_64 ]]
+for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+  [[ -f "$APP/entry/build/default/outputs/$hap" ]] || { echo 'Build both isolated presentation HAPs first.' >&2; exit 1; }
+done
+OUT="$ROOT/.tools/emulator-inbox-presentation-$DMAIL_PRESENTATION_SCREEN"
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  find "$OUT" -maxdepth 1 -type f -exec mv -t "$PREVIOUS" {} +
+fi
+INSTALLED=false
+cleanup() {
+  local result=$?
+  trap - EXIT
+  if "$INSTALLED"; then
+    for shot in pending after scrolled returned held-scrolled held-reader released-reader split; do
+      run_hdc -t "$HDC_TARGET" file recv "/data/local/tmp/inbox-presentation-$shot.png" "$OUT/$shot.png" >/dev/null 2>&1 || true
+    done
+    run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+for shot in pending after scrolled returned held-scrolled held-reader released-reader split; do
+  run_hdc -t "$HDC_TARGET" shell rm -f "/data/local/tmp/inbox-presentation-$shot.png"
+done
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+INSTALLED=true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+timeout --foreground --kill-after=5s 75s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/InboxPresentationRunner \
+  -s timeout 70000 | tee "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"
+grep -q 'INBOX_PRESENTATION_RESULT: held native refresh retains 80 rows without extra app spinners; search settles hidden away and visible at top; two synthetic Inbox pages; scrolling and cached reading work before release; late refresh preserves reader; no bodies or other mail requests' "$OUT/test.log"
+if [[ "$DMAIL_PRESENTATION_SCREEN" == matepad-landscape ]]; then
+  grep -q 'INBOX_PRESENTATION_STAGE: tablet side-by-side inbox and cached reader preserved' "$OUT/test.log"
+fi
+python3 - "$OUT" "$DMAIL_PRESENTATION_SCREEN" <<'PY'
+from pathlib import Path
+import json,sys
+out=Path(sys.argv[1])
+(out/'result.json').write_text(json.dumps({'tests':1,'passed':1,'screen':sys.argv[2],
+    'scope':'Two held synthetic Inbox pages during native pull-to-refresh; retained80rows, no extra app spinners, stable header geometry; search hidden away and56vp at top; scrolling and cached reader open while second page remains pending, late response preserves reader/cache; tablet splitreader when wide; no body, real mail or provider requests.',
+    'visualEvidence':'pending, after, scrolled, returned, held-scrolled, held-reader and released-reader screenshots; split screenshot on tablet. Native Refresh internal spinner node count is logged where exposed.'},indent=2)+'\n')
+print('PASS: native inbox refresh and settled search presentation.')
+PY

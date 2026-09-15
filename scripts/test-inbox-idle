@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+# Isolated native Inbox; transport is in-memory and cannot contact a mail server.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+[[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 && "${HDC_TARGET:-}" == 127.0.0.1:5555 ]]
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app"
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == x86_64 ]]
+grep -q 'InboxIdleTrace.recordQuery' "$APP/entry/src/main/ets/data/MailSyncStore.ets"
+grep -q 'InboxIdleTrace.recordScan' "$APP/entry/src/main/ets/mail/MailBodySync.ets"
+grep -q 'InboxIdleTrace.recordBatch' "$APP/entry/src/main/ets/data/PictureSnapshot.ets"
+grep -q 'InboxIdleTrace.recordInboxVisibility(visible)' "$APP/entry/src/main/ets/pages/ConnectedMail.ets"
+OUT="$ROOT/.tools/emulator-inbox-idle"
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  find "$OUT" -maxdepth 1 -type f -exec mv -t "$PREVIOUS" {} +
+fi
+INSTALLED=false
+cleanup() {
+  local result=$?
+  trap - EXIT
+  if "$INSTALLED"; then
+    run_hdc -t "$HDC_TARGET" shell aa force-stop org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+    run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+INSTALLED=true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+run_hdc -t "$HDC_TARGET" shell aa start -b org.thunderbird.harmony.imaptest -a EntryAbility
+timeout --foreground --kill-after=5s 110s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/InboxIdleRunner \
+  -s timeout 100000 | tee "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"
+grep -q '^INBOX_IDLE_RESULT: 16 bodies and immutable documents synced while Inbox remained visible;' "$OUT/test.log"
+grep -q '^INBOX_IDLE_NAVIGATION: Inbox hide/show callbacks fired on phone Navigation;' "$OUT/test.log"
+python3 - "$OUT" <<'PY'
+import json,re,sys
+from pathlib import Path
+out=Path(sys.argv[1]); log=(out/'test.log').read_text()
+phases={}
+for name,at,counts in re.findall(r'^INBOX_IDLE_PHASE: ([\w-]+) at=(\d+) counts=([\d,]+)$',log,re.M):
+    phases[name]={'at':int(at),'counts':list(map(int,counts.split(',')))}
+assert phases['settled-start']['counts']==phases['settled-end']['counts']
+assert phases['settled-end']['at']-phases['settled-start']['at']>=10000
+assert phases['settled-end']['counts'][1:5]==[16,0,16,16]
+assert phases['events-settled']['counts'][1:5]==[16,0,16,16]
+assert phases['navigation-hidden']['counts'][8]>phases['navigation-start']['counts'][8]
+assert phases['navigation-hidden']['counts'][3:5]==[16,17]
+assert phases['navigation-shown']['counts'][7]>phases['navigation-complete']['counts'][7]
+for name in ['navigation-complete','navigation-shown','navigation-reopened']:
+    assert phases[name]['counts'][1:5]==[17,0,17,17]
+assert all(p['counts'][6]==0 for p in phases.values())
+times=list(map(int,re.search(r'^INBOX_IDLE_TIMES: ([\d,]+)$',log,re.M).group(1).split(',')))
+assert len(times)==16 and all(b-a>=180 for a,b in zip(times,times[1:]))
+assert times[-1]-times[0]>=3000
+(out/'result.json').write_text(json.dumps({'tests':1,'phases':phases,'bodyRequestTimes':times,
+ 'counterOrder':['syncQueries','scans','pictureBatches','completedJobs','bodyCalls','pageCalls','violations','inboxShown','inboxHidden'],
+ 'nativeNavigation':{'syncedBodies':17,'actualInboxHideShow':True,'fixedPendingReader':True,'savedReopenWithoutDownloadOrScan':True},
+ 'scope':'Actual visible ConnectedMail and encrypted sync storage with an in-memory synthetic service. No CPU, energy or real-mail claim.'},indent=2)+'\n')
+print('PASS: 16 synthetic bodies reach idle; phone Navigation hides/shows Inbox and body 17 saves for local-only reopen.')
+PY

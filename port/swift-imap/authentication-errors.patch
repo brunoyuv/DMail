@@ -1,0 +1,24 @@
+--- a/Sources/IMAP/LoginCommand.swift
++++ b/Sources/IMAP/LoginCommand.swift
+@@ -12,9 +12,9 @@
+ 
+     // MARK: IMAPCommand
+     typealias Result = [Capability]
+-    typealias Handler = CapabilityHandler
++    typealias Handler = LoginHandler
+ 
+-    var name: String { "login \"\(username)\"" }
++    var name: String { "login" }
+ 
+     func tagged(_ tag: String) -> NIOIMAPCore.TaggedCommand {
+         TaggedCommand(tag: tag, command: .login(username: username, password: password))
+--- a/Sources/IMAP/IMAPClient.swift
++++ b/Sources/IMAP/IMAPClient.swift
+@@ -345,6 +345,7 @@
+             // A timed-out or failed exchange cannot be reused with late replies.
+             channel.close(promise: nil)
+             if Task.isCancelled { throw CancellationError() }
++            if let rejection = error as? AuthenticationFailure { throw rejection }
+             throw IMAPError.commandFailed(command.description)
+         }
+     }

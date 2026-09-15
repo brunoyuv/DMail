@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+# Prepared native discovery and account-form checks; emulator always stops.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+SCREEN="${1:-pura-main}"
+APP="$ROOT/.tools/imap-test-app"
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" != 1 ]]; then
+  for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+    [[ -f "$APP/entry/build/default/outputs/$hap" ]]
+  done
+  export EMULATOR_SCREEN="$SCREEN" EMULATOR_TEST_SECONDS=180
+  exec "$ROOT/scripts/with-test-emulator" "$0" "$SCREEN"
+fi
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+OUT="$ROOT/.tools/discovery-ui/$SCREEN"
+mkdir -p "$OUT"
+UITEST_PREVIOUS=''
+cleanup() {
+  local result=$?
+  trap - EXIT
+  "$HDC" -t 127.0.0.1:5555 shell hilog -x > "$OUT/hilog.txt" 2>&1 || true
+  "$HDC" -t 127.0.0.1:5555 shell uitest screenCap -p /data/local/tmp/discovery-final.png >/dev/null 2>&1 || true
+  for name in discovery-options discovery-applied discovery-final oauth-accounts; do
+    "$HDC" -t 127.0.0.1:5555 file recv "/data/local/tmp/$name.png" "$OUT/$name.png" >/dev/null 2>&1 || true
+  done
+  if [[ -n "$UITEST_PREVIOUS" ]]; then
+    "$HDC" -t 127.0.0.1:5555 shell param set persist.ace.testmode.enabled "$UITEST_PREVIOUS" >/dev/null 2>&1 || true
+  fi
+  "$HDC" -t 127.0.0.1:5555 uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+UITEST_PREVIOUS="$("$HDC" -t 127.0.0.1:5555 shell param get persist.ace.testmode.enabled | tr -d '\r\n')"
+[[ "$UITEST_PREVIOUS" == 1 ]] || UITEST_PREVIOUS=0
+"$HDC" -t 127.0.0.1:5555 shell param set persist.ace.testmode.enabled 0
+"$HDC" -t 127.0.0.1:5555 uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+"$HDC" -t 127.0.0.1:5555 install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+"$HDC" -t 127.0.0.1:5555 install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+"$HDC" -t 127.0.0.1:5555 shell rm -f /data/local/tmp/discovery-options.png /data/local/tmp/discovery-applied.png
+timeout --foreground --kill-after=5s 130s "$HDC" -t 127.0.0.1:5555 shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/DiscoveryRunner \
+  -s timeout 110000 | tee "$OUT/test.log"
+grep -q 'Tests run: 5, Failure: 0, Error: 0, Pass: 5, Ignore: 0' "$OUT/test.log"
+python3 - "$ROOT" "$OUT" <<'PY'
+from pathlib import Path
+import hashlib,json,sys,zipfile
+root,out=map(Path,sys.argv[1:])
+with zipfile.ZipFile(root/'.tools/imap-test-app/entry/build/default/outputs/default/entry-default-unsigned.hap') as hap:
+    core=hap.read('libs/x86_64/libThunderbirdCore.so')
+assert core==(root/'harmony/entry/libs/x86_64/libThunderbirdCore.so').read_bytes()
+(out/'result.json').write_text(json.dumps({'tests':5,'nativeCoreSHA256':hashlib.sha256(core).hexdigest()},indent=2)+'\n')
+PY

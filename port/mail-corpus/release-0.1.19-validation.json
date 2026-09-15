@@ -1,0 +1,345 @@
+{
+  "versionName": "0.1.19",
+  "versionCode": 100019,
+  "status": "Validated and installed in place on Pura X and MatePad; narrow investigation complete",
+  "privacy": {
+    "syntheticOnly": true,
+    "productionLaunched": false,
+    "realMailReadOrSent": false
+  },
+  "host": {
+    "javascriptTests": 469,
+    "javascriptFiles": 47,
+    "javascriptFailures": 0,
+    "pythonTests": 13,
+    "mimeSwiftTests": 103,
+    "mimeSwiftSuites": 24
+  },
+  "builds": {
+    "productionX86": true,
+    "productionArm": true,
+    "isolatedMainAndTests": true,
+    "swiftBothArchitecturesRebuilt": true,
+    "compileSdk": "26.0.0.105",
+    "targetApi": 22,
+    "minimumApi": 22,
+    "signedHapSha256": "dccc05d162643af37f3e2c1415bc72923443e453116c2339fb8c4f73c18d6b01"
+  },
+  "sourceParity": {
+    "shippingSourceFiles": 53,
+    "localizedResourcesEqual": true,
+    "linkCountersIsolatedOnly": true,
+    "coreSha256": {
+      "x86_64": "6a9fe2143f45fbb4f0497429a7e36d5579cd412ca9e89177da00042a39b33681",
+      "arm64-v8a": "c49bce38888f2ff0382b0d0a4a09d4afa28c49de9592b74fa2a1ac33be0cffdb"
+    }
+  },
+  "nativePictureCache": {
+    "tests": 1,
+    "passed": 1,
+    "scope": "Actual HtmlMail fitContent reader within Scroll; three PNG URLs served as application/octet-stream. One good image survives two missing-image failures and a held/coalesced retry without re-fetch. Both missing images then recover; all three retain image/png bytes, timestamps and consent. Retry and warning disappear, including after remount with all resources returning HTTP503. Exactly seven loopback requests, per URL counts 1/3/3; remount adds zero. Two non-content image endpoints always return HTTP503 but receive zero requests throughout initial load, retries and remount. Screenshots verify original colors throughout and recovered colors only after success.",
+    "nonContentRequests": 0,
+    "limits": "Synthetic main-HAP fixture and loopback only; no production accounts or external servers.",
+    "screenshots": {
+      "partial": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "recoveredColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "sha256": "c42e8d61c061630be9ac2b00f68950bb0cd5960ceca2c563bfbe73c95882152a"
+      },
+      "held": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "recoveredColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "sha256": "a9b873bbde2078a338688d9a0795063269adcce3cd2cb2534ef972ec119f3f87"
+      },
+      "failed-retry": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "recoveredColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "sha256": "c42e8d61c061630be9ac2b00f68950bb0cd5960ceca2c563bfbe73c95882152a"
+      },
+      "recovered": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "recoveredColorPixels": [
+          74501,
+          74134,
+          74501
+        ],
+        "sha256": "51b46d0702b567815c79ad0b1facddeed68b6517c9837491f583acde51a3056a"
+      },
+      "reopened": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "recoveredColorPixels": [
+          74501,
+          74134,
+          74501
+        ],
+        "sha256": "51b46d0702b567815c79ad0b1facddeed68b6517c9837491f583acde51a3056a"
+      }
+    }
+  },
+  "nativeLinks": {
+    "passed": true,
+    "injectedOpenerCalls": 1,
+    "localAnchorsPreserved": true,
+    "externalBrowserLaunched": false
+  },
+  "nativeLongReader": {
+    "rows": 1500,
+    "htmlUtf16Units": 233428,
+    "controllerLoads": 1,
+    "documentLoads": 1,
+    "drags": 5,
+    "durationMs": 12646,
+    "scrollCallbacks": 757,
+    "maximumOffsetVp": 1786.4710046070886,
+    "closeDelayIncludingDriverMs": 1021,
+    "reloadsDuringScrolling": 0,
+    "target": "bounded emulator"
+  },
+  "malformedHtml": {
+    "swiftPreview": {
+      "inputAngleBrackets": 20000,
+      "beforeMs": 6402.42,
+      "afterMs": 4.81,
+      "smallDifferentialCases": 1000
+    },
+    "arktsInboxPreview": [
+      {
+        "fragment": "<a ",
+        "repeats": 8000,
+        "units": 24000,
+        "before_ms": 90.02054100000001,
+        "after_ms": 1.4960740000000214
+      },
+      {
+        "fragment": "<a ",
+        "repeats": 20000,
+        "units": 60000,
+        "before_ms": 513.21198,
+        "after_ms": 1.7149329999999736
+      },
+      {
+        "fragment": "<head ",
+        "repeats": 8000,
+        "units": 48000,
+        "before_ms": 352.96904100000006,
+        "after_ms": 0.6659369999999853
+      },
+      {
+        "fragment": "<head ",
+        "repeats": 20000,
+        "units": 120000,
+        "before_ms": 2197.783087,
+        "after_ms": 1.5689440000001014
+      }
+    ],
+    "arktsReader": {
+      "date": "2026-09-14T17:19:49.921Z",
+      "syntheticCorpusFiles": [
+        "port/mail-corpus/store-newsletter.html",
+        "port/mail-corpus/store-workshop.html",
+        "port/mail-corpus/store-workshop-reply.html"
+      ],
+      "validDifferentialCases": 200,
+      "results": [
+        {
+          "token": "<a ",
+          "repeat": 1000,
+          "bytes": 3000,
+          "function": "prepareMailHtml",
+          "beforeMs": 9.723,
+          "afterMs": 0.409
+        },
+        {
+          "token": "<a ",
+          "repeat": 1000,
+          "bytes": 3000,
+          "function": "hasRemotePictures",
+          "beforeMs": 6.196,
+          "afterMs": 0.397
+        },
+        {
+          "token": "<a ",
+          "repeat": 2000,
+          "bytes": 6000,
+          "function": "prepareMailHtml",
+          "beforeMs": 37.828,
+          "afterMs": 0.451
+        },
+        {
+          "token": "<a ",
+          "repeat": 2000,
+          "bytes": 6000,
+          "function": "hasRemotePictures",
+          "beforeMs": 24.437,
+          "afterMs": 0.462
+        },
+        {
+          "token": "<a ",
+          "repeat": 4000,
+          "bytes": 12000,
+          "function": "prepareMailHtml",
+          "beforeMs": 148.74,
+          "afterMs": 0.579
+        },
+        {
+          "token": "<a ",
+          "repeat": 4000,
+          "bytes": 12000,
+          "function": "hasRemotePictures",
+          "beforeMs": 88.198,
+          "afterMs": 0.416
+        },
+        {
+          "token": "<a ",
+          "repeat": 8000,
+          "bytes": 24000,
+          "function": "prepareMailHtml",
+          "beforeMs": 538.119,
+          "afterMs": 0.804
+        },
+        {
+          "token": "<a ",
+          "repeat": 8000,
+          "bytes": 24000,
+          "function": "hasRemotePictures",
+          "beforeMs": 343.572,
+          "afterMs": 0.498
+        },
+        {
+          "token": "<a title=\"",
+          "repeat": 1000,
+          "bytes": 10000,
+          "function": "prepareMailHtml",
+          "beforeMs": 24.328,
+          "afterMs": 0.442
+        },
+        {
+          "token": "<a title=\"",
+          "repeat": 1000,
+          "bytes": 10000,
+          "function": "hasRemotePictures",
+          "beforeMs": 16.564,
+          "afterMs": 0.361
+        },
+        {
+          "token": "<a title=\"",
+          "repeat": 2000,
+          "bytes": 20000,
+          "function": "prepareMailHtml",
+          "beforeMs": 97.757,
+          "afterMs": 0.623
+        },
+        {
+          "token": "<a title=\"",
+          "repeat": 2000,
+          "bytes": 20000,
+          "function": "hasRemotePictures",
+          "beforeMs": 65.99,
+          "afterMs": 0.447
+        },
+        {
+          "token": "<a title=\"",
+          "repeat": 4000,
+          "bytes": 40000,
+          "function": "prepareMailHtml",
+          "beforeMs": 390.336,
+          "afterMs": 0.879
+        },
+        {
+          "token": "<a title=\"",
+          "repeat": 4000,
+          "bytes": 40000,
+          "function": "hasRemotePictures",
+          "beforeMs": 259.699,
+          "afterMs": 0.558
+        },
+        {
+          "token": "<a title=\"",
+          "repeat": 8000,
+          "bytes": 80000,
+          "function": "prepareMailHtml",
+          "beforeMs": ">750",
+          "afterMs": 1.46
+        },
+        {
+          "token": "<a title=\"",
+          "repeat": 8000,
+          "bytes": 80000,
+          "function": "hasRemotePictures",
+          "beforeMs": ">750",
+          "afterMs": 0.807
+        }
+      ]
+    },
+    "scope": "Actual helpers with synthetic host inputs; CPU cost only, not device energy or proof of the contents of the user email"
+  },
+  "pictureFailureMemo": {
+    "sequentialCallbacks": 10,
+    "beforeNetworkAttempts": 10,
+    "afterNetworkAttempts": 1,
+    "explicitRetryClearsMemo": true,
+    "savedBytesPreserved": true
+  },
+  "scrollingAndSdkComparisonRecord": "scroll-power-2026-09-15.json",
+  "emulatorStopped": true,
+  "isolatedMatePadTestRemoved": true,
+  "limitations": [
+    "The exact cause of the user email failure/heat and APS warning is unconfirmed; real mail was not retrieved.",
+    "SDK picture comparison stages predate the final malformed HTML parser fixes and retain the frozen benchmark core.",
+    "Charging current and listed process CPU are not app energy or a complete ArkWeb process inventory.",
+    "Duplicate body-read coalescing/cancellation and transport-enforced partial-fetch limits are recommendations, not new features in this update.",
+    "AppGallery not rebuilt."
+  ],
+  "installedDevices": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "versionCode": 100019,
+      "versionName": "0.1.19",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "dccc05d162643af37f3e2c1415bc72923443e453116c2339fb8c4f73c18d6b01"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "versionCode": 100019,
+      "versionName": "0.1.19",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "dccc05d162643af37f3e2c1415bc72923443e453116c2339fb8c4f73c18d6b01"
+    }
+  ]
+}

@@ -1,0 +1,63 @@
+{
+  "checksumProvenance": "Locally measured SHA-256 of official tagged archives",
+  "dependencies": [
+    {
+      "repository": "https://github.com/swiftlang/swift-foundation",
+      "tag": "swift-6.2.3-RELEASE",
+      "url": "https://github.com/swiftlang/swift-foundation/archive/refs/tags/swift-6.2.3-RELEASE.tar.gz",
+      "archive": "foundation-6.2.3.tar.gz",
+      "directory": "swift-foundation-source",
+      "sha256": "262d7e08febd334437fee1cdd4c5f7e6c44dbfbd2c2d148a3ddd6574921539da"
+    },
+    {
+      "repository": "https://github.com/swiftlang/swift-corelibs-foundation",
+      "tag": "swift-6.2.3-RELEASE",
+      "url": "https://github.com/swiftlang/swift-corelibs-foundation/archive/refs/tags/swift-6.2.3-RELEASE.tar.gz",
+      "archive": "corelibs-foundation-6.2.3.tar.gz",
+      "directory": "swift-corelibs-foundation-source",
+      "sha256": "b17df5dfa18681a6be115e80802103b63e37ddfc5c84c1da4e99409d10840964"
+    },
+    {
+      "repository": "https://github.com/swiftlang/swift-foundation-icu",
+      "tag": "swift-6.2.3-RELEASE",
+      "url": "https://github.com/swiftlang/swift-foundation-icu/archive/refs/tags/swift-6.2.3-RELEASE.tar.gz",
+      "archive": "foundation-icu-6.2.3.tar.gz",
+      "directory": "swift-foundation-icu-source",
+      "sha256": "3effa1313f2b7adfdd83e84e420883e0553abee4d2e5791a533c0aa59aae1668"
+    },
+    {
+      "repository": "https://github.com/apple/swift-collections",
+      "tag": "1.1.2",
+      "url": "https://github.com/apple/swift-collections/archive/refs/tags/1.1.2.tar.gz",
+      "archive": "collections-1.1.2.tar.gz",
+      "directory": "swift-collections-source",
+      "sha256": "cd30d2f93c72424df48d182006417abdeebe74d250cb99d1cda78daf40aca569"
+    },
+    {
+      "repository": "https://github.com/swiftlang/swift-experimental-string-processing",
+      "tag": "swift-6.2.3-RELEASE",
+      "url": "https://github.com/swiftlang/swift-experimental-string-processing/archive/refs/tags/swift-6.2.3-RELEASE.tar.gz",
+      "archive": "string-processing-6.2.3.tar.gz",
+      "directory": "swift-string-processing-source",
+      "sha256": "8f24d32e28b71f410230a35dd06c0e54a85ebbbc5d2d34618d2d66de5bad5e3e"
+    },
+    {
+      "repository": "https://github.com/void-linux/musl-fts",
+      "tag": "v1.2.7",
+      "url": "https://github.com/void-linux/musl-fts/archive/refs/tags/v1.2.7.tar.gz",
+      "archive": "musl-fts-1.2.7.tar.gz",
+      "directory": "musl-fts-source",
+      "sha256": "49ae567a96dbab22823d045ffebe0d6b14b9b799925e9ca9274d47d26ff482a6",
+      "sourceMarker": "fts.c"
+    },
+    {
+      "repository": "https://gitlab.gnome.org/GNOME/libxml2",
+      "tag": "v2.14.6",
+      "url": "https://download.gnome.org/sources/libxml2/2.14/libxml2-2.14.6.tar.xz",
+      "archive": "libxml2-2.14.6.tar.xz",
+      "directory": "libxml2-source",
+      "sha256": "7ce458a0affeb83f0b55f1f4f9e0e55735dbfc1a9de124ee86fb4a66b597203a",
+      "checksumProvenance": "Matches publisher SHA-256 file from GNOME"
+    }
+  ]
+}

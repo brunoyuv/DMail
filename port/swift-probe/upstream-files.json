@@ -1,0 +1,219 @@
+{
+  "repository": "https://github.com/thunderbird/thunderbird-ios",
+  "revision": "61c78d9ebe39ac5b61f31fce371bdfe8c001f7bf",
+  "sourcePatches": [],
+  "files": [
+    {
+      "upstreamPath": "Core/Sources/EmailAddress/EmailAddress.swift",
+      "sha256": "72dd0173ee8633b8bffd5a08f13add33d231bca210f788ee7a9d175b4579dfb7"
+    },
+    {
+      "upstreamPath": "Core/Sources/EmailAddress/String.swift",
+      "sha256": "91d6ec45460ff875726c5f978b089fe230c860d6930d89b43a0a1e11a1538187"
+    },
+    {
+      "upstreamPath": "Core/Sources/MIME/Body.swift",
+      "sha256": "612d1b5441f33507a0d2db1d8b7a6deef8d25440e8fbcbcd8d4f845776aa3409"
+    },
+    {
+      "upstreamPath": "Core/Sources/MIME/Boundary.swift",
+      "sha256": "e7631f34b56097038a7d6d9afefe55e9cc39e1018cd16f264315f022e6733115"
+    },
+    {
+      "upstreamPath": "Core/Sources/MIME/Character.swift",
+      "sha256": "c67260b2639b88a4a5260de88190244972b0598c24febdd6585c593509fc94ab"
+    },
+    {
+      "upstreamPath": "Core/Sources/MIME/CharacterSet.swift",
+      "sha256": "8eff998bc64f915b4806395d7fa83906ac9af82ed2d0b1ef6ef15ce4b9475d22"
+    },
+    {
+      "upstreamPath": "Core/Sources/MIME/ContentDisposition.swift",
+      "sha256": "700e3f20058e3c19bf0d508166c6bf305a1571d95e1d7dc5f4bb08b2b47f2b95"
+    },
+    {
+      "upstreamPath": "Core/Sources/MIME/ContentID.swift",
+      "sha256": "abdb47537081a769457bfca2910af521ddbcc2940c747061d669aac4e24f91c7"
+    },
+    {
+      "upstreamPath": "Core/Sources/MIME/ContentTransferEncoding.swift",
+      "sha256": "8308196ac325386af6cff1d454a4efe3e4fc8957ad22d02a67a1d59690d951c0"
+    },
+    {
+      "upstreamPath": "Core/Sources/MIME/ContentType.swift",
+      "sha256": "0f394e3c104598c962f728983e7667c68381bb003fb829f77e0c16485d8cfc92"
+    },
+    {
+      "upstreamPath": "Core/Sources/MIME/Header.swift",
+      "sha256": "f2eda55afd23cfc84b432be9a057c85ad02138b28cec3c24a182fd97f7dda5c9"
+    },
+    {
+      "upstreamPath": "Core/Sources/MIME/MIMEError.swift",
+      "sha256": "657b4a7c855fa57904e2fb49af7b699924d6e51ab8709b74d90e2f2ba8d4f4f5"
+    },
+    {
+      "upstreamPath": "Core/Sources/MIME/Part.swift",
+      "sha256": "74214d63327e9a6f34d85e981f19ea5ded035dca23b9dfcdb62008ba69f1a076"
+    },
+    {
+      "upstreamPath": "Core/Sources/MIME/RFC822DateFormatter.swift",
+      "sha256": "437ba0b7d6986cd2718191897702a7c5e14bf391dda636ee103ed5d442c6e4dd"
+    },
+    {
+      "upstreamPath": "Core/Sources/MIME/String.swift",
+      "sha256": "65db6588d9942570a048b1ac314e6f0dcdfc4e675092da8a3780ee50553c22e7"
+    },
+    {
+      "upstreamPath": "Core/Sources/MIME/URL.swift",
+      "sha256": "63a82ad0c0eb477f611195ad69858f11f26dbc82598c7c17b7e0ce4b60be6c22"
+    },
+    {
+      "upstreamPath": "Core/Sources/MIME/UUID.swift",
+      "sha256": "0cfcf0cf69b5c287ba748ca010a31dab96b13724c2918a779ccef019425e73f5"
+    },
+    {
+      "upstreamPath": "Core/Tests/EmailAddressTests/EmailAddressTests.swift",
+      "sha256": "8513e938dae53c12b0ac1e927a9e9ca143d275b1bbf80b948e6f4c617d3e6cf4"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/BodyTests.swift",
+      "sha256": "e3a06c56398e2802da24ba07eed56aa70195b43fbc6594a2c1b7ec04feec551d"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/BoundaryTests.swift",
+      "sha256": "e53fe318678bb2f048a000dfc23401bf5209de3f2f860e56e74f59969a107930"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Bundle.swift",
+      "sha256": "79e5fe374546791618d952123e16e336a7209e1b47fb83fbafe36b99bea8ef24"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/CharacterSetTests.swift",
+      "sha256": "1bc332779203060a409ab699c240bf5c91b9290763a3a4622ae05efc5354a768"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/CharacterTests.swift",
+      "sha256": "e8c2c7a6398551536003b026cb5152f03ad40279e99c37ec3f12e6760731aa7a"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/ContentDispositionTests.swift",
+      "sha256": "5236abcf25b30215264415049c267d9c066f963af354242193b807e2416c6681"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/ContentIDTests.swift",
+      "sha256": "4b544cf22b481094a257907e2b13262068b7abeb6942c1be84ca161966a8f142"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/ContentTransferEncodingTests.swift",
+      "sha256": "c9be0cc62045cc4aca02689e05cd0f7f2b7fcf490c6990e07c04ff54e38e997d"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/ContentTypeTests.swift",
+      "sha256": "5569cf0684f7505ab89b4344edcc4480251534d052821e327abde4085566fc48"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/HeaderTests.swift",
+      "sha256": "0b8a8177df2de3b5c1911b1727421e0455d49c3d36387c03fe0b74c6ded39c55"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/MIMEErrorTests.swift",
+      "sha256": "14b3f44039b76e426bfeef0b6cbf53a4adb96336ab58b7b6a765dcbcacfa64a1"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/PartTests.swift",
+      "sha256": "bcc8d2c462165873a04e8ba854de1af9e47fed3bb6a18497c3f5efc9f185ae79"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/RFC822DateFormatterTests.swift",
+      "sha256": "e06b1e0f13627079a9d957d7c38a8d8433c5799c3d809934be894eca59713f0e"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Resources/mime-body-1759430F.eml",
+      "sha256": "42690159979eb145440ca56dc9230202238863c37841c22f25a528e11c916da0"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Resources/mime-body-2874E3C9.eml",
+      "sha256": "a204a59a487c312c53cafc843ef5f700e87570e83f54069d1c4a5a403e79b966"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Resources/mime-body-2EA571DD.eml",
+      "sha256": "a2c2bf2a5b5b0b4935743cdebc73c0d904badecb6357b2cefb9521334189f747"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Resources/mime-body-60EB5CAE.eml",
+      "sha256": "af63ccc25e6e8d267d619347cc516b3d916b2757ba3c04bcd33dde05cb4d29f9"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Resources/mime-body-7A690F43.eml",
+      "sha256": "4fd272136804a1afb0aef740c95727036b55f28362d8bed9f1ce65af7ab8190b"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Resources/mime-body-86925F24.eml",
+      "sha256": "c560ef1735b6bb23205e0edea2ee83dc0e3115e72b1797c155a644b51b09319a"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Resources/mime-body-89526045.eml",
+      "sha256": "7b67c3ba62da96619017002f7b8373519e1a8fd219c8cd2b220f4b11c8c7e47e"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Resources/mime-body-976C6A94.eml",
+      "sha256": "ba1e0cd1e0a39e6c2a63653bb9afd9fb3cfc96e18db2dd5b11ab41c011f8cdd7"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Resources/mime-body-BFA06D93.eml",
+      "sha256": "f930cf6d2d441a28cff591b55127f995a32aef600e0fe6772600b7fc1cf338b0"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Resources/mime-body-CFD4D3A3.eml",
+      "sha256": "2f030930b819816492bfe59d9f57a770c0953c19b9d53835df6da57a2e6e3b3f"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Resources/mime-body-E18BEE81.eml",
+      "sha256": "1f7201deadda6dbf4cccd0de14eb4904ee6c2129542ffb04f1591b5a61b0a2c9"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Resources/mime-body-E1FA0690.eml",
+      "sha256": "3f703b692db46e9aa61a18b8e3c903a2ad49186e885de59c52c31bec371302f5"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Resources/mime-body-F02140B7.eml",
+      "sha256": "574e62503268ae259de098b197f9d6e928359d0e3de94e686d2ff9864031a8f4"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Resources/mime-part.html",
+      "sha256": "bc9ff94f8247ec079b448499f3b4068fea91562eebdf802b946a9c03be38908e"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Resources/mime-part.jpg",
+      "sha256": "5b8614911d0c5db23d83a4c5e9bc4e469ed969cc5f4674383ae47cd92c3d7878"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Resources/mime-part.png",
+      "sha256": "e504ff3e85f5dbd3502e0dac86de6830150acd6920c20cd13db2307c6d954ee7"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Resources/mime-part.txt",
+      "sha256": "ce8b61faee05fc8e8849bbdf12ba4341945128ec489d7d042a4775cb3446a418"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Resources/mime-part.zip",
+      "sha256": "1c0015d946afb775e7ce456077f9d65d1a381561ae52d142c63011c439dfb852"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/Resources/quoted-printable.html",
+      "sha256": "bc323c1be4b74baafd8b06baa67c1246434571ff9b5d68fafcd2b9d68b983498"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/StringTests.swift",
+      "sha256": "7a864a94d80ebdd0b3db5779c9cd61b4668c6d707fd2c6a83fabc25c0bcca8a2"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/URLTests.swift",
+      "sha256": "bc422908075c98a7df4f79fb6d4dffb425d05d8e0ebdae72b54fbc84bb2bcd81"
+    },
+    {
+      "upstreamPath": "Core/Tests/MIMETests/UUIDTests.swift",
+      "sha256": "3291b2ebb8e5418c61bb8ad8aff828b108b6d29e5e9b43b0af388920fd9409b2"
+    }
+  ]
+}

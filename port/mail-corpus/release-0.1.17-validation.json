@@ -1,0 +1,224 @@
+{
+  "version": "0.1.17",
+  "versionCode": 100017,
+  "bundleName": "org.thunderbird.harmony.dev",
+  "status": "installed-and-verified",
+  "hostJavaScript": {
+    "tests": 439,
+    "pass": 439,
+    "fail": 0,
+    "skipped": 0,
+    "files": 45,
+    "logSha256": "a464145c2572238a899a6fbf9eba5340a5b3f28f1ba2904f068dc5f048a3761e"
+  },
+  "hostPython": {
+    "tests": 9,
+    "pass": 9
+  },
+  "hostSwift": {
+    "tests": 79,
+    "pass": 79,
+    "suites": 27,
+    "actualClientAuthenticationScenarios": 19,
+    "logSha256": "aa318e1d91a6d7d23c645ac87a7aded9c0e391f884308d14d17af6ff7f3dc76a"
+  },
+  "focusedRenderer": {
+    "tests": 25,
+    "pass": 25,
+    "scope": "Final pending-navigation guard including an old-document callback before failed loadUrl; cache-first and failed-save status.",
+    "logSha256": "b75055be2f5748a81f5f1955c7ae2ed6996bcc563cd810bee8eacbfbf2e3f36b"
+  },
+  "deterministicEvidence": {
+    "pictureRequests": {
+      "initialImages": 5,
+      "initiallySaved": 3,
+      "initiallyMissing": 2,
+      "requestsPerRetry": 2,
+      "requestsOnCompletedRetryAndReopen": 0,
+      "savedBytesAndTimestampsUnchanged": true
+    },
+    "startupCache": {
+      "freshBodies": 24,
+      "serializedCharactersBefore": 4934442,
+      "serializationsBefore": 24,
+      "serializationsAfter": 0,
+      "databaseChanges": 0
+    },
+    "notificationNavigation": "No300ms busy/background tap polling; route commits before asynchronous dismissal; later account/composer state is preserved."
+  },
+  "nativeOAuth": {
+    "tests": 7,
+    "imapTlsSessions": 10,
+    "smtpTlsSessions": 3,
+    "nativeCoreSHA256": "b9aa308f481d84d0734ae57941458cf7d04b459c82f721c88a5fa8266014f049",
+    "scope": "Synthetic verified-TLS IMAP XOAUTH2 reading; SMTP XOAUTH2 sending over implicit TLS and STARTTLS; no password fallback"
+  },
+  "nativeStorage": {
+    "tests": 1,
+    "passed": 1,
+    "durationMs": 9296,
+    "scope": "Actual encrypted RDB with65 headers, original saved body, dirty filtering, batch order and close/reopen; zero mail calls.",
+    "logSha256": "c64d508eb16451591fffb9970c9823ee6947c53e21c5ea37355ad01f624d9aef"
+  },
+  "nativePictures": {
+    "tests": 1,
+    "passed": 1,
+    "scope": "Actual HtmlMail fitContent reader within Scroll; three PNG URLs served as application/octet-stream. One good image survives two missing-image failures and a held/coalesced retry without re-fetch. Both missing images then recover; all three retain image/png bytes, timestamps and consent. Retry and warning disappear, including after remount with all resources returning HTTP503. Exactly seven loopback requests, per URL counts 1/3/3; remount adds zero. Screenshots verify original colors throughout and recovered colors only after success.",
+    "limits": "Synthetic main-HAP fixture and loopback only; no production accounts or external servers.",
+    "screenshots": {
+      "partial": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "recoveredColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "sha256": "e58e4800daa42f8347aac5572ac0e4f9f1d37a7a264210d82408437016b26b75"
+      },
+      "held": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "recoveredColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "sha256": "b4e9b751ef6456b0df40fcfb7f165d3e6b947784564e3c41dfff9bc727f12a4f"
+      },
+      "failed-retry": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "recoveredColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "sha256": "e58e4800daa42f8347aac5572ac0e4f9f1d37a7a264210d82408437016b26b75"
+      },
+      "recovered": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "recoveredColorPixels": [
+          74501,
+          74134,
+          74501
+        ],
+        "sha256": "1a8761f87583996a92ad81028c36e774661d49b343ff52c673f02144d3f930c1"
+      },
+      "reopened": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "recoveredColorPixels": [
+          74501,
+          74134,
+          74501
+        ],
+        "sha256": "1a8761f87583996a92ad81028c36e774661d49b343ff52c673f02144d3f930c1"
+      }
+    },
+    "durationMs": 22106,
+    "requestCounts": [
+      1,
+      3,
+      3
+    ],
+    "requestsAfterReopen": 0,
+    "visuallyInspected": [
+      "partial",
+      "reopened"
+    ],
+    "logSha256": "f77e39389d4f0984497273155203168bdbe2d601ecc1f9c2c63f98caadc3b62a"
+  },
+  "emulator": {
+    "screen": "pura-main",
+    "boundedSeconds": 240,
+    "stopped": true,
+    "nativeProcessAbsenceVerified": true,
+    "logSha256": "7f1e05f08c4a7aa603abddbbc2acf2c30bd79b79d7f6b6b05156f2b87a9e8c7a"
+  },
+  "builds": {
+    "isolated-main": {
+      "success": true,
+      "duration": "6 s 474 ms",
+      "logSha256": "1fcc0cd86f01a1b5220bc872ec2ef857e0fac8ffd740bedb87391c618d51320a"
+    },
+    "isolated-test": {
+      "success": true,
+      "duration": "6 s 867 ms",
+      "logSha256": "80985d6035dd8a9619be35eb12645ab1f85678e2cf3648501398f42e4c3bb697"
+    },
+    "production": {
+      "success": true,
+      "duration": "5 s 711 ms",
+      "logSha256": "6796c5b997818b07ebc4ef17aa0e6064c51dbcc7f729cfe5a52236824f4fd585"
+    },
+    "device": {
+      "success": true,
+      "duration": "7 s 73 ms",
+      "logSha256": "8d8dcdd602fe363ae4da5c474d6a43de095fb2b6ccac99f78a90e9390154b258"
+    }
+  },
+  "nativeCore": {
+    "x86_64": {
+      "sha256": "b9aa308f481d84d0734ae57941458cf7d04b459c82f721c88a5fa8266014f049",
+      "size": 47249056
+    },
+    "arm64-v8a": {
+      "sha256": "be5fd82c6b0a81162d255f79bae00dcec6f4ad8388d4ee0b02d7839a6b793e3f",
+      "size": 47431384
+    }
+  },
+  "installations": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "versionCode": 100017,
+      "versionName": "0.1.17",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "3388b4ec3eb4aaf1b2701977ae9cd8ff69ff83d6681f64e4e18e99cfd1a147a7"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "versionCode": 100017,
+      "versionName": "0.1.17",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "3388b4ec3eb4aaf1b2701977ae9cd8ff69ff83d6681f64e4e18e99cfd1a147a7"
+    }
+  ],
+  "sourceParity": {
+    "shippingFilesIdenticalInIsolatedFixture": 52,
+    "localizationsIdentical": [
+      "base",
+      "zh_CN"
+    ],
+    "diagnosticTracingEnabled": false,
+    "signedArmSourceAndLibraryCheck": "passed"
+  },
+  "limits": [
+    "Only synthetic mail and loopback servers were used; production was not launched or read.",
+    "No physical heat, energy, frame-rate or provider-latency measurement.",
+    "Tablet split layout unchanged; this round native picture UI ran at Pura main size.",
+    "Seven-day retention remains unchanged.",
+    "Optional IMAP count/logout deadlines, connection reuse and MIME/CID edge cases remain separate follow-ups.",
+    "AppGallery package not rebuilt."
+  ]
+}

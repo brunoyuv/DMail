@@ -1,0 +1,66 @@
+{
+  "versionName": "0.1.25",
+  "versionCode": 100025,
+  "status": "Installed on Pura X first at user request; awaiting user test",
+  "privacy": {
+    "syntheticOnly": true,
+    "productionLaunched": false,
+    "realMailReadOrSent": false,
+    "physicalScreenshots": false
+  },
+  "host": {
+    "tests": 580,
+    "pass": 580,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "javascriptFiles": 55,
+    "pythonTests": 20,
+    "pythonFiles": 3
+  },
+  "swift": {
+    "tests": 103,
+    "suites": 31,
+    "logSha256": "8ac282a5c06b8a7a1525c20d7c750559bcd5b8dae1127f7d7643cd45e7b73351"
+  },
+  "builds": {
+    "productionArm": true,
+    "productionX86": true,
+    "swiftRebuiltThisUpdate": true,
+    "compileSdk": "26.0.0.105",
+    "targetApi": 22,
+    "minimumApi": 22,
+    "signedHapVerified": true
+  },
+  "fixes": [
+    "Retire interrupted scroll/pull/swipe state at visibility/background boundaries while preserving active tablet gestures.",
+    "Requeue terminal jobs whose exact raw cache is absent or canonical metadata explicitly pending, using a bounded 192-character prefix in SQLite.",
+    "Recover failed bodies despite differing completion timestamps without repeating settled picture work.",
+    "Merge same-sequence FETCH attributes with UID conflict checks and select explicit target UID despite unrelated flags."
+  ],
+  "nativeRuntime": {
+    "prepared": true,
+    "isolatedBuildCompleted": false,
+    "executedThisUpdate": false,
+    "reason": "User requested immediate Pura X installation for personal testing."
+  },
+  "emulatorStopped": true,
+  "installedDevices": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "versionCode": 100025,
+      "versionName": "0.1.25",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "fb4db628cdb17cfc808258022df220c5e8b4f6e84c9097bc5a45f939c321ac99"
+    }
+  ],
+  "matepadVersion": "0.1.24",
+  "limits": [
+    "Synthetic reproductions establish defects, not which defect affected a particular real mailbox.",
+    "No physical heat or battery measurement.",
+    "Prepared native integration tests remain unrun.",
+    "Loaded HTML/pictures remain immutable; existing retention, transfer bounds, pacing and background scheduling remain."
+  ]
+}

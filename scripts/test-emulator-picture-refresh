@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+# Stage with DMAIL_STATIC_PICTURE_TRACE=1 and build before this bounded check.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+exec "$ROOT/scripts/test-emulator-static-picture-snapshot" "$@"

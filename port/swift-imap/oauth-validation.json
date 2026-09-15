@@ -1,0 +1,32 @@
+{
+  "tests": 7,
+  "imapTlsSessions": 10,
+  "smtpTlsSessions": 3,
+  "nativeCoreSHA256": "cf0eea3ed709defbff885bb60a2f3bd3e99fa9fb9f1bb7a7ffd75799940efc2e",
+  "scope": "Synthetic verified-TLS IMAP XOAUTH2 reading; SMTP XOAUTH2 sending over implicit TLS and STARTTLS; no password fallback",
+  "date": "2026-09-14",
+  "hostTestsPassed": 41,
+  "hostScratch": "Clean scratch path; initial reused scratch produced body encoding failures",
+  "emulatorProcessExitVerified": true,
+  "armVerified": false,
+  "liveProviderVerified": false,
+  "evidence": {
+    ".tools/mail-oauth-host-tests.log": "7ddd1ddfe5cdef948245a61e40d3a39a5f08ffe6fc9c486825e6fec6a53f4780",
+    ".tools/mail-oauth-emulator-session.log": "8d00ad5e3fcb526eefccfbc89e9d3d3a8cfd5289627d5089050b2e35dc22992d",
+    ".tools/imap-oauth-native-test/test.log": "3a5c8750f273359a04685b7b97381d5340b9891bab639111976ce341add8231c",
+    ".tools/imap-oauth-native-test/stats.json": "a3114dbe85715367319095ea657b949c01d7b9b41bee16ce8dc096d83931409a",
+    ".tools/imap-oauth-native-test/smtp-stats.json": "fd0b41454cf9c7efa4b1d28111cbf5845562c06c5d36bcd00887b552f07df356",
+    "port/swift-imap/oauth.patch": "e5316c692a20f4f660af8fe758b4c2d9038abf73618a91237706d7de3ade75fc",
+    "port/swift-imap/XOAuth2Command.swift": "22a54d0fa25d17839db8c2bc0a12b8ce70005e7e257c345791ebba62a57a41a8",
+    "port/swift-imap/XOAuth2Tests.swift": "00bf9ca22df723f088a699b253aaa33de7901826436f01935e20dc343054a957",
+    "port/swift-smtp/oauth.patch": "cca091d620292a664658fa75b40d3881e498920f27b331211b1e3273f1cca193",
+    "port/swift-smtp/XOAuth2.swift": "fab214095dafbb07f75febbc388d77538648b165690e70857edaea6025610816",
+    "port/swift-smtp/XOAuth2Tests.swift": "a60e0344d4d1525d65ddc2538d5ff5a74c3e1a40ca6dba899c84071ee964a576",
+    "port/swift-imap/OAuthImap.test.ets": "bade44773c885eb6341351521fbb13cee66e07b60d39d8c9426ac091b4920c5d",
+    "port/swift-smtp/OAuthSmtp.test.ets": "db78793f720ccb5d242702bfcdb962eca471c9af2a3ca34606f5aeefb8605898",
+    "scripts/test-emulator-mail-oauth": "dcc7605b60b1d5474f8ff1d517d6f07820f6e0eb5b6492ca1d1800722914b821",
+    ".tools/oauth-round-emulator-session.log": "d2089152bef4bb42a16dc6f04301949dce2b000230ff640677fae96591918284"
+  },
+  "armBuildVerified": true,
+  "armVerificationScope": "Signed ARM build and source/library parity verified; app execution and live provider testing left to user"
+}

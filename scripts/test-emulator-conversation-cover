@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# One prepared native conversation test on the 327 vp Pura cover; synthetic mail only.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+APP="$ROOT/.tools/imap-test-app"
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" != 1 ]]; then
+  for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+    [[ -f "$APP/entry/build/default/outputs/$hap" ]] || { echo 'Build conversation test HAPs before starting the emulator.' >&2; exit 1; }
+  done
+  export EMULATOR_SCREEN=pura-cover EMULATOR_TEST_SECONDS=150
+  exec "$ROOT/scripts/with-test-emulator" "$0"
+fi
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+OUT="$ROOT/.tools/conversation-cover-test"
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  find "$OUT" -maxdepth 1 -type f -exec mv -t "$PREVIOUS" {} +
+fi
+UITEST_PREVIOUS=''
+cleanup() {
+  local result=$?
+  trap - EXIT
+  for name in thread-inbox thread-reader thread-quote async-switch; do
+    "$HDC" -t 127.0.0.1:5555 file recv "/data/local/tmp/navigation-$name.png" "$OUT/$name.png" >/dev/null 2>&1 || true
+  done
+  "$HDC" -t 127.0.0.1:5555 shell hilog -x > "$OUT/hilog.txt" 2>&1 || true
+  "$HDC" -t 127.0.0.1:5555 uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  if [[ -n "$UITEST_PREVIOUS" ]]; then "$HDC" -t 127.0.0.1:5555 shell param set persist.ace.testmode.enabled "$UITEST_PREVIOUS" >/dev/null 2>&1 || true; fi
+  if [[ "$result" == 0 ]]; then
+    python3 - "$ROOT" "$OUT" <<'PY' || result=1
+from pathlib import Path
+import hashlib,re,struct,sys,json,zipfile
+root,out=map(Path,sys.argv[1:]);log=(out/'test.log').read_text()
+assert 'OHOS_REPORT_RESULT: stream=Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' in log
+for name in ['cached_sent_thread_quotes_and_pending_flags_survive_account_switch']:
+    assert re.search(r'OHOS_REPORT_STATUS: test='+name+r'\r?\nOHOS_REPORT_STATUS_CODE: 0(?:\r?\n|$)',log)
+screenshots={}
+for name in ['thread-inbox','thread-reader','thread-quote','async-switch']:
+    data=(out/f'{name}.png').read_bytes()
+    assert struct.unpack('>II',data[16:24])==(980,980),name
+    screenshots[name]=hashlib.sha256(data).hexdigest()
+with zipfile.ZipFile(root/'.tools/imap-test-app/entry/build/default/outputs/default/entry-default-unsigned.hap') as hap:
+    core=hap.read('libs/x86_64/libThunderbirdCore.so')
+assert core==(root/'harmony/entry/libs/x86_64/libThunderbirdCore.so').read_bytes()
+(out/'result.json').write_text(json.dumps({'tests':1,'screen':'pura-cover','viewportVp':327,'nativeCoreSHA256':hashlib.sha256(core).hexdigest(),
+    'screenshots':screenshots,'scope':'Pura cover: cached received/Sent conversation, duplicate and unrelated subject isolation, quoted text disclosure, pending optimistic Star completes after account switch without body downloads'},indent=2)+'\n')
+print('PASS: native cached conversation, quoted text, and pending account switch on Pura cover.')
+PY
+  fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+UITEST_PREVIOUS="$("$HDC" -t 127.0.0.1:5555 shell param get persist.ace.testmode.enabled | tr -d '\r\n')"
+[[ "$UITEST_PREVIOUS" == 1 ]] || UITEST_PREVIOUS=0
+"$HDC" -t 127.0.0.1:5555 shell param set persist.ace.testmode.enabled 0
+"$HDC" -t 127.0.0.1:5555 uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+"$HDC" -t 127.0.0.1:5555 install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+"$HDC" -t 127.0.0.1:5555 install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+"$HDC" -t 127.0.0.1:5555 shell 'rm -f /data/local/tmp/navigation-*.png'
+timeout --foreground --kill-after=5s 120s "$HDC" -t 127.0.0.1:5555 shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/ConversationNavigationRunner \
+  -s timeout 110000 | tee "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"

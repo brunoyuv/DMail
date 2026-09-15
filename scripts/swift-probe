@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+MODE="${1:-host}"
+case "$MODE" in host|static-linux|ohos) ;; *) echo 'Usage: ./scripts/swift-probe [host|static-linux|ohos]' >&2; exit 1;; esac
+SWIFT="$ROOT/.tools/swift/usr/bin/swift"
+[[ -x "$SWIFT" ]] || { echo 'Run ./scripts/setup-swift first.' >&2; exit 1; }
+./scripts/prepare-swift-probe
+export CLANG_MODULE_CACHE_PATH="$ROOT/.tools/swift-probe/clang-cache-$MODE"
+export SWIFTPM_MODULECACHE_OVERRIDE="$ROOT/.tools/swift-probe/module-cache-$MODE"
+OPTIONS=(--package-path "$ROOT/.tools/swift-probe/package"
+  --cache-path "$ROOT/.tools/swift-probe/cache-$MODE" --config-path "$ROOT/.tools/swift-probe/config"
+  --security-path "$ROOT/.tools/swift-probe/security" --scratch-path "$ROOT/.tools/swift-probe/build-$MODE" --disable-netrc)
+case "$MODE" in
+  host) exec "$SWIFT" test "${OPTIONS[@]}" ;;
+  static-linux)
+    exec "$SWIFT" build "${OPTIONS[@]}" --swift-sdks-path "$ROOT/.tools/swift-sdk" --swift-sdk x86_64-swift-linux-musl ;;
+  ohos)
+    # This is a real target compile, deliberately allowed to fail when the
+    # matching Swift standard library is unavailable. No target substitution.
+    exec "$ROOT/.tools/swift/usr/bin/swiftc" -target x86_64-unknown-linux-ohos \
+      -sdk "$ROOT/.tools/command-line-tools/sdk/default/openharmony/native/sysroot" \
+      -module-cache-path "$ROOT/.tools/swift-probe/native-cache" -emit-module -module-name EmailAddress \
+      "$ROOT"/upstream/thunderbird-ios/Core/Sources/EmailAddress/*.swift \
+      -o "$ROOT/.tools/swift-probe/EmailAddress.swiftmodule" ;;
+esac

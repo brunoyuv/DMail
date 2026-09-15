@@ -1,0 +1,28 @@
+--- a/Sources/IMAP/IMAPClient.swift
++++ b/Sources/IMAP/IMAPClient.swift
+@@ -182,9 +182,9 @@
+     }
+ 
+     /// Fetch the current status for a mailbox.
+-    public func status(mailbox name: MailboxName) async throws -> Mailbox.Status {
++    public func status(mailbox name: MailboxName, attributes: [MailboxAttribute]? = nil, timeout: Int64? = nil) async throws -> Mailbox.Status {
+         logger?.info("Refreshing mailbox \(name) status…")
+-        return try await execute(command: StatusCommand(name, attributes: .standard + .extended(capabilities)))
++        return try await execute(command: StatusCommand(name, attributes: attributes ?? (.standard + .extended(capabilities)), timeout: timeout))
+     }
+ 
+     /// Expunge messages flagged as deleted in current working mailbox.
+--- a/Sources/IMAP/StatusCommand.swift
++++ b/Sources/IMAP/StatusCommand.swift
+@@ -9,10 +9,12 @@
+ struct StatusCommand: IMAPCommand {
+     let mailboxName: MailboxName
+     let attributes: [MailboxAttribute]
++    let timeout: Int64
+ 
+-    init(_ mailboxName: MailboxName, attributes: [MailboxAttribute] = .standard) {
++    init(_ mailboxName: MailboxName, attributes: [MailboxAttribute] = .standard, timeout: Int64? = nil) {
+         self.mailboxName = mailboxName
+         self.attributes = attributes
++        self.timeout = timeout ?? .timeout
+     }

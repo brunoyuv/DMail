@@ -1,0 +1,23 @@
+--- a/Sources/IMAP/IMAPClient.swift
++++ b/Sources/IMAP/IMAPClient.swift
+@@ -300,6 +300,12 @@
+     public func appendSent(_ data: Data, to mailbox: Mailbox.Name) async throws {
+         guard let channel, channel.isActive, !isIdling else { throw SentAppendError.rejected }
+         try await appendSentMessage(data, to: mailbox, channel: channel, timeout: commandTimeout)
++    }
++
++    /// Atomic UID MOVE, without COPY/STORE/global EXPUNGE fallbacks.
++    public func archiveMove(uid: UID, to mailbox: Mailbox.Name) async throws -> ArchiveMoveResult {
++        guard capabilities.contains(where: { $0.rawValue.uppercased() == "MOVE" }) else { throw ArchiveMoveError.unavailable }
++        return try await execute(command: ArchiveMoveCommand(uid: uid, mailbox: mailbox))
+     }
+ 
+     // Run IMAP command through NIO `IMAPClientHandler` in channel and handle results
+@@ -346,6 +352,7 @@
+             channel.close(promise: nil)
+             if Task.isCancelled { throw CancellationError() }
+             if let rejection = error as? AuthenticationFailure { throw rejection }
++            if let move = error as? ArchiveMoveError { throw move }
+             throw IMAPError.commandFailed(command.description)
+         }
+     }

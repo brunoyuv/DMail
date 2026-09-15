@@ -1,0 +1,246 @@
+--- a/Sources/Autoconfiguration/EmailProvider.swift
++++ b/Sources/Autoconfiguration/EmailProvider.swift
+@@ -12,11 +12,16 @@
+             case passwordCleartext = "password-cleartext"
+             case passwordEncrypted = "password-encrypted"
+             case smtpAfterPop = "smtp-after-pop"
++            case ntlm = "NTLM", gssapi = "GSSAPI", tlsClientCert = "TLS-client-cert", none, unknown
++
++            public init(from decoder: any Decoder) throws {
++                self = Self(rawValue: try decoder.singleValueContainer().decode(String.self)) ?? .unknown
++            }
+ 
+             // MARK: CustomStringConvertible
+             public var description: String {
+                 switch self {
+-                case .clientIPAddress, .oAuth2: rawValue
++                case .clientIPAddress, .oAuth2, .ntlm, .gssapi, .tlsClientCert, .none, .unknown: rawValue
+                 case .passwordCleartext: "clear-text password"
+                 case .passwordEncrypted: "encrypted password"
+                 case .smtpAfterPop: "SMTP after POP"
+@@ -25,14 +30,22 @@
+         }
+ 
+         public enum ServerType: String, CaseIterable, CustomStringConvertible, Decodable {
+-            case imap, pop3, smtp
++            case imap, pop3, smtp, unknown
++
++            public init(from decoder: any Decoder) throws {
++                self = Self(rawValue: try decoder.singleValueContainer().decode(String.self)) ?? .unknown
++            }
+ 
+             // MARK: CustomStringConvertible
+             public var description: String { rawValue.uppercased() }
+         }
+ 
+         public enum SocketType: String, CaseIterable, CustomStringConvertible, Decodable {
+-            case startTLS = "STARTTLS", ssl = "SSL"
++            case startTLS = "STARTTLS", ssl = "SSL", plain, unknown
++
++            public init(from decoder: any Decoder) throws {
++                self = Self(rawValue: try decoder.singleValueContainer().decode(String.self)) ?? .unknown
++            }
+ 
+             // MARK: CustomStringConvertible
+             public var description: String { rawValue }
+--- a/Sources/Autoconfiguration/XMLToJSONParser.swift
++++ b/Sources/Autoconfiguration/XMLToJSONParser.swift
+@@ -3,6 +3,7 @@
+ // file, You can obtain one at http://mozilla.org/MPL/2.0/
+ 
+ import Foundation
++import FoundationXML
+ 
+ // Translate client config XML into JSON
+ class XMLToJSONParser: NSObject, XMLParserDelegate {
+@@ -11,7 +12,8 @@
+ 
+     var data: Data {
+         get throws {
+-            try JSONSerialization.data(
++            guard valid else { throw URLError(.cannotParseResponse) }
++            return try JSONSerialization.data(
+                 withJSONObject: dictionary,
+                 options: [
+                     .withoutEscapingSlashes,
+@@ -26,9 +28,31 @@
+         super.init()
+         self.emailAddress = emailAddress
+         parser.delegate = self
+-        parser.parse()
+-    }
+-
++        parser.shouldResolveExternalEntities = false
++        guard data.count <= 524288 else { return }
++        valid = parser.parse() && parser.parserError == nil && !rejected && dictionary["clientConfig"] != nil
++    }
++
++    private var valid = false
++    private var rejected = false
++    private var path: [String] = []
++    private var elementCount = 0
++    private func reject(_ parser: XMLParser) { rejected = true; parser.abortParsing() }
++    private var supportedPath: Bool {
++        let parent = path.dropLast().joined(separator: "/")
++        let name = path.last ?? ""
++        switch parent {
++        case "": return name == "clientConfig"
++        case "clientConfig": return ["emailProvider", "oAuth2", "webMail"].contains(name)
++        case "clientConfig/emailProvider":
++            return ["domain", "displayName", "displayShortName", "incomingServer", "outgoingServer", "documentation", "instruction"].contains(name)
++        case "clientConfig/emailProvider/incomingServer", "clientConfig/emailProvider/outgoingServer":
++            return ["authentication", "hostname", "port", "socketType", "username"].contains(name)
++        case "clientConfig/oAuth2": return ["authURL", "issuer", "scope", "tokenURL"].contains(name)
++        case "clientConfig/webMail": return name == "loginPage"
++        default: return false
++        }
++    }
+     private let parser: XMLParser
+     private var element: (name: String, value: String?)?
+     private var emailProvider: [String: Any]?
+@@ -57,6 +81,10 @@
+         qualifiedName qName: String?,
+         attributes attributeDict: [String: String] = [:]
+     ) {
++        path.append(elementName)
++        elementCount += 1
++        guard path.count <= 32, elementCount <= 4096, element == nil else { reject(parser); return }
++        guard supportedPath else { return }
+         switch Key(stringValue: elementName) {
+         case .clientConfig:
+             dictionary[Key.clientConfig.stringValue] = [:]
+@@ -97,10 +125,19 @@
+     }
+ 
+     func parser(_ parser: XMLParser, foundCharacters string: String) {
+-        let string: String = string.trimmingCharacters(in: .whitespacesAndNewlines)
+-        guard !string.isEmpty else { return }
+-        element?.value = string.applying(emailAddress)
+-    }
++        guard supportedPath, element != nil else { return }
++        let previous = element?.value ?? ""
++        element?.value = previous + string
++        if (element?.value?.utf8.count ?? 0) > 65536 { reject(parser) }
++    }
++
++    func parser(_ parser: XMLParser, foundCDATA CDATABlock: Data) {
++        guard let text = String(data: CDATABlock, encoding: .utf8) else { reject(parser); return }
++        self.parser(parser, foundCharacters: text)
++    }
++
++    func parser(_ parser: XMLParser, foundInternalEntityDeclarationWithName name: String, value: String?) { reject(parser) }
++    func parser(_ parser: XMLParser, foundExternalEntityDeclarationWithName name: String, publicID: String?, systemID: String?) { reject(parser) }
+ 
+     func parser(
+         _ parser: XMLParser,
+@@ -108,6 +145,11 @@
+         namespaceURI: String?,
+         qualifiedName qName: String?
+     ) {
++        defer { if !path.isEmpty { path.removeLast() } }
++        guard supportedPath else { return }
++        if let value = element?.value {
++            element?.value = value.trimmingCharacters(in: .whitespacesAndNewlines).applying(emailAddress)
++        }
+         switch Key(stringValue: elementName) {
+         case .emailProvider:
+             if var clientConfig: [String: Any] = dictionary[Key.clientConfig.stringValue] as? [String: Any],
+@@ -119,6 +161,7 @@
+             emailProvider = nil
+         case .displayName, .displayShortName, .domain:
+             if elementName == Key.domain.stringValue, emailProvider?[Key.domain.stringValue] != nil {
++                element = nil
+                 break  // Keep first domain only
+             }
+             if let name: String = element?.name, let value: String = element?.value {
+--- a/Sources/Autoconfiguration/String.swift
++++ b/Sources/Autoconfiguration/String.swift
+@@ -7,8 +7,11 @@
+ extension String {
+     public var host: Self {
+         get throws {
+-            // Ensure valid host/domain with `URL` initializer, then discard the `URL`.
+-            guard let url: URL = URL(string: "http://\(components(separatedBy: "@").last!)"),
++            let candidate = components(separatedBy: "@").last ?? ""
++            guard !candidate.isEmpty, candidate.utf8.count <= 253,
++                !candidate.contains(where: { $0.isWhitespace || "/\\:?#%".contains($0) }),
++                !candidate.unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }),
++                let url: URL = URL(string: "https://\(candidate)"),
+                 let host: String = url.host()
+             else {
+                 throw URLError(.cannotFindHost)
+--- a/Sources/Autoconfiguration/OAuth2.swift
++++ b/Sources/Autoconfiguration/OAuth2.swift
+@@ -3,7 +3,7 @@
+ // file, You can obtain one at http://mozilla.org/MPL/2.0/
+ 
+ import Foundation
+-import CryptoKit
++import CAutoconfigCrypto
+ 
+ public struct OAuth2: Decodable {
+     public struct PKCE: Equatable, Sendable {
+@@ -20,7 +20,11 @@
+ 
+         init(codeVerifier: String) {
+             self.codeVerifier = codeVerifier
+-            self.codeChallenge = Data(SHA256.hash(data: Data(codeVerifier.utf8))).base64URLEncodedString()
++            self.codeChallenge = Data(codeVerifier.utf8).withUnsafeBytes { bytes in
++                var digest = [UInt8](repeating: 0, count: 32)
++                precondition(tb_autoconfig_sha256(bytes.bindMemory(to: UInt8.self).baseAddress, bytes.count, &digest) == 1)
++                return Data(digest).base64URLEncodedString()
++            }
+         }
+     }
+ 
+@@ -76,7 +80,7 @@
+ 
+         public func matches(_ host: String) -> Bool {
+             for _host in hosts {
+-                guard host.hasSuffix(_host) else { continue }
++                guard host.lowercased() == _host.lowercased() || host.lowercased().hasSuffix(".\(_host.lowercased())") else { continue }
+                 return true
+             }
+             return false
+--- a/Sources/Autoconfiguration/URLRequest.swift
++++ b/Sources/Autoconfiguration/URLRequest.swift
+@@ -3,6 +3,7 @@
+ // file, You can obtain one at http://mozilla.org/MPL/2.0/
+ 
+ import Foundation
++import FoundationNetworking
+ 
+ extension URLRequest {
+     public static func token(_ request: OAuth2.Request, code: String, pkce: OAuth2.PKCE) throws -> Self {
+@@ -10,13 +11,14 @@
+             var components: URLComponents = URLComponents(
+                 url: request.tokenURL(code, pkce: pkce),
+                 resolvingAgainstBaseURL: false
+-            ), let httpBody: Data = components.percentEncodedQuery?.data(using: .utf8)
++            ), let httpBody: Data = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B").data(using: .utf8)
+         else {
+             throw URLError(.badURL)
+         }
+         components.queryItems = nil
+         var request: Self = Self(url: components.url!)
+         request.httpMethod = "POST"
++        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+         request.httpBody = httpBody
+         return request
+     }
+@@ -26,13 +28,14 @@
+             var components: URLComponents = URLComponents(
+                 url: request.refreshTokenURL(refreshToken),
+                 resolvingAgainstBaseURL: false
+-            ), let httpBody: Data = components.percentEncodedQuery?.data(using: .utf8)
++            ), let httpBody: Data = components.percentEncodedQuery?.replacingOccurrences(of: "+", with: "%2B").data(using: .utf8)
+         else {
+             throw URLError(.badURL)
+         }
+         components.queryItems = nil
+         var request: Self = Self(url: components.url!)
+         request.httpMethod = "POST"
++        request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
+         request.httpBody = httpBody
+         return request
+     }

@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+APP="$ROOT/.tools/imap-test-app"
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" != 1 ]]; then
+  for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+    [[ -f "$APP/entry/build/default/outputs/$hap" ]]
+  done
+  export EMULATOR_SCREEN=pura-main EMULATOR_TEST_SECONDS=180
+  exec "$ROOT/scripts/with-test-emulator" "$0"
+fi
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+NODE="$ROOT/.tools/runtime/node_modules/node/bin/node"
+OUT="$ROOT/.tools/mailbox-loading-native-test"
+mkdir -p "$OUT"
+FIXTURE_PID=''; FORWARDED=false; UITEST_PREVIOUS=''
+cleanup() {
+  local result=$?
+  trap - EXIT
+  "$HDC" -t 127.0.0.1:5555 file recv /data/local/tmp/mailbox-loading-recovered.png "$OUT/recovered.png" >/dev/null 2>&1 || true
+  "$HDC" -t 127.0.0.1:5555 shell hilog -x > "$OUT/hilog.txt" 2>&1 || true
+  "$HDC" -t 127.0.0.1:5555 uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  if "$FORWARDED"; then "$HDC" -t 127.0.0.1:5555 fport rm tcp:9761 tcp:9761 >/dev/null 2>&1 || true; fi
+  if [[ -n "$UITEST_PREVIOUS" ]]; then "$HDC" -t 127.0.0.1:5555 shell param set persist.ace.testmode.enabled "$UITEST_PREVIOUS" >/dev/null 2>&1 || true; fi
+  if [[ -n "$FIXTURE_PID" ]]; then kill "$FIXTURE_PID" 2>/dev/null || true; wait "$FIXTURE_PID" 2>/dev/null || true; fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+if "$HDC" fport ls | grep -q 'tcp:9761 '; then echo 'Fixture port already forwarded.' >&2; exit 1; fi
+"$NODE" port/swift-imap/fixture.cjs .tools/imap-test-certs > "$OUT/fixture.log" 2>&1 &
+FIXTURE_PID=$!
+READY=false
+for ((attempt=0; attempt<30; attempt++)); do
+  kill -0 "$FIXTURE_PID"
+  if curl --fail --silent http://127.0.0.1:9760/health >/dev/null; then READY=true; break; fi
+  sleep 0.1
+done
+"$READY"
+"$HDC" -t 127.0.0.1:5555 rport tcp:9761 tcp:9761 | grep -q 'Forwardport result:OK'
+FORWARDED=true
+UITEST_PREVIOUS="$("$HDC" -t 127.0.0.1:5555 shell param get persist.ace.testmode.enabled | tr -d '\r\n')"
+[[ "$UITEST_PREVIOUS" == 1 ]] || UITEST_PREVIOUS=0
+"$HDC" -t 127.0.0.1:5555 shell param set persist.ace.testmode.enabled 0
+"$HDC" -t 127.0.0.1:5555 uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+"$HDC" -t 127.0.0.1:5555 install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+"$HDC" -t 127.0.0.1:5555 install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+timeout --foreground --kill-after=5s 120s "$HDC" -t 127.0.0.1:5555 shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/MailboxLoadingRunner \
+  -s timeout 110000 | tee "$OUT/test.log"
+curl --fail --silent http://127.0.0.1:9760/stats > "$OUT/stats.json"
+grep -q 'Tests run: 4, Failure: 0, Error: 0, Pass: 4, Ignore: 0' "$OUT/test.log"
+python3 - "$ROOT" "$OUT" <<'PY'
+from pathlib import Path
+import hashlib,json,sys,zipfile
+root,out=map(Path,sys.argv[1:]); stats=json.loads((out/'stats.json').read_text())
+assert stats['violations']==[] and stats['active']==0
+assert all(s['closed'] and 'violation' not in s for s in stats['sessions'])
+for mode in ['status-fail','status-drop']:
+    lists=[s for s in stats['sessions'] if s['mode']==mode and 'LIST' in s['commands']]
+    assert len(lists)==1 and lists[0]['commands'].count('STATUS')==1
+    assert any(s['mode']==mode and 'FETCH' in s['commands'] for s in stats['sessions'])
+for s in stats['sessions']:
+    if s['mode']=='status-basic-only':
+        assert all(a.endswith('(MESSAGES UNSEEN)') for a in s.get('statusArguments',[]))
+assert sum('LIST' in s['commands'] for s in stats['sessions'] if s['mode']=='list-retry')==2
+with zipfile.ZipFile(root/'.tools/imap-test-app/entry/build/default/outputs/default/entry-default-unsigned.hap') as hap:
+    core=hap.read('libs/x86_64/libThunderbirdCore.so')
+assert core==(root/'harmony/entry/libs/x86_64/libThunderbirdCore.so').read_bytes()
+(out/'result.json').write_text(json.dumps({'tests':4,'nativeCoreSHA256':hashlib.sha256(core).hexdigest(),
+    'scope':'Synthetic TLS: minimal STATUS, rejected/dropped count request preserves reading, real pull-refresh recovers failed folder listing'},indent=2)+'\n')
+PY

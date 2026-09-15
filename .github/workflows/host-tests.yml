@@ -1,0 +1,23 @@
+name: Host tests
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22.23.2'
+      - name: Install the host test compiler
+        run: npm install --prefix .tools/test --ignore-scripts --no-audit --no-fund typescript@5.9.3
+      - name: Run synthetic host tests
+        run: ./scripts/test

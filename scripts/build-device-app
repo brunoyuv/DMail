@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# Prepare a separate ARM HAP, preserving local device signing configuration.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+export THUNDERBIRD_SWIFT_ARCH=aarch64
+source "$ROOT/scripts/swift-target-env"
+[[ -f "$SWIFT_TARGET_SDK/lib/swift/musl/libFoundationNetworking.so" ]] || {
+  echo 'Build the ARM SDK first with scripts/build-arm-sdk.' >&2; exit 1;
+}
+./scripts/prepare-native-app
+python3 - <<'PY'
+from pathlib import Path
+import shutil
+root = Path.cwd(); source = root/'harmony'; dest = root/'.tools/device-app'
+shutil.copytree(source, dest, dirs_exist_ok=True,
+    ignore=shutil.ignore_patterns('build', '.hvigor', 'oh_modules', 'node_modules', 'libs', '.cxx', 'build-profile.json5'))
+profile = dest/'entry/build-profile.json5'
+text = (source/'entry/build-profile.json5').read_text()
+assert '"abiFilters": ["x86_64"]' in text
+profile.write_text(text.replace('"abiFilters": ["x86_64"]', '"abiFilters": ["arm64-v8a"]'))
+PY
+# Signing contains local private material: merge only signing fields into the
+# current production configuration and keep the generated file private.
+"$ROOT/.tools/runtime/node_modules/node/bin/node" - "$ROOT" <<'JS'
+const fs = require('fs');
+const root = process.argv[2];
+const json5 = require(root + '/.tools/deveco/node_modules/json5/lib/index.js');
+const output = root + '/.tools/device-app/build-profile.json5';
+const profile = json5.parse(fs.readFileSync(root + '/harmony/build-profile.json5', 'utf8'));
+if (fs.existsSync(output)) {
+  const previous = json5.parse(fs.readFileSync(output, 'utf8'));
+  if (previous.app?.signingConfigs?.length) {
+    profile.app.signingConfigs = previous.app.signingConfigs;
+    for (const product of profile.app.products) {
+      const old = previous.app.products.find(item => item.name === product.name);
+      if (old?.signingConfig) product.signingConfig = old.signingConfig;
+    }
+  }
+}
+fs.writeFileSync(output, JSON.stringify(profile, null, 2) + '\n', { mode: 0o600 });
+fs.chmodSync(output, 0o600);
+JS
+source "$ROOT/scripts/harmony-build-env"
+cd "$ROOT/.tools/device-app"
+"$THUNDERBIRD_BUILD_TOOLS/ohpm/bin/ohpm" install --all
+"$THUNDERBIRD_BUILD_TOOLS/bin/hvigorw" assembleHap --mode module -p product=default -p module=entry@default --no-daemon
+"$ROOT/scripts/verify-device-app"

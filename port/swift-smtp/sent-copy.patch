@@ -1,0 +1,23 @@
+--- a/Sources/SMTP/RequestEncoder.swift
++++ b/Sources/SMTP/RequestEncoder.swift
+@@ -51,18 +51,8 @@
+         case .data:
+             out.writeString("DATA")
+         case .transferData(let email):
+-            try validateMessage(email)
+-            var message = "From: \(email.sender.value)\(crlf)"
+-            if !email.recipients.isEmpty { message += "To: \(email.recipients.map { $0.value }.joined(separator: ",\r\n "))\(crlf)" }
+-            if !email.copied.isEmpty { message += "Cc: \(email.copied.map { $0.value }.joined(separator: ",\r\n "))\(crlf)" }
+-            message += "Date: \(email.date.rfc822Format())\(crlf)Message-ID: \(email.messageID)\(crlf)"
+-            if !email.inReplyTo.isEmpty { message += "In-Reply-To: \(try replyHeader(email.inReplyTo))\(crlf)" }
+-            if !email.references.isEmpty { message += "References: \(try replyHeader(email.references))\(crlf)" }
+-            message += "Subject: \(try subjectHeader(email.subject))\(crlf)MIME-Version: 1.0\(crlf)"
+-            guard let body = String(data: email.body.rawValue, encoding: .ascii) else { throw SMTPError.invalidMessage }
+-            message += body
+-            // Normalize all newlines and SMTP dot-stuff the entire DATA payload.
+-            let lines = message.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n").components(separatedBy: "\n")
++            let message = String(decoding: try messageData(email), as: UTF8.self)
++            let lines = message.components(separatedBy: crlf)
+             let wire = lines.map { $0.hasPrefix(".") ? "." + $0 : $0 }.joined(separator: crlf)
+             out.writeString(wire)
+             if !wire.hasSuffix(crlf) { out.writeString(crlf) }

@@ -1,0 +1,15 @@
+{
+  "status": "installed successfully",
+  "bundleName": "org.thunderbird.harmony.dev",
+  "deviceModel": "VDE-AL00",
+  "replaceExisting": true,
+  "originalInstallTimePreserved": true,
+  "previousUpdateTime": 1789326743394,
+  "updateTime": 1789348129868,
+  "updateTimeUtc": "2026-09-14T01:08:49.868000+00:00",
+  "productionAppForceStoppedBeforeInstall": true,
+  "productionAppLaunched": false,
+  "accountDataAccessed": false,
+  "hapSha256": "59ea21fa70ecc4390f53810125f2ab7b6d29ac10251f5338305c00985e031f62",
+  "compiledUiMarkersVerified": true
+}

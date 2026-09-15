@@ -1,0 +1,132 @@
+{
+  "date": "2026-09-14",
+  "versionName": "0.1.1",
+  "versionCode": 100001,
+  "changes": [
+    "Mixed/folded RFC2047 subject and sender decoding, Q spaces, IANA charsets, malformed-word preservation",
+    "Complete transfer-byte decoding before body charset conversion; strict UTF8 recovery after declared charset fails",
+    "Canonical UTF8 HTML document declaration",
+    "Body decoder revision preserves offline fallback and refreshes old bodies once"
+  ],
+  "hostTests": {
+    "command": "scripts/test",
+    "passed": 76,
+    "failed": 0,
+    "logSHA256": "cde040b88c0f51348dba3281635f65fde28946d71444fccee11ee1c8de31b34d"
+  },
+  "swiftTests": {
+    "command": "scripts/test-mime-port",
+    "passed": 77,
+    "suites": 20,
+    "publicCorpusCases": 17,
+    "baselineHeaderFailedTestDefinitions": 6,
+    "baselineBodyFailedCases": 6,
+    "logSHA256": "e9b4678513b909af6a76124f4b4d889641cd624bd687f66e7bf217a3871c9c86"
+  },
+  "emulatorTest": {
+    "command": "scripts/test-emulator-encoding",
+    "passed": true,
+    "durationMs": 17196,
+    "result": {
+      "tests": 1,
+      "nativeCases": 3,
+      "nativeCoreSHA256": "36089eb11693d3f63d672701ed97408c62e4dfb5780a5a581bfb0d781f47c2f2",
+      "screenshots": {
+        "inbox": "cbfacd65c28f6f8e06b7108f77e7e48ad247ea89637e8fea6619249442c2cff4",
+        "reader": "fc2d1ab562febac1582435a25091782669f8754a34a2c727116298d62c0e2432",
+        "cached": "fc2d1ab562febac1582435a25091782669f8754a34a2c727116298d62c0e2432"
+      },
+      "scope": "Synthetic TLS: exact Unicode subject/sender and selected MIME parts through shipping Swift/NAPI, rendered HTML and cached revisit without refetch"
+    },
+    "closedSyntheticSessions": 10,
+    "activeSessions": 0,
+    "fixtureViolations": 0,
+    "cachedRevisitNewConnections": 0,
+    "postprocessorNote": "Optional console-info markers were unavailable in collected hilog. Collector now requires exact named Hypium success/count plus unchanged fixture, screenshot and native-core checks. Retained snapshots were revalidated without repeating the emulator session.",
+    "testLogSHA256": "85ab51a6192e339571e9df36c2adaf83c907cf8646fa23b9b0b63cf16db7d146",
+    "statsSHA256": "5243733e9b760fa5cc35c66179488e93c041b18ac3a82036d5efac966add4841"
+  },
+  "builds": {
+    "x86CoreAndHap": "passed",
+    "armCoreAndSignedHap": "passed",
+    "fixtureHaps": "passed",
+    "signedArmVerification": {
+      "target": "aarch64-unknown-linux-ohos",
+      "hap": ".tools/device-app/entry/build/default/outputs/default/entry-default-signed.hap",
+      "hapSha256": "4d13c1c2530bad5a42f92990a6950be16e52c948cfca3c771537bdf534534f70",
+      "signedArtifact": true,
+      "deviceExecutionVerified": false,
+      "libraries": {
+        "libBlocksRuntime.so": "3db890900a413f4d996f0b476b3eeed8caf68cfbe35004c2a754763ad8b5ae95",
+        "libFoundation.so": "df1ed03407516f0c41f3276a92bb54a9d0562f05569c14e3dbd60780a1f355da",
+        "libFoundationEssentials.so": "88beb0c95755d135eabb0a26ca87afe9a57f2ce557b565c387bb262670e44fba",
+        "libFoundationInternationalization.so": "5c31544d1945cb999bcf02c676bf8fbdd78867cb46365397b6e2fdc5dacef62e",
+        "libFoundationNetworking.so": "03b7cf0dc7a05da8cba224e7658569ffce3f9deb58c52ac2edede0fb11cf0e3d",
+        "libFoundationXML.so": "9c780d208c79f0dccea52fc0154cae4d163810bdd9edfea7f21100abf63a7c8d",
+        "libThunderbirdCore.so": "ebe71e73d68899d77c9888311fbadbed9cf14a4cea903d86a97f695337f67dc5",
+        "lib_FoundationICU.so": "a7149cfe358dbea269b75d924f7acbef4445de377a8c0be624d1c5d816b2d2de",
+        "libc++_shared.so": "cf2ea887af365557f4ad258c62631a4f92f902b4b79203a2185dba10efe19e62",
+        "libcrypto.so.3": "583023538ebcbd8a04fad69dc214b6c15bacf0d431cdb879e26392250d64abbe",
+        "libcurl.so.4": "d99cbf616a79220f6f18151ae54fd630fbf58c6adfe8c3d05e54b3d61fb79931",
+        "libdispatch.so": "d7b7304ca6152b46c5ecbb746cf54da6532ea4d11fcdb5bee7ef536a3293f832",
+        "libfts.so": "b3109ef91e6119c47adf95a09ca5ddf6f54348f64f744508e852709a6ebe51da",
+        "libssl.so.3": "3b884cefcc97def6282a8e7374f8fcbc138b5faa6e9b2d5e6e9bff4d5508a531",
+        "libswiftCore.so": "cb78733db77fbc742633882f8f8d8dba585c41207dd05aced6a24ce4579374fd",
+        "libswiftDispatch.so": "53b2248f5e9e9fd14991c0fe70f418b2767701bbf48e104e05242e94803241a7",
+        "libswiftMusl.so": "d959b823a185661890e57a0bb0f2aad631631b9b16dc17825b9a149e5ee423a8",
+        "libswiftSwiftOnoneSupport.so": "422a7cf4c82a2c81d01489cd55cfa90346aeeae950bed1ff7508e94bdfcadb65",
+        "libswiftSynchronization.so": "6f503892b3014820e720930957511f02fb2af83add8644566ea86865db204682",
+        "libswift_Concurrency.so": "45d8f1dcec8b94644a376d18702fbae1d4be145cd1fb7005afa07fd8df489774",
+        "libswift_RegexParser.so": "ca398af367915111c6b0d4c44a01c594651cb2964267a9a23d50813a35996d70",
+        "libswift_StringProcessing.so": "7b60f54ac6181a3772e1b441d8293c857b9cf11dcb3deedb76f0cad18076c777",
+        "libthunderbird.so": "e7bf034a839db5d19a5780b3525671dbf3ac652faf9b7199c58cebcdd4a355a7",
+        "libxml2.so.16": "ed8f17eca668a93794659eb188aba48a68a245c39a5083cda4ccd2bb796b422c"
+      }
+    }
+  },
+  "installation": {
+    "device": "Pura X",
+    "verifiedModel": "VDE-AL00",
+    "status": "installed successfully",
+    "versionName": "0.1.1",
+    "versionCode": 100001,
+    "originalInstallTimePreserved": true,
+    "updateTimeAdvanced": true,
+    "forceStoppedBeforeInstall": true,
+    "productionAppLaunched": false,
+    "matepad": "not connected"
+  },
+  "privacy": {
+    "realAccountAccess": false,
+    "realMessagesSent": false,
+    "productionScreensCaptured": false
+  },
+  "emulatorFinalState": {
+    "status": "stopped",
+    "nativeProcessExited": true
+  },
+  "sourcesSHA256": {
+    "harmony/AppScope/app.json5": "443a083bd838969c4e4a930621a3c8769cfea784ec705865291ebc04db02a074",
+    "harmony/entry/src/main/ets/data/MailCacheModel.ts": "19185f14d15c77ba7e5b645f3421f74335074cc5aa536dc3afdbe09298660ba8",
+    "harmony/entry/src/main/ets/pages/ConnectedMail.ets": "0a23806efa99b67beb9de6d92b83be5b37bc98413e5059947585f8a5313f3a75",
+    "harmony/entry/src/main/ets/mail/html/HtmlDocument.ts": "2f29ccf7df5db9c10ff37c85369ab070d555dbe07c39109c40c26a1bbfc2d9c0",
+    "port/swift-mime/HeaderDecoding.swift": "c475ca8b31fe97e9639550efc4599dbfe3e9bad03e89f3ac79dfe68badd4c242",
+    "port/swift-mime/header-decoding.patch": "29d581ff4df19d199c53a7209fbf64c7fc415dd6b8ae7d428f9b355e45afffbb",
+    "port/swift-mime/HeaderDecodingTests.swift": "72ff11ef744140ceb248454cd249d5161ec2128ba147fcdc39f975a456ec65e0",
+    "port/swift-accountbody/body-adapter.patch": "8f2ea7d1003176046f5c8867271537a126b9705ede5e6a25e485108ec46d437c",
+    "port/swift-accountbody/CompatibilityTests.swift": "a44a8ab7eb0582092a7563a9db3279c82d678352a0f6e09a13cd1c8e168c1285",
+    "port/swift-imap/Encoding.test.ets": "523250199055481bdd50a81301568a8c85ecdb3372f40d2b5090641329c79c9b",
+    "port/swift-imap/account-fixture.cjs": "c470482b851773b8c2c3afbb47442e8c81a175f60ef6f3bc20ea5b97118f5f6c",
+    "port/swift-imap/fixture.cjs": "3ec40031aa88c26ac085d454ce6cc65a996aa3a8065b36e69682f51d63549137",
+    "scripts/prepare-mime": "d7a2234d1b33d762ce44933df8a2c84a6690a53e601394f30ddbedc75bfd5467",
+    "scripts/prepare-mime-tests": "886eadc20447c7bddfa7bd0018273bdd33da52ff7624ba18ae270abb056ec2ca",
+    "scripts/prepare-imap-test-app": "4d7973a412cf0e35ab799566870c35b4a3f4f4184d3dc2330e8a99411d2caac5",
+    "scripts/test-emulator-encoding": "f186d605f92d20c1294edbedd2ed5deafd888812b91920fb6725e3ecb162e134",
+    "tests/mail-cache.test.cjs": "294a7505f6d6c696414a114e03c103d5a4f73aa333313b4c3f6cee668027589a",
+    "tests/html-document.test.cjs": "c0f185cc1c13b05a03335bed8519886f141a174cd8832e3e81ef4e6f3ac9dd84"
+  },
+  "screenshot": {
+    "path": "docs/screenshots/utf8-reader.png",
+    "sha256": "fc2d1ab562febac1582435a25091782669f8754a34a2c727116298d62c0e2432"
+  }
+}

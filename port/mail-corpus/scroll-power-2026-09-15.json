@@ -1,0 +1,983 @@
+{
+  "date": "2026-09-15",
+  "device": "MatePad MRO-W00",
+  "scenario": "Isolated synthetic 1500-row HTML, with text-only and static cached-picture trials; production mail was not accessed",
+  "energyMeasured": false,
+  "trials": {
+    "moderate": {
+      "inputsSha256": {
+        "test_log": "a7f413559c30ce1f326d855422bda318095c690813bbaa3eb9df4ee05bc0655d",
+        "profiler_csv": "72dcc57e7690d55ba63fc64b333102caf47097eab861a96c1146e843c42f03c8"
+      },
+      "cpuCores": 12,
+      "phases": [
+        {
+          "mode": "baseline011",
+          "phase": "idle",
+          "samples": 4,
+          "listedCpuPercent": 0.046223,
+          "listedCpuCoreEquivalents": 0.005547,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 0.251198
+        },
+        {
+          "mode": "baseline011",
+          "phase": "scroll",
+          "samples": 10,
+          "listedCpuPercent": 3.337335,
+          "listedCpuCoreEquivalents": 0.40048,
+          "wholeDeviceGpuPercent": 9.8062,
+          "framesPerSecond": 120.0
+        },
+        {
+          "mode": "baseline011",
+          "phase": "settled",
+          "samples": 3,
+          "listedCpuPercent": 0.036013,
+          "listedCpuCoreEquivalents": 0.004322,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 0.0
+        },
+        {
+          "mode": "current018",
+          "phase": "idle",
+          "samples": 4,
+          "listedCpuPercent": 0.045803,
+          "listedCpuCoreEquivalents": 0.005496,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 0.245689
+        },
+        {
+          "mode": "current018",
+          "phase": "scroll",
+          "samples": 10,
+          "listedCpuPercent": 3.322658,
+          "listedCpuCoreEquivalents": 0.398719,
+          "wholeDeviceGpuPercent": 13.976391,
+          "framesPerSecond": 120.0
+        },
+        {
+          "mode": "current018",
+          "phase": "settled",
+          "samples": 3,
+          "listedCpuPercent": 0.133897,
+          "listedCpuCoreEquivalents": 0.016068,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 1.001664
+        },
+        {
+          "mode": "asyncViewport",
+          "phase": "idle",
+          "samples": 4,
+          "listedCpuPercent": 0.02305,
+          "listedCpuCoreEquivalents": 0.002766,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 0.0
+        },
+        {
+          "mode": "asyncViewport",
+          "phase": "scroll",
+          "samples": 11,
+          "listedCpuPercent": 6.108833,
+          "listedCpuCoreEquivalents": 0.73306,
+          "wholeDeviceGpuPercent": 24.011186,
+          "framesPerSecond": 114.367224
+        },
+        {
+          "mode": "asyncViewport",
+          "phase": "settled",
+          "samples": 3,
+          "listedCpuPercent": 0.047471,
+          "listedCpuCoreEquivalents": 0.005697,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 0.0
+        }
+      ]
+    },
+    "rapid": {
+      "inputsSha256": {
+        "test_log": "6a9b8b168d68c0857837347e435775c3a50f43041238091ddc408eca42066686",
+        "profiler_csv": "f2fce314df82e866e1d2ba6ba254c575ca28d137d23cce2641a2ae2c0bc551d0"
+      },
+      "cpuCores": 12,
+      "phases": [
+        {
+          "mode": "baseline011",
+          "phase": "idle",
+          "samples": 4,
+          "listedCpuPercent": 0.058392,
+          "listedCpuCoreEquivalents": 0.007007,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 0.251123
+        },
+        {
+          "mode": "baseline011",
+          "phase": "scroll",
+          "samples": 19,
+          "listedCpuPercent": 4.469605,
+          "listedCpuCoreEquivalents": 0.536353,
+          "wholeDeviceGpuPercent": 26.219135,
+          "framesPerSecond": 118.998421
+        },
+        {
+          "mode": "baseline011",
+          "phase": "settled",
+          "samples": 3,
+          "listedCpuPercent": 0.29633,
+          "listedCpuCoreEquivalents": 0.03556,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 31.498665
+        },
+        {
+          "mode": "current018",
+          "phase": "idle",
+          "samples": 4,
+          "listedCpuPercent": 0.041549,
+          "listedCpuCoreEquivalents": 0.004986,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 0.0
+        },
+        {
+          "mode": "current018",
+          "phase": "scroll",
+          "samples": 19,
+          "listedCpuPercent": 4.488618,
+          "listedCpuCoreEquivalents": 0.538634,
+          "wholeDeviceGpuPercent": 28.678385,
+          "framesPerSecond": 120.0
+        },
+        {
+          "mode": "current018",
+          "phase": "settled",
+          "samples": 3,
+          "listedCpuPercent": 0.083646,
+          "listedCpuCoreEquivalents": 0.010038,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 11.991333
+        },
+        {
+          "mode": "asyncViewport",
+          "phase": "idle",
+          "samples": 4,
+          "listedCpuPercent": 0.054301,
+          "listedCpuCoreEquivalents": 0.006516,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 0.0
+        },
+        {
+          "mode": "asyncViewport",
+          "phase": "scroll",
+          "samples": 19,
+          "listedCpuPercent": 6.711158,
+          "listedCpuCoreEquivalents": 0.805339,
+          "wholeDeviceGpuPercent": 29.065151,
+          "framesPerSecond": 119.105357
+        },
+        {
+          "mode": "asyncViewport",
+          "phase": "settled",
+          "samples": 3,
+          "listedCpuPercent": 0.933196,
+          "listedCpuCoreEquivalents": 0.111983,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 34.837425
+        }
+      ]
+    },
+    "picturesSdk26": {
+      "inputsSha256": {
+        "test_log": "718befe82daecc6ba0ac86eac00416f4b326cfd1d1a0d9cd2a7f13a0f7096653",
+        "profiler_csv": "3de412d803a4071d057d8454734632cc7098e295b8f249fc7e57c4b7e3fe3fd9"
+      },
+      "toolchain": "sdk26",
+      "cpuCores": 12,
+      "testResult": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "passes": 1
+      },
+      "phases": [
+        {
+          "mode": "baseline018",
+          "phase": "idle",
+          "samples": 4,
+          "sampledMs": 3964,
+          "mainCpuPercent": 0.037602,
+          "listedChildCpuPercent": 0.0,
+          "listedCpuPercent": 0.037602,
+          "listedCpuCoreEquivalents": 0.004512,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 0.0,
+          "socTemperatureC": {
+            "samples": 4,
+            "mean": 43.104196,
+            "min": 40.783,
+            "max": 46.351
+          },
+          "currentNowRaw": {
+            "samples": 4,
+            "mean": -32.615288,
+            "min": -49.0,
+            "max": -20.0
+          },
+          "voltageNowRaw": {
+            "samples": 4,
+            "mean": 7712051.967709,
+            "min": 7706000.0,
+            "max": 7716000.0
+          },
+          "missingMainSamples": 0,
+          "incompleteChildSamples": 0,
+          "pictureWorkDelta": {
+            "missing_http": 0,
+            "resources": 0,
+            "good_http": 0,
+            "cache": 0,
+            "tracker_http": 0
+          }
+        },
+        {
+          "mode": "baseline018",
+          "phase": "scroll",
+          "samples": 19,
+          "sampledMs": 18999,
+          "mainCpuPercent": 4.456154,
+          "listedChildCpuPercent": 0.000876,
+          "listedCpuPercent": 4.45703,
+          "listedCpuCoreEquivalents": 0.534844,
+          "wholeDeviceGpuPercent": 18.637402,
+          "framesPerSecond": 120.0,
+          "socTemperatureC": {
+            "samples": 19,
+            "mean": 52.212327,
+            "min": 46.227,
+            "max": 54.037
+          },
+          "currentNowRaw": {
+            "samples": 19,
+            "mean": -438.679562,
+            "min": -469.0,
+            "max": -417.0
+          },
+          "voltageNowRaw": {
+            "samples": 19,
+            "mean": 7675894.83657,
+            "min": 7668000.0,
+            "max": 7684000.0
+          },
+          "missingMainSamples": 0,
+          "incompleteChildSamples": 0,
+          "pictureWorkDelta": {
+            "missing_http": 0,
+            "resources": 0,
+            "good_http": 0,
+            "cache": 0,
+            "tracker_http": 0
+          }
+        },
+        {
+          "mode": "baseline018",
+          "phase": "settled",
+          "samples": 3,
+          "sampledMs": 3005,
+          "mainCpuPercent": 0.346965,
+          "listedChildCpuPercent": 0.0,
+          "listedCpuPercent": 0.346965,
+          "listedCpuCoreEquivalents": 0.041636,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 15.254576,
+          "socTemperatureC": {
+            "samples": 3,
+            "mean": 45.857611,
+            "min": 43.447,
+            "max": 48.704
+          },
+          "currentNowRaw": {
+            "samples": 3,
+            "mean": -100.38802,
+            "min": -138.0,
+            "max": -77.0
+          },
+          "voltageNowRaw": {
+            "samples": 3,
+            "mean": 7707345.091514,
+            "min": 7706000.0,
+            "max": 7708000.0
+          },
+          "missingMainSamples": 0,
+          "incompleteChildSamples": 0,
+          "pictureWorkDelta": {
+            "missing_http": 0,
+            "resources": 0,
+            "good_http": 0,
+            "cache": 0,
+            "tracker_http": 0
+          }
+        },
+        {
+          "mode": "current019",
+          "phase": "idle",
+          "samples": 4,
+          "sampledMs": 4001,
+          "mainCpuPercent": 0.03958,
+          "listedChildCpuPercent": 0.002034,
+          "listedCpuPercent": 0.041613,
+          "listedCpuCoreEquivalents": 0.004994,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 0.0,
+          "socTemperatureC": {
+            "samples": 4,
+            "mean": 41.796258,
+            "min": 40.194,
+            "max": 44.148
+          },
+          "currentNowRaw": {
+            "samples": 4,
+            "mean": -21.516621,
+            "min": -26.0,
+            "max": -18.0
+          },
+          "voltageNowRaw": {
+            "samples": 4,
+            "mean": 7714000.0,
+            "min": 7714000.0,
+            "max": 7714000.0
+          },
+          "missingMainSamples": 0,
+          "incompleteChildSamples": 0,
+          "pictureWorkDelta": {
+            "missing_http": 0,
+            "resources": 0,
+            "good_http": 0,
+            "cache": 0,
+            "tracker_http": 0
+          }
+        },
+        {
+          "mode": "current019",
+          "phase": "scroll",
+          "samples": 19,
+          "sampledMs": 18951,
+          "mainCpuPercent": 4.461405,
+          "listedChildCpuPercent": 0.00044,
+          "listedCpuPercent": 4.461845,
+          "listedCpuCoreEquivalents": 0.535421,
+          "wholeDeviceGpuPercent": 18.916996,
+          "framesPerSecond": 119.841486,
+          "socTemperatureC": {
+            "samples": 19,
+            "mean": 52.794772,
+            "min": 46.877,
+            "max": 54.827
+          },
+          "currentNowRaw": {
+            "samples": 19,
+            "mean": -465.955622,
+            "min": -651.0,
+            "max": -419.0
+          },
+          "voltageNowRaw": {
+            "samples": 19,
+            "mean": 7676731.254287,
+            "min": 7654000.0,
+            "max": 7684000.0
+          },
+          "missingMainSamples": 0,
+          "incompleteChildSamples": 0,
+          "pictureWorkDelta": {
+            "missing_http": 0,
+            "resources": 0,
+            "good_http": 0,
+            "cache": 0,
+            "tracker_http": 0
+          }
+        },
+        {
+          "mode": "current019",
+          "phase": "settled",
+          "samples": 3,
+          "sampledMs": 3004,
+          "mainCpuPercent": 0.389819,
+          "listedChildCpuPercent": 0.0,
+          "listedCpuPercent": 0.389819,
+          "listedCpuCoreEquivalents": 0.046778,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 17.390812,
+          "socTemperatureC": {
+            "samples": 3,
+            "mean": 46.530897,
+            "min": 44.033,
+            "max": 49.3
+          },
+          "currentNowRaw": {
+            "samples": 3,
+            "mean": -79.744341,
+            "min": -128.0,
+            "max": -49.0
+          },
+          "voltageNowRaw": {
+            "samples": 3,
+            "mean": 7708667.110519,
+            "min": 7708000.0,
+            "max": 7710000.0
+          },
+          "missingMainSamples": 0,
+          "incompleteChildSamples": 0,
+          "pictureWorkDelta": {
+            "missing_http": 0,
+            "resources": 0,
+            "good_http": 0,
+            "cache": 0,
+            "tracker_http": 0
+          }
+        }
+      ],
+      "sceneResults": [
+        {
+          "mode": "baseline018",
+          "rows": 1500,
+          "flings": 223,
+          "flingElapsedMs": 20036,
+          "scrollEvents": 2280,
+          "maxOffsetVp": 35664.606001112195,
+          "settledLoadCountsUnchanged": [
+            1,
+            1
+          ],
+          "oneWeb": true,
+          "driverCloseMs": 970,
+          "nativeCloseMs": 45,
+          "closedViewFound": true,
+          "savedImages": 20,
+          "decodedRgbaBytes": 28800000,
+          "savedBytesAndTimestampsIntact": true,
+          "initialAndFinalPictureWork": {
+            "resources": 24,
+            "cache": 24,
+            "good_http": 20,
+            "missing_http": 2,
+            "tracker_http": 2
+          }
+        },
+        {
+          "mode": "current019",
+          "rows": 1500,
+          "flings": 223,
+          "flingElapsedMs": 20085,
+          "scrollEvents": 2301,
+          "maxOffsetVp": 34755.40881347656,
+          "settledLoadCountsUnchanged": [
+            1,
+            1
+          ],
+          "oneWeb": true,
+          "driverCloseMs": 1114,
+          "nativeCloseMs": 45,
+          "closedViewFound": true,
+          "savedImages": 20,
+          "decodedRgbaBytes": 28800000,
+          "savedBytesAndTimestampsIntact": true,
+          "initialAndFinalPictureWork": {
+            "resources": 22,
+            "cache": 22,
+            "good_http": 20,
+            "missing_http": 2,
+            "tracker_http": 0
+          }
+        }
+      ]
+    },
+    "picturesSdk22": {
+      "inputsSha256": {
+        "test_log": "c7a409ab1dea7db7a1e44254c5579e8bd4b6dd4f6d8803d54ab7e445d16c8df2",
+        "profiler_csv": "af085ed6d3d7f3e2fff7e993087ff5099d99a577fd9d5fda8d8b028516c328e8"
+      },
+      "toolchain": "sdk22",
+      "cpuCores": 12,
+      "testResult": {
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "passes": 1
+      },
+      "phases": [
+        {
+          "mode": "baseline018",
+          "phase": "idle",
+          "samples": 4,
+          "sampledMs": 4036,
+          "mainCpuPercent": 0.063627,
+          "listedChildCpuPercent": 0.002067,
+          "listedCpuPercent": 0.065694,
+          "listedCpuCoreEquivalents": 0.007883,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 0.0,
+          "socTemperatureC": {
+            "samples": 4,
+            "mean": 41.828765,
+            "min": 40.226,
+            "max": 44.145
+          },
+          "currentNowRaw": {
+            "samples": 4,
+            "mean": -38.0778,
+            "min": -62.0,
+            "max": -21.0
+          },
+          "voltageNowRaw": {
+            "samples": 4,
+            "mean": 7709479.187314,
+            "min": 7706000.0,
+            "max": 7712000.0
+          },
+          "missingMainSamples": 0,
+          "incompleteChildSamples": 0,
+          "pictureWorkDelta": {
+            "cache": 0,
+            "resources": 0,
+            "good_http": 0,
+            "missing_http": 0,
+            "tracker_http": 0
+          }
+        },
+        {
+          "mode": "baseline018",
+          "phase": "scroll",
+          "samples": 19,
+          "sampledMs": 19000,
+          "mainCpuPercent": 4.518331,
+          "listedChildCpuPercent": 0.000439,
+          "listedCpuPercent": 4.51877,
+          "listedCpuCoreEquivalents": 0.542252,
+          "wholeDeviceGpuPercent": 20.060211,
+          "framesPerSecond": 119.894895,
+          "socTemperatureC": {
+            "samples": 19,
+            "mean": 51.666891,
+            "min": 48.276,
+            "max": 53.121
+          },
+          "currentNowRaw": {
+            "samples": 19,
+            "mean": -435.783368,
+            "min": -493.0,
+            "max": -414.0
+          },
+          "voltageNowRaw": {
+            "samples": 19,
+            "mean": 7673053.473684,
+            "min": 7664000.0,
+            "max": 7680000.0
+          },
+          "missingMainSamples": 0,
+          "incompleteChildSamples": 0,
+          "pictureWorkDelta": {
+            "cache": 0,
+            "resources": 0,
+            "good_http": 0,
+            "missing_http": 0,
+            "tracker_http": 0
+          }
+        },
+        {
+          "mode": "baseline018",
+          "phase": "settled",
+          "samples": 3,
+          "sampledMs": 3002,
+          "mainCpuPercent": 0.156825,
+          "listedChildCpuPercent": 0.00282,
+          "listedCpuPercent": 0.159645,
+          "listedCpuCoreEquivalents": 0.019157,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 6.966023,
+          "socTemperatureC": {
+            "samples": 3,
+            "mean": 44.210781,
+            "min": 42.216,
+            "max": 46.406
+          },
+          "currentNowRaw": {
+            "samples": 3,
+            "mean": -52.757495,
+            "min": -81.0,
+            "max": -34.0
+          },
+          "voltageNowRaw": {
+            "samples": 3,
+            "mean": 7706664.890073,
+            "min": 7704000.0,
+            "max": 7708000.0
+          },
+          "missingMainSamples": 0,
+          "incompleteChildSamples": 0,
+          "pictureWorkDelta": {
+            "cache": 0,
+            "resources": 0,
+            "good_http": 0,
+            "missing_http": 0,
+            "tracker_http": 0
+          }
+        },
+        {
+          "mode": "current019",
+          "phase": "idle",
+          "samples": 4,
+          "sampledMs": 3997,
+          "mainCpuPercent": 0.04757,
+          "listedChildCpuPercent": 0.002063,
+          "listedCpuPercent": 0.049632,
+          "listedCpuCoreEquivalents": 0.005956,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 0.0,
+          "socTemperatureC": {
+            "samples": 4,
+            "mean": 40.857142,
+            "min": 39.465,
+            "max": 42.376
+          },
+          "currentNowRaw": {
+            "samples": 4,
+            "mean": -23.887916,
+            "min": -38.0,
+            "max": -15.0
+          },
+          "voltageNowRaw": {
+            "samples": 4,
+            "mean": 7711460.595447,
+            "min": 7710000.0,
+            "max": 7714000.0
+          },
+          "missingMainSamples": 0,
+          "incompleteChildSamples": 0,
+          "pictureWorkDelta": {
+            "cache": 0,
+            "resources": 0,
+            "good_http": 0,
+            "missing_http": 0,
+            "tracker_http": 0
+          }
+        },
+        {
+          "mode": "current019",
+          "phase": "scroll",
+          "samples": 19,
+          "sampledMs": 19002,
+          "mainCpuPercent": 4.533897,
+          "listedChildCpuPercent": 0.000438,
+          "listedCpuPercent": 4.534335,
+          "listedCpuCoreEquivalents": 0.54412,
+          "wholeDeviceGpuPercent": 22.736712,
+          "framesPerSecond": 119.947374,
+          "socTemperatureC": {
+            "samples": 19,
+            "mean": 51.92672,
+            "min": 46.978,
+            "max": 53.169
+          },
+          "currentNowRaw": {
+            "samples": 19,
+            "mean": -446.165456,
+            "min": -497.0,
+            "max": -413.0
+          },
+          "voltageNowRaw": {
+            "samples": 19,
+            "mean": 7673578.570677,
+            "min": 7664000.0,
+            "max": 7678000.0
+          },
+          "missingMainSamples": 0,
+          "incompleteChildSamples": 0,
+          "pictureWorkDelta": {
+            "cache": 0,
+            "resources": 0,
+            "good_http": 0,
+            "missing_http": 0,
+            "tracker_http": 0
+          }
+        },
+        {
+          "mode": "current019",
+          "phase": "settled",
+          "samples": 3,
+          "sampledMs": 3000,
+          "mainCpuPercent": 0.157541,
+          "listedChildCpuPercent": 0.002815,
+          "listedCpuPercent": 0.160355,
+          "listedCpuCoreEquivalents": 0.019243,
+          "wholeDeviceGpuPercent": 0.0,
+          "framesPerSecond": 13.664667,
+          "socTemperatureC": {
+            "samples": 3,
+            "mean": 44.827281,
+            "min": 42.848,
+            "max": 46.942
+          },
+          "currentNowRaw": {
+            "samples": 3,
+            "mean": -56.673333,
+            "min": -66.0,
+            "max": -42.0
+          },
+          "voltageNowRaw": {
+            "samples": 3,
+            "mean": 7707332.0,
+            "min": 7706000.0,
+            "max": 7710000.0
+          },
+          "missingMainSamples": 0,
+          "incompleteChildSamples": 0,
+          "pictureWorkDelta": {
+            "cache": 0,
+            "resources": 0,
+            "good_http": 0,
+            "missing_http": 0,
+            "tracker_http": 0
+          }
+        }
+      ],
+      "sceneResults": [
+        {
+          "mode": "baseline018",
+          "rows": 1500,
+          "flings": 221,
+          "flingElapsedMs": 20056,
+          "scrollEvents": 2316,
+          "maxOffsetVp": 35759.03422715929,
+          "settledLoadCountsUnchanged": [
+            1,
+            1
+          ],
+          "oneWeb": true,
+          "driverCloseMs": 1063,
+          "nativeCloseMs": 48,
+          "closedViewFound": true,
+          "savedImages": 20,
+          "decodedRgbaBytes": 28800000,
+          "savedBytesAndTimestampsIntact": true,
+          "initialAndFinalPictureWork": {
+            "resources": 24,
+            "cache": 24,
+            "good_http": 20,
+            "missing_http": 2,
+            "tracker_http": 2
+          }
+        },
+        {
+          "mode": "current019",
+          "rows": 1500,
+          "flings": 222,
+          "flingElapsedMs": 20067,
+          "scrollEvents": 2310,
+          "maxOffsetVp": 35345.98358154297,
+          "settledLoadCountsUnchanged": [
+            1,
+            1
+          ],
+          "oneWeb": true,
+          "driverCloseMs": 1078,
+          "nativeCloseMs": 48,
+          "closedViewFound": true,
+          "savedImages": 20,
+          "decodedRgbaBytes": 28800000,
+          "savedBytesAndTimestampsIntact": true,
+          "initialAndFinalPictureWork": {
+            "resources": 22,
+            "cache": 22,
+            "good_http": 20,
+            "missing_http": 2,
+            "tracker_http": 0
+          }
+        }
+      ]
+    }
+  },
+  "limits": [
+    "CPU covers the processes supplied to SmartPerf, not a verified complete ArkWeb process tree.",
+    "GPU is whole-device. Signed current and voltage retain raw SmartPerf units; charging samples do not establish application watts, energy or battery share.",
+    "Static text and cached PNG fixtures do not reproduce every newsletter, image decoder, animation, malformed document, background task or inbox refresh.",
+    "First rapid text attempt hit the 100-gesture cap before 20 seconds and failed the unchanged duration assertion; raising the cap to 400 yielded 218–221 flings per 20 seconds.",
+    "Experimental async mode uses a bounded viewport with its own scrolling; it has different layout/observer behavior and is not shipping.",
+    "The first SDK 26 picture attempt failed the candidate Close deadline and is excluded; instrumented reruns retained the deadline.",
+    "SDK comparison used sequential trials, one completed run per toolchain and different starting temperatures, without randomized repetitions.",
+    "No extra tracked HTTP, resource or cache work occurred during picture scrolling on either renderer; this does not establish a CPU saving from the failure memo.",
+    "The matched compiler-comparison source predates final malformed-HTML parser fixes and uses a frozen earlier Swift core, not the final release build.",
+    "The SDK comparison does not globally rule out SDK involvement or explain the reported heat and 50-percent battery share."
+  ],
+  "pictureFixture": {
+    "modes": {
+      "baseline018": "Frozen installed 0.1.18 renderer/helper, renamed and instrumented only in isolated test staging.",
+      "current019": "Frozen picture-failure memo and non-content tracker filtering candidate; precedes final malformed-HTML parser fixes."
+    },
+    "rows": 1500,
+    "staticPngImages": 20,
+    "imageWidth": 800,
+    "imageHeight": 450,
+    "encodedPngBytes": 4505709,
+    "decodedRgbaBytes": 28800000,
+    "htmlByteLimit": 1000000,
+    "visibleUnavailableImages": 2,
+    "onePixelTrackingImages": 2,
+    "assetManifestSha256": "7a144019e2b83ec15813e69aba3c4695b279926d21179ff03672fd983d5b2a31",
+    "assetManifest": "port/swift-smtp/picture-scroll/manifest.json",
+    "priming": "Twenty HTTP 200 downloads into the isolated encrypted PictureCache before measured phases; saved-image endpoints then return counted HTTP 503 responses.",
+    "verification": "All saved bytes and timestamps checked after each scene. Every measured phase has zero added resource callbacks, cache API calls, and good/missing/tracker HTTP requests.",
+    "phaseDurationMs": {
+      "idle": 5000,
+      "scroll": 20000,
+      "settled": 5000
+    },
+    "flingVelocityPxPerSecond": 16000,
+    "nativeLayout": "Same production-style outer Scroll and padded Column for both renderer modes.",
+    "trackerResult": "Baseline requested two one-pixel trackers during initial loading; candidate filtered both before requesting them.",
+    "repeatedFailureResult": "Neither renderer repeated failed-image requests during measured scrolling; this fixture does not prove CPU savings from the failure memo."
+  },
+  "toolchainComparison": {
+    "sourceParityFiles": 253,
+    "importedNativeParityFiles": 24,
+    "importedSwiftCoreSha256": "1c074e12a6c71d2e0f563c7df7145c841a8b74c9b8eb6c2a2111ed4a8a238e91",
+    "sourceParityRecordSha256": "c94ed06266f1b4eea1a9d593bb3b35c633f49521443f8f14eb1c288773123d88",
+    "buildValidationRecordSha256": "10f7bacccb1843b9286067e20a98ccba1bc581494ac4c7d868c1e886a94db392",
+    "selectedStagedSourceSha256": {
+      "entry/src/main/ets/pages/HtmlMail018.ets": "d73f08b6d18e363a82dbffecc54e635c4f4a265d355abebfabb1c1c7de2cc433",
+      "entry/src/main/ets/mail/html/HtmlDocument018.ts": "b855fefde2327cc9b6a0bd414de4a6603da6595f1d14ea9352edf75b879e499d",
+      "entry/src/main/ets/pages/HtmlMail.ets": "995050e301225291f269036cebffc2f571c66fcc2a9ee1a9fad72af265029b96",
+      "entry/src/main/ets/mail/html/HtmlDocument.ts": "61334a61e962e5fb34a51ec1737418492433b6d2b1c62ce408c1cfcade3dd26d",
+      "entry/src/main/ets/data/PictureCache.ets": "03941e96c2fb9560beaa9780d4827646a0c7d7c8a5e00d8da54ac55890705649",
+      "entry/src/main/ets/support/HtmlPictureScrollState.ets": "9fed638f3d5c928a8944e2dc8e8500ea65f0b0e582b3f33a70f71dda26ff3c6c",
+      "entry/src/main/ets/pages/HtmlPictureScrollFixture.ets": "9b5446dc03dd2dbeb8db29ce2dc3116c1024c78083ee54a0389221b10a98a8d9",
+      "entry/src/ohosTest/ets/test/HtmlPictureScroll.test.ets": "f6912967b3eca0ae845384077c43926fef82f748db559fe7ac4b81421115c7a1",
+      "entry/src/ohosTest/ets/testrunner/HtmlPictureScrollRunner.ets": "62382cfd25e0fc0bd51fa529732a69783bb265b784aec2dab8e502714d52de1e"
+    },
+    "sdk22": {
+      "cli": "6.0.2.670",
+      "hvigor": "6.22.9",
+      "plugin": "6.22.9",
+      "node": "18.20.1",
+      "pnpm": "10.27.0",
+      "sdk": "6.0.2.130",
+      "api": 22
+    },
+    "sdk26": {
+      "cli": "26.0.0.821",
+      "hvigor": "6.26.4",
+      "plugin": "6.26.4",
+      "node": "24.14.1",
+      "sdk": "26.0.0.105",
+      "api": 26
+    },
+    "minimumApi": 22,
+    "targetApi": 22,
+    "nativeSwiftSysrootApi": 22,
+    "profileChange": "Removed only compileSdkVersion override in isolated SDK 22 copy; other profile values preserved.",
+    "nativeDifferences": {
+      "default": [
+        "libs/arm64-v8a/libthunderbird.so",
+        "libs/arm64-v8a/libimaptest.so"
+      ],
+      "ohosTest": []
+    },
+    "nativeDifferenceReason": "C++ bridge libraries rebuilt by each SDK; imported Swift/native library bytes remained identical.",
+    "artifacts": {
+      "default": {
+        "sdk22": {
+          "hapSha256": "51620c842f62bb85d2df76ce5a76d6c8189f0310750102b58850ecc825b59738",
+          "abcSha256": "e232beab248616f2f0c5cce31faf3df6709e8886f3e2ff895f4a812718f57720",
+          "metadata": {
+            "bundleName": "org.thunderbird.harmony.imaptest",
+            "versionCode": 1,
+            "versionName": "0.1.0",
+            "compileSdkVersion": "6.0.2.130",
+            "compileSdkType": "HarmonyOS",
+            "minAPIVersion": 60002022,
+            "targetAPIVersion": 60002022
+          }
+        },
+        "sdk26": {
+          "hapSha256": "3290e365530970fd2f80406fb0ea926dab97864af03427cb994d7a100fe98ce1",
+          "abcSha256": "171f6f2ad635fc25f31344fe44b330f49108d6d68e8c0e87d4017e1203b51349",
+          "metadata": {
+            "bundleName": "org.thunderbird.harmony.imaptest",
+            "versionCode": 1,
+            "versionName": "0.1.0",
+            "compileSdkVersion": "26.0.0.105",
+            "compileSdkType": "HarmonyOS",
+            "minAPIVersion": 60002022,
+            "targetAPIVersion": 60002022
+          }
+        }
+      },
+      "ohosTest": {
+        "sdk22": {
+          "hapSha256": "69c1062c7e46531b23d797a016d117c1fba453c9a66d538aec86a1d9baf0260d",
+          "abcSha256": "4196a91c259ed5843dda72adda70554f71a8a25f7b0e741c99828c54c69e8c4d",
+          "metadata": {
+            "bundleName": "org.thunderbird.harmony.imaptest",
+            "versionCode": 1,
+            "versionName": "0.1.0",
+            "compileSdkVersion": "6.0.2.130",
+            "compileSdkType": "HarmonyOS",
+            "minAPIVersion": 60002022,
+            "targetAPIVersion": 60002022
+          }
+        },
+        "sdk26": {
+          "hapSha256": "b79a6a609c63f4705ca88f90dc5102efa91fa1d27c5237be1a76f0cd244191c6",
+          "abcSha256": "90e1b6cf738d32e09c4564a2fa70e14599db9d63968390e0b67f41eca3af8260",
+          "metadata": {
+            "bundleName": "org.thunderbird.harmony.imaptest",
+            "versionCode": 1,
+            "versionName": "0.1.0",
+            "compileSdkVersion": "26.0.0.105",
+            "compileSdkType": "HarmonyOS",
+            "minAPIVersion": 60002022,
+            "targetAPIVersion": 60002022
+          }
+        }
+      }
+    },
+    "runOrder": [
+      "picturesSdk26",
+      "picturesSdk22"
+    ],
+    "completedRunsPerToolchain": 1,
+    "conclusion": "SDK 26 did not show higher listed CPU use in this matched static-picture fixture; this does not rule out SDK-related effects in other content or activity.",
+    "frozenSourceLimitation": "Both builds precede final malformed-HTML parser fixes and preserve the earlier frozen Swift benchmark core; neither is the final release build."
+  },
+  "excludedPictureAttempt": {
+    "toolchain": "sdk26",
+    "inputsSha256": {
+      "test_log": "b949481e9481b2cf236d63002ec958e65b8f433c20825b5932876fc48dcabe89",
+      "profiler_csv": "256a7d5996b14a0af473c2a0bb2de6067e26a77480fdfe82c05380f5238ebe71"
+    },
+    "testResult": {
+      "tests": 1,
+      "failures": 1,
+      "errors": 0,
+      "passes": 0
+    },
+    "reason": "Candidate Close driver operation failed unchanged <3000 ms assertion after picture/phase assertions passed.",
+    "candidateCloseDurationMs": null,
+    "durationLimitation": "Actual duration was not logged before the failed assertion; no cause is assigned.",
+    "followUp": "Added scene-owned native button-handler/closed-view timestamps and logging before assertion. SDK 26 rerun and SDK 22 run passed the same deadline.",
+    "includedInComparison": false
+  },
+  "sampleSemantics": {
+    "mean": "Weighted by accepted sample interval duration.",
+    "firstCollectorSampleExcluded": true,
+    "acceptedIntervalMs": [
+      750,
+      1500
+    ],
+    "intervalMustBeFullyWithinPhase": true,
+    "settledInitialExclusionMs": 1000,
+    "missingValues": "NA is missing, never zero; listed CPU total requires main and all reported child entries numeric.",
+    "cpu": "Machine-normalized percentage; 100/12 percent is one logical core equivalent.",
+    "currentNowRaw": "Signed raw currentNow reading, original units and charging direction retained.",
+    "voltageNowRaw": "Raw voltageNow reading with no unit conversion.",
+    "testAcceptance": "Incomplete or failed test runs are rejected.",
+    "gpu": "Whole-device GPU utilization; not application-attributed.",
+    "fps": "SmartPerf-reported FPS; this is not proof of smoothness or frame latency."
+  }
+}

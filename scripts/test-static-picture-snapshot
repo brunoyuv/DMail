@@ -1,0 +1,104 @@
+#!/usr/bin/env bash
+# Prepared emulator-only snapshot/visual gate; loopback HTTP and synthetic images.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+[[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 && "${HDC_TARGET:-}" == 127.0.0.1:5555 ]]
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app"
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == x86_64 ]]
+for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+  [[ -f "$APP/entry/build/default/outputs/$hap" ]] || { echo 'Build both isolated static-picture HAPs first.' >&2; exit 1; }
+done
+# Avoid a false-positive result from an uninstrumented or historical staged renderer.
+grep -q 'StaticPictureState.recordMount' "$APP/entry/src/main/ets/pages/HtmlMail.ets"
+grep -q 'StaticPictureState.recordDocument' "$APP/entry/src/main/ets/pages/HtmlMail.ets"
+OUT="$ROOT/.tools/emulator-static-picture-snapshot"
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  find "$OUT" -maxdepth 1 -type f -exec mv -t "$PREVIOUS" {} +
+fi
+INSTALLED=false
+CAPTURES=(initial scrolled reopened reopened-scrolled)
+cleanup() {
+  local result=$?
+  trap - EXIT
+  if "$INSTALLED"; then
+    for name in "${CAPTURES[@]}"; do
+      run_hdc -t "$HDC_TARGET" file recv "/data/local/tmp/static-picture-$name.png" "$OUT/$name.png" >/dev/null 2>&1 || true
+      run_hdc -t "$HDC_TARGET" shell rm -f "/data/local/tmp/static-picture-$name.png" >/dev/null 2>&1 || true
+    done
+    run_hdc -t "$HDC_TARGET" shell aa force-stop org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+    run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+INSTALLED=true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+for name in "${CAPTURES[@]}"; do
+  run_hdc -t "$HDC_TARGET" shell rm -f "/data/local/tmp/static-picture-$name.png"
+done
+# Bring the isolated blank page forward before the test's first wake/gesture.
+run_hdc -t "$HDC_TARGET" shell aa start -b org.thunderbird.harmony.imaptest -a EntryAbility
+timeout --foreground --kill-after=5s 100s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/StaticPictureRunner \
+  -s timeout 90000 | tee "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"
+grep -q '^STATIC_PICTURE_RESULT: real sync resumed after worker and encrypted-store restart at 2 of 7 bodies, then saved all 7 messages across 3 pages before first reader;' "$OUT/test.log"
+grep -q '^STATIC_PICTURE_COUNTS: requests=1,1,1 non_content=0 loads=2,2 work=7,7,1 ' "$OUT/test.log"
+grep -q '^STATIC_PICTURE_SYNC: pages=0,3,6 checkpoint=2/7 saved=7/7$' "$OUT/test.log"
+for name in "${CAPTURES[@]}"; do
+  run_hdc -t "$HDC_TARGET" file recv "/data/local/tmp/static-picture-$name.png" "$OUT/$name.png" >/dev/null
+done
+python3 - "$OUT" <<'PY'
+import hashlib,json,re,sys
+from pathlib import Path
+from PIL import Image,ImageChops
+out=Path(sys.argv[1]); log=(out/'test.log').read_text()
+match=re.search(r'^STATIC_PICTURE_COUNTS: requests=1,1,1 non_content=0 loads=2,2 work=7,7,1 scroll_max=([\d.]+)$',log,re.M)
+assert match and float(match.group(1))>100, 'Missing synthetic native scrolling evidence'
+assert re.search(r'^STATIC_PICTURE_SYNC: pages=0,3,6 checkpoint=2/7 saved=7/7$',log,re.M), 'Missing durable mailbox completion evidence'
+bounds={}
+for raw in re.findall(r'^STATIC_PICTURE_BOUNDS: (\{[^\r\n]+\})$',log,re.M):
+    value=json.loads(raw); bounds[value['name']]=value['bounds']
+original_colors=[(233,48,37),(56,171,100),(46,125,204)]
+replacement_colors=[(190,80,170),(235,145,35),(25,165,170)]
+def color_pixels(picture,color):
+    masks=[band.point(lambda value,target=target: 255 if abs(value-target)<=8 else 0)
+           for band,target in zip(picture.split(),color)]
+    return ImageChops.darker(ImageChops.darker(masks[0],masks[1]),masks[2]).histogram()[255]
+visual={}
+for name in ['initial','scrolled','reopened','reopened-scrolled']:
+    assert name in bounds, (name,'Missing native Web bounds')
+    picture=Image.open(out/f'{name}.png').convert('RGB'); box=bounds[name]
+    # The intrinsic Web is taller than the screen. Inspect only visible pixels,
+    # never allocate a crop extending to the full offscreen document height.
+    crop_box=(max(0,round(box['left'])),max(0,round(box['top'])),
+              min(picture.width,round(box['right'])),min(picture.height,round(box['bottom'])))
+    assert crop_box[2]>crop_box[0] and crop_box[3]>crop_box[1],(name,'Web outside visible screen')
+    crop=picture.crop(crop_box)
+    original=[color_pixels(crop,color) for color in original_colors]
+    replacement=[color_pixels(crop,color) for color in replacement_colors]
+    assert all(count>=100 for count in original),(name,'Saved original image not rendered',original)
+    assert all(count<100 for count in replacement),(name,'Broken image changed after sync',replacement)
+    visual[name]={'originalColorPixels':original,'replacementColorPixels':replacement,
+                  'visibleWebCropPx':crop_box,'sha256':hashlib.sha256((out/f'{name}.png').read_bytes()).hexdigest()}
+result={'tests':1,'passed':1,'scope':'Actual MailBodySync, AccountStore and saved-document reader in an isolated synthetic main HAP with loopback HTTP only.',
+ 'syncBeforeReader':True,'sourcesOfflineBeforeFirstOpen':True,'documentMounts':2,'documentLoads':2,
+ 'bodyRequests':7,'htmlScans':7,'pictureBatches':1,'readerBodyScanBatchHttpDelta':0,
+ 'mailboxPages':[0,3,6],'savedMessages':7,'checkpointSavedMessages':2,
+ 'workerAndEncryptedStoreRestartBeforeCompletion':True,'allMessageBodiesAndDocumentsSavedBeforeOpening':True,
+ 'perImageRequests':[1,1,1],'nonContentRequests':0,'savedBodyHtmlBytesAndTimestampsIntact':True,
+ 'brokenImagesStayBroken':True,'reopenThroughNewStoreWithoutHttp':True,
+ 'foregroundAndScrollAddNoHttpOrDocumentLoads':True,'maximumNativeScrollVp':float(match.group(1)),
+ 'testLogSha256':hashlib.sha256((out/'test.log').read_bytes()).hexdigest(),
+ 'emulatorVisualProof':visual,
+ 'limits':'Synthetic content, x86 emulator screenshots and simulated picture foreground lifecycle; no physical captures, app battery measurement, production mail or external servers.'}
+(out/'result.json').write_text(json.dumps(result,indent=2)+'\n')
+print('PASS: sync resumes after encrypted-store restart and saves every message across 3 pages before opening; saved pixels and broken images remain fixed without reader scanning, retries or HTTP.')
+PY

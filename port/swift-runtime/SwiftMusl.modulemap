@@ -1,0 +1,14 @@
+// Huawei's unmodified musl headers are imported as one umbrella module.
+// Swift's stock musl.modulemap instead requires a specially modularized sysroot.
+module CFTS [system] {
+  header "../../../../include/fts.h"
+  export *
+  link "fts"
+}
+module SwiftMusl [system] {
+  header "SwiftMusl.h"
+  export *
+  export CFTS
+  link "c"
+  link "fts"
+}

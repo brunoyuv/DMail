@@ -1,0 +1,340 @@
+--- a/Sources/IMAP/CapabilityCommand.swift
++++ b/Sources/IMAP/CapabilityCommand.swift
+@@ -42,6 +42,11 @@
+         clientBug = response.clientBug
+         switch response {
+         case .tagged(let taggedResponse):
++            guard taggedResponse.tag == tag else {
++                promise.fail(IMAPError.unexpectedResponse("Mismatched command tag"))
++                context.close(promise: nil)
++                return
++            }
+             switch taggedResponse.state {
+             case .bad(let text), .no(let text):
+                 promise.fail(IMAPError.commandFailed(text.text))
+--- a/Sources/IMAP/FetchCommand.swift
++++ b/Sources/IMAP/FetchCommand.swift
+@@ -54,6 +54,11 @@
+         clientBug = response.clientBug
+         switch response {
+         case .tagged(let taggedResponse):
++            guard taggedResponse.tag == tag else {
++                promise.fail(IMAPError.unexpectedResponse("Mismatched command tag"))
++                context.close(promise: nil)
++                return
++            }
+             switch taggedResponse.state {
+             case .bad(let text), .no(let text):
+                 promise.fail(IMAPError.commandFailed(text.text))
+--- a/Sources/IMAP/IMAPClient.swift
++++ b/Sources/IMAP/IMAPClient.swift
+@@ -30,22 +30,48 @@
+     /// Bootstrap NIO channel, connect to the configured ``Server``.
+     public func connect() async throws {
+         logger?.info("Connecting to \(self.server)…")
++        try Task.checkCancellation()
++        guard !isShutDown else { throw IMAPError.commandFailed("Client is shut down") }
++        guard server.connectionSecurity == .tls else {
++            throw IMAPError.commandNotSupported("Only implicit TLS is supported")
++        }
+         resetInactiveChannel()
+         guard channel == nil else {
+             logger?.error("\(IMAPError.alreadyConnected)")
+             throw IMAPError.alreadyConnected
+         }
+         do {
++            let tlsContext = try NIOSSLContext(configuration: tlsConfiguration)
+             self.channel =
+                 try await ClientBootstrap
+-                .bootstrap(server: server, logger: logger, group: group)
++                .bootstrap(server: server, context: tlsContext, group: group, timeout: connectionTimeout)
+                 .connect(host: server.hostname, port: server.port)
+                 .get()
+             logger?.info("Connected to \(self.server)")
++            try Task.checkCancellation()
+             try await refreshCapabilities()
+         } catch {
++            if let channel { try? await channel.close().get() }
++            self.channel = nil
+             logger?.error("\(error)")
+-            throw IMAPError(error)
++            throw error
++        }
++    }
++
++    /// Finish channel and worker threads; call after the final operation.
++    /// A client is owned by one serial account operation at a time.
++    public func shutdown() async throws {
++        guard !isShutDown else { return }
++        isShutDown = true
++        if let channel { try? await channel.close().get() }
++        self.channel = nil
++        try await group.shutdownGracefully()
++    }
++
++    deinit {
++        if !isShutDown {
++            channel?.close(promise: nil)
++            group.shutdownGracefully { _ in }
+         }
+     }
+ 
+@@ -222,15 +248,22 @@
+ 
+     public init(
+         _ server: Server,
+-        logger: Logger? = Logger(subsystem: "net.thunderbird", category: "IMAP")
++        logger: Logger? = Logger(subsystem: "net.thunderbird", category: "IMAP"),
++        tlsConfiguration: TLSConfiguration = .makeClientConfiguration(),
++        connectionTimeout: TimeAmount = .seconds(10),
++        commandTimeout: Int64 = 30
+     ) {
+         group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+         self.server = server
+         self.logger = logger
++        self.tlsConfiguration = tlsConfiguration
++        self.connectionTimeout = connectionTimeout
++        self.commandTimeout = max(1, commandTimeout)
+     }
+ 
+     // Run IMAP command through NIO `IMAPClientHandler` in channel and handle results
+     private func execute<T: IMAPCommand>(command: T) async throws -> T.Result {
++        try Task.checkCancellation()
+         let logger: Logger? = logger  // Copy logger instead of capturing
+         logger?.debug("Executing \(command)…")
+         guard let channel, channel.isActive else {
+@@ -240,7 +273,7 @@
+         let promise: EventLoopPromise<T.Result> = channel.eventLoop.makePromise(of: T.Result.self)
+         let tag: String = UUID().uuidString(1)  // Hold onto specific auto-generated tag
+         let handler: T.Handler = T.Handler(tag: tag, promise: promise)
+-        let seconds: Int64 = max(command.timeout, 1)
++        let seconds: Int64 = max(min(command.timeout, commandTimeout), 1)
+         let task: Scheduled = group.next().scheduleTask(in: .seconds(seconds)) {
+             let error: IMAPError = .timedOut(seconds: seconds)
+             logger?.error("\(error)")
+@@ -251,10 +284,15 @@
+             task.cancel()
+         }
+         do {
+-            try await channel.pipeline.addHandler(handler).get()
+-            let message: IMAPClientHandler.Message = IMAPClientHandler.OutboundIn.part(.tagged(command.tagged(tag)))
+-            try await channel.writeAndFlush(message).get()
+-            let result: T.Result = try await promise.futureResult.get()
++            let result: T.Result = try await withTaskCancellationHandler {
++                try await channel.pipeline.addHandler(handler).get()
++                try Task.checkCancellation()
++                let message: IMAPClientHandler.Message = IMAPClientHandler.OutboundIn.part(.tagged(command.tagged(tag)))
++                try await channel.writeAndFlush(message).get()
++                return try await promise.futureResult.get()
++            } onCancel: {
++                channel.close(promise: nil)
++            }
+             logger?.debug("\(command.description.capitalized(.sentence)) succeeded")
+             if let clientBug = handler.clientBug {
+                 logger?.debug("CLIENTBUG: \(clientBug)")
+@@ -263,6 +301,9 @@
+         } catch {
+             promise.fail(error)
+             logger?.error("\(error)")
++            // A timed-out or failed exchange cannot be reused with late replies.
++            channel.close(promise: nil)
++            if Task.isCancelled { throw CancellationError() }
+             throw IMAPError.commandFailed(command.description)
+         }
+     }
+@@ -332,6 +373,10 @@
+         logger?.info("Channel reset; ready to connect")
+     }
+ 
++    private let tlsConfiguration: TLSConfiguration
++    private let connectionTimeout: TimeAmount
++    private let commandTimeout: Int64
++    private var isShutDown = false
+     private var idleHandler: IdleHandler?
+     private var channel: Channel?
+     private var count: Int = 0
+@@ -347,39 +392,26 @@
+ }
+ 
+ private extension ClientBootstrap {
+-    static func bootstrap(
+-        server: Server,
+-        logger: Logger? = nil,
+-        group: EventLoopGroup
+-    ) -> Self {
+-        Self(group: group).channelInitializer { channel in
+-            try! channel.pipeline.syncOperations.addHandlers(
+-                [
+-                    // LoggingHandler(logger), // Enable byte-level logging
+-                    TLSClientHandler(serverHostname: server.hostname),
++    static func bootstrap(server: Server, context: NIOSSLContext, group: EventLoopGroup, timeout: TimeAmount) -> Self {
++        Self(group: group).connectTimeout(timeout).channelInitializer { channel in
++            do {
++                try channel.pipeline.syncOperations.addHandlers([
++                    try NIOSSLClientHandler(context: context, serverHostname: server.hostname),
+                     IMAPClientHandler(parserOptions: .max)
+-                ]
+-            )
+-            return channel.eventLoop.makeSucceededFuture(())
+-        }
+-    }
+-}
+-
+-private extension NIOSSLContext {
+-    static var ssl: Self { try! Self(configuration: .makeClientConfiguration()) }
+-}
+-
+-private func TLSClientHandler(serverHostname: String? = nil) -> NIOSSLClientHandler {
+-    try! NIOSSLClientHandler(context: .ssl, serverHostname: serverHostname)
++                ])
++                return channel.eventLoop.makeSucceededFuture(())
++            } catch { return channel.eventLoop.makeFailedFuture(error) }
++        }
++    }
+ }
+ 
+ private extension ResponseParser.Options {
+     static var max: Self {
+         Self(
+             bufferLimit: 1024 * 1024,
+-            messageAttributeLimit: .max,
+-            bodySizeLimit: .max,
+-            literalSizeLimit: IMAPDefaults.literalSizeLimit
++            messageAttributeLimit: 1024,
++            bodySizeLimit: 4 * 1024 * 1024,
++            literalSizeLimit: 4 * 1024 * 1024
+         )
+     }
+ }
+--- a/Sources/IMAP/IMAPCommand.swift
++++ b/Sources/IMAP/IMAPCommand.swift
+@@ -35,6 +35,11 @@
+ extension IMAPCommandHandler {
+ 
+     // MARK: IMAPCommandHandler
++    func channelInactive(context: ChannelHandlerContext) {
++        promise.fail(IMAPError.serverDisconnected)
++        context.fireChannelInactive()
++    }
++
+     func errorCaught(context: ChannelHandlerContext, error: any Error) {
+         promise.fail(error)
+         context.pipeline.removeHandler(self, promise: nil)
+@@ -51,26 +56,20 @@
+         clientBug = response.clientBug
+         switch response {
+         case .tagged(let taggedResponse):
++            guard taggedResponse.tag == tag else {
++                promise.fail(IMAPError.unexpectedResponse("Mismatched command tag"))
++                context.close(promise: nil)
++                return
++            }
+             switch taggedResponse.state {
+             case .bad(let text), .no(let text):
+                 promise.fail(IMAPError.unexpectedResponse(text))
+             case .ok:
+                 promise.succeed(())
+             }
+-        case .untagged(let payload):
+-            switch payload {
+-            case .conditionalState(let status):
+-                switch status {
+-                case .bad(let text), .no(let text):
+-                    promise.fail(IMAPError.unexpectedResponse(text))
+-                default:
+-                    promise.succeed()
+-                }
+-            default:
+-                promise.fail(IMAPError.unexpectedResponse(response.debugDescription))
+-            }
+         default:
+-            promise.fail(IMAPError.unexpectedResponse(response.debugDescription))
++            context.fireChannelRead(data)
++            return
+         }
+         context.pipeline.removeHandler(self, promise: nil)
+         context.fireChannelRead(data)
+--- a/Sources/IMAP/IdleHandler.swift
++++ b/Sources/IMAP/IdleHandler.swift
+@@ -37,6 +37,11 @@
+         clientBug = response.clientBug
+         switch response {
+         case .tagged(let taggedResponse):
++            guard taggedResponse.tag == tag else {
++                promise.fail(IMAPError.unexpectedResponse("Mismatched command tag"))
++                context.close(promise: nil)
++                return
++            }
+             // Always finish continuation first, then fulfill promise
+             continuation?.finish()
+             switch taggedResponse.state {
+--- a/Sources/IMAP/ListCommand.swift
++++ b/Sources/IMAP/ListCommand.swift
+@@ -59,6 +59,11 @@
+         clientBug = response.clientBug
+         switch response {
+         case .tagged(let taggedResponse):
++            guard taggedResponse.tag == tag else {
++                promise.fail(IMAPError.unexpectedResponse("Mismatched command tag"))
++                context.close(promise: nil)
++                return
++            }
+             switch taggedResponse.state {
+             case .bad(let text), .no(let text):
+                 promise.fail(IMAPError.commandFailed(text.text))
+--- a/Sources/IMAP/NamespaceCommand.swift
++++ b/Sources/IMAP/NamespaceCommand.swift
+@@ -41,6 +41,11 @@
+         clientBug = response.clientBug
+         switch response {
+         case .tagged(let taggedResponse):
++            guard taggedResponse.tag == tag else {
++                promise.fail(IMAPError.unexpectedResponse("Mismatched command tag"))
++                context.close(promise: nil)
++                return
++            }
+             switch taggedResponse.state {
+             case .bad(let text), .no(let text):
+                 promise.fail(IMAPError.commandFailed(text.text))
+--- a/Sources/IMAP/NoopCommand.swift
++++ b/Sources/IMAP/NoopCommand.swift
+@@ -46,6 +46,11 @@
+         clientBug = response.clientBug
+         switch response {
+         case .tagged(let taggedResponse):
++            guard taggedResponse.tag == tag else {
++                promise.fail(IMAPError.unexpectedResponse("Mismatched command tag"))
++                context.close(promise: nil)
++                return
++            }
+             switch taggedResponse.state {
+             case .bad(let text), .no(let text):
+                 promise.fail(IMAPError.commandFailed(text.text))
+--- a/Sources/IMAP/SelectCommand.swift
++++ b/Sources/IMAP/SelectCommand.swift
+@@ -46,6 +46,11 @@
+         clientBug = response.clientBug
+         switch response {
+         case .tagged(let taggedResponse):
++            guard taggedResponse.tag == tag else {
++                promise.fail(IMAPError.unexpectedResponse("Mismatched command tag"))
++                context.close(promise: nil)
++                return
++            }
+             switch taggedResponse.state {
+             case .bad(let text), .no(let text):
+                 promise.fail(IMAPError.commandFailed(text.text))
+--- a/Sources/IMAP/StatusCommand.swift
++++ b/Sources/IMAP/StatusCommand.swift
+@@ -48,6 +48,11 @@
+         clientBug = response.clientBug
+         switch response {
+         case .tagged(let taggedResponse):
++            guard taggedResponse.tag == tag else {
++                promise.fail(IMAPError.unexpectedResponse("Mismatched command tag"))
++                context.close(promise: nil)
++                return
++            }
+             switch taggedResponse.state {
+             case .bad(let text), .no(let text):
+                 promise.fail(IMAPError.commandFailed(text.text))

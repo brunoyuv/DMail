@@ -1,0 +1,54 @@
+--- a/Sources/MIME/String.swift
++++ b/Sources/MIME/String.swift
+@@ -69,27 +69,30 @@
+         }
+ 
+         var result: Self = ""
+-        var position: Index = startIndex
+-
+-        // Find next ampersand; copy characters preceding it to result
+-        while let ampRange: Range<Index> = self[position...].range(of: "&") {
+-            result.append(contentsOf: self[position..<ampRange.lowerBound])
+-            position = ampRange.lowerBound
+-
+-            // Find next semicolon; copy characters between "&" and ";"
+-            guard let semiRange: Range<Index> = self[position...].range(of: ";") else {
+-                continue
+-            }
+-            let entity: Substring = self[position..<semiRange.upperBound]
+-            if let character: Character = decode(entity) {
+-                result.append(character)
+-                position = semiRange.upperBound
+-            } else {
+-                result.append(contentsOf: self[ampRange])
+-                position = ampRange.upperBound
+-            }
+-        }
+-        result.append(contentsOf: self[position...])  // Copy remaining characters to result:
++        result.reserveCapacity(utf8.count)
++        var kept: Index = startIndex, candidate: Index?
++
++        // Walk every scalar once. An unterminated '&' stays literal; restarting
++        // a suffix search without advancing here used to spin forever. A later
++        // '&' starts a new candidate so malformed runs cannot rescan one suffix
++        // for every ampersand. Decode only disjoint, completed candidates.
++        for index in unicodeScalars.indices {
++            switch unicodeScalars[index].value {
++            case 38: candidate = index  // &
++            case 59:  // ;
++                if let start = candidate {
++                    let end = unicodeScalars.index(after: index)
++                    if let character = decode(self[start..<end]) {
++                        result.append(contentsOf: self[kept..<start])
++                        result.append(character)
++                        kept = end
++                    }
++                    candidate = nil
++                }
++            default: break
++            }
++        }
++        result.append(contentsOf: self[kept...])
+         return result
+     }
+ 

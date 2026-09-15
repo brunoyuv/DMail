@@ -1,0 +1,28 @@
+--- a/Core/Sources/JMAP/URLSession.swift
++++ b/Core/Sources/JMAP/URLSession.swift
+@@ -20,10 +20,11 @@
+ 
+         // Unwrap and map responses from "envelope" array
+         guard let object: [String: Any] = object as? [String: Any],
+-            let responses: [[Any]] = object["methodResponses"] as? [[Any]], !responses.isEmpty
++            let responses: [[Any]] = object["methodResponses"] as? [[Any]], !responses.isEmpty, responses.count == methods.count
+         else {
+             throw URLError(.cannotDecodeContentData)
+         }
++        var seen = Set<UUID>()
+         return try responses.map { response in
+ 
+             // Parse each raw response into return response types
+@@ -32,6 +33,12 @@
+                 let object: [String: Any] = response[1] as? [String: Any],
+                 let id: UUID = UUID(uuidString: response[2] as? String ?? "")
+             else {
++                throw URLError(.cannotDecodeContentData)
++            }
++            guard seen.insert(id).inserted,
++                  let method = methods.first(where: { $0.id == id }),
++                  name == type(of: method).name,
++                  name == "Core/echo" || object["accountId"] as? String == method.accountID else {
+                 throw URLError(.cannotDecodeContentData)
+             }
+             switch name.components(separatedBy: "/").last {

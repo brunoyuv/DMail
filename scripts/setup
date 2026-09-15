@@ -1,0 +1,25 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+mkdir -p .tools
+npm install --prefix .tools/runtime --no-audit --no-fund node@22.23.2
+export PATH="$ROOT/.tools/runtime/node_modules/node/bin:$PATH"
+npm install --prefix .tools/deveco --no-audit --no-fund @deveco/deveco-cli@1.3.0-stable
+npm install --prefix .tools/test --no-audit --no-fund typescript@5.9.3
+if [[ ! -x .tools/command-line-tools/sdk/default/openharmony/native/llvm/bin/clang ]]; then
+  if [[ ! -f .tools/commandline-tools-linux-x64-6.0.2.670.zip ]]; then
+    echo 'Download Command Line Tools for Linux 6.0.2.670 from Huawei into .tools/ for the pinned Swift native SDK.' >&2
+    exit 1
+  fi
+  unzip -q .tools/commandline-tools-linux-x64-6.0.2.670.zip -d .tools
+fi
+if [[ ! -x .tools/deveco-26/command-line-tools/bin/hvigorw || ! -x .tools/deveco-26/command-line-tools/emulator/Emulator ]]; then
+  if [[ ! -f .tools/commandline-tools-linux-x64-26.0.0.821.zip ]]; then
+    echo 'Download Command Line Tools for Linux 26.0.0.821 from Huawei into .tools/ first.' >&2
+    exit 1
+  fi
+  mkdir -p .tools/deveco-26
+  unzip -q .tools/commandline-tools-linux-x64-26.0.0.821.zip -d .tools/deveco-26
+fi
+echo 'Local toolchain ready. Run ./scripts/test and ./scripts/build.'

@@ -1,0 +1,20 @@
+#!/usr/bin/env python3
+"""Check installed ARM SDK/probe ELF architecture; this does not prove execution."""
+from pathlib import Path
+import hashlib,json,struct
+root=Path(__file__).resolve().parent.parent;sdk=root/'.tools/swift-ohos-sdk-aarch64'
+required = [sdk/'lib/swift/musl/aarch64'/name for name in
+            ['libswiftCore.so', 'libswift_Concurrency.so', 'libswiftSwiftOnoneSupport.so']]
+required += [sdk/'lib'/name for name in ['libdispatch.so', 'libBlocksRuntime.so']]
+required += [root/'.tools/swift-probe'/name for name in ['native-runtime-probe-aarch64', 'concurrency-probe-aarch64']]
+for path in required: assert path.is_file(), path
+records={}
+for base in [sdk/'lib',root/'.tools/swift-probe']:
+ for p in base.rglob('*') if base==sdk/'lib' else base.glob('*probe-aarch64'):
+  if not p.is_file() or p.is_symlink(): continue
+  with p.open('rb') as f: header=f.read(20)
+  if header[:4]!=b'\x7fELF':continue
+  machine=struct.unpack('<H',header[18:20])[0]
+  assert header[4]==2 and machine==183,(p,machine)
+  records[str(p.relative_to(root))]=hashlib.sha256(p.read_bytes()).hexdigest()
+print(json.dumps({'target':'aarch64-unknown-linux-ohos','elfMachine':183,'files':records,'executionVerified':False},indent=2))

@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+# SPDX-License-Identifier: MPL-2.0
+# Build the isolated HAPs first. Never targets production or physical devices.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+APP="$ROOT/.tools/imap-test-app"
+OUT="$ROOT/.tools/store-screenshots"
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+  [[ -f "$APP/entry/build/default/outputs/$hap" ]] || { echo 'Build isolated store screenshot HAPs first.' >&2; exit 1; }
+done
+if [[ "${1:-}" != --inside-emulator ]]; then
+  for target in phone tablet; do
+    profile=store-phone
+    [[ "$target" != tablet ]] || profile=matepad-landscape
+    EMULATOR_SCREEN="$profile" EMULATOR_TEST_SECONDS=120 HDC_TARGET=127.0.0.1:5555 \
+      "$ROOT/scripts/with-test-emulator" "$0" --inside-emulator "$target"
+  done
+  echo "Six original PNG captures ready in $OUT/{phone,tablet}."
+  exit 0
+fi
+[[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 && "${HDC_TARGET:-}" == 127.0.0.1:5555 ]]
+[[ "${2:-}" == phone || "${2:-}" == tablet ]]
+OUT="$OUT/$2"; mkdir -p "$OUT"
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" -t "$HDC_TARGET" "$@"; }
+[[ "$(run_hdc shell uname -m | tr -d '[:space:]')" == x86_64 ]]
+cleanup() {
+  local result=$?
+  trap - EXIT
+  if [[ "$result" != 0 ]]; then
+    for extension in png json; do
+      run_hdc file recv "/data/local/tmp/store-failure.$extension" "$OUT/failure.$extension" >/dev/null 2>&1 || true
+    done
+  fi
+  run_hdc uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || result=1
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+run_hdc uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+run_hdc install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+run_hdc install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+run_hdc shell rm -f /data/local/tmp/store-failure.png /data/local/tmp/store-failure.json
+for name in inbox reader composer; do run_hdc shell rm -f "/data/local/tmp/store-$name.png"; done
+timeout --foreground --kill-after=5s 75s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/StoreScreenshotsRunner \
+  -s timeout 65000 | tee "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"
+grep -q 'STORE_SCREENSHOTS_RESULT: three captures; zero mail calls, no send' "$OUT/test.log"
+grep -q 'STORE_CONVERSATION_RESULT: three header-linked Inbox/Sent messages; earlier sent reply expanded and collapsed; quoted text expanded and folded' "$OUT/test.log"
+for name in inbox reader composer; do
+  run_hdc file recv "/data/local/tmp/store-$name.png" "$OUT/$name.png" >/dev/null
+  run_hdc shell rm -f "/data/local/tmp/store-$name.png"
+done

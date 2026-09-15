@@ -1,0 +1,103 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+if [[ "${1:-build}" == build ]]; then exec "$ROOT/scripts/build-network-test-app"; fi
+[[ "${1:-}" == device ]] || { echo 'Usage: scripts/test-native-network [build|device]' >&2; exit 2; }
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" != 1 ]]; then
+  exec "$ROOT/scripts/with-test-emulator" "$0" device
+fi
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+DEVICE=127.0.0.1:5555
+NODE="$ROOT/.tools/runtime/node_modules/node/bin/node"
+APP="$ROOT/.tools/network-test-app"
+FIXTURE_PID=''
+FORWARDS=()
+cleanup() {
+  "$HDC" -t "$DEVICE" shell hilog -x > .tools/network-test-hilog.log 2>&1 || true
+  "$HDC" -t "$DEVICE" uninstall org.thunderbird.harmony.nettest >/dev/null 2>&1 || true
+  for port in "${FORWARDS[@]}"; do "$HDC" -t "$DEVICE" fport rm "tcp:$port" "tcp:$port" >/dev/null 2>&1 || true; done
+  if [[ -n "$FIXTURE_PID" ]]; then kill "$FIXTURE_PID" 2>/dev/null || true; wait "$FIXTURE_PID" 2>/dev/null || true; fi
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+if "$HDC" fport ls | grep -Eq 'tcp:966[0-3] '; then echo 'Network test ports are already forwarded.' >&2; exit 1; fi
+"$NODE" port/network-tests/fixture.cjs .tools/network-test-certs > .tools/network-fixture.log 2>&1 &
+FIXTURE_PID=$!
+READY=false
+for ((attempt=0; attempt<30; attempt++)); do
+  kill -0 "$FIXTURE_PID" || { cat .tools/network-fixture.log; exit 1; }
+  if curl --fail --silent http://127.0.0.1:9660/health >/dev/null; then READY=true; break; fi
+  sleep 0.1
+done
+"$READY" || { echo 'Fixture failed to start.' >&2; exit 1; }
+for port in 9660 9661 9662 9663; do
+  "$HDC" -t "$DEVICE" rport "tcp:$port" "tcp:$port" | grep -q 'Forwardport result:OK'
+  FORWARDS+=("$port")
+done
+"$HDC" -t "$DEVICE" install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap" \
+  "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+"$HDC" -t "$DEVICE" shell aa test -b org.thunderbird.harmony.nettest -m entry_test \
+  -s unittest /ets/testrunner/NetworkTestRunner -s timeout 60000 | tee .tools/network-test-device.log
+curl --fail --silent http://127.0.0.1:9660/stats > .tools/network-fixture-stats.json
+grep -q 'Tests run: 32, Failure: 0, Error: 0, Pass: 32, Ignore: 0' .tools/network-test-device.log
+"$NODE" - <<'JS'
+const assert = require('node:assert/strict');
+const stats = JSON.parse(require('node:fs').readFileSync('.tools/network-fixture-stats.json', 'utf8'));
+assert.equal(stats.plain, 1, 'disallowed localhost HTTP request must not reach the fixture');
+assert.equal(stats.trusted, 21);
+assert.equal(stats.untrusted, 0);
+assert.equal(stats.wrongHost, 0);
+assert.ok(stats.untrustedConnections > 0);
+assert.ok(stats.wrongHostConnections > 0);
+assert.equal(stats.cancelStarted, 1);
+assert.equal(stats.cancelled, 1);
+assert.equal(stats.jmap.sessions, 3);
+assert.equal(stats.jmap.unauthorized, 1);
+assert.equal(stats.jmap.malformed, 1);
+assert.deepEqual(stats.jmap.violations, []);
+assert.deepEqual(stats.jmap.calls, ['Mailbox/get', 'Email/query', 'Email/get', 'Thread/get', 'Email/get', 'Mailbox/get', 'Mailbox/set', 'Mailbox/set', 'Mailbox/set']);
+for (const operation of ['created', 'updated', 'destroyed']) assert.deepEqual(stats.jmap[operation], ['created-folder']);
+assert.deepEqual(stats.nativeAccount.violations, []);
+assert.equal(stats.nativeAccount.forbidden, 0);
+assert.equal(stats.nativeAccount.unauthorized, 1);
+assert.deepEqual(stats.nativeAccount.selectedAccounts, ['z_selected', 'z_selected', 'z_selected']);
+assert.equal(stats.nativeAccount.postRedirects, 1);
+assert.equal(stats.nativeAccount.mismatchedReplies, 1);
+assert.equal(stats.nativeAccount.oversizedCancelled, true);
+assert.ok(stats.nativeAccount.oversizedBytes < 8 * 1024 * 1024);
+assert.deepEqual(stats.nativeReader.violations, []);
+assert.deepEqual(stats.nativeReader.queries, [['paged', 0], ['paged', 2], ['ordered', 0], ['unknown', 0],
+  ['unknown', 1], ['changed', 0], ['wrongPosition', 0]]);
+assert.deepEqual(stats.nativeReader.gets, [
+  { ids: ['first', 'deleted'], includeBody: false }, { ids: ['last'], includeBody: false },
+  { ids: ['first', 'last'], includeBody: false }, { ids: ['first'], includeBody: false },
+  ...['first', 'html', 'missing', 'badbody', 'duplicate', 'badDate', 'tooLarge', 'long'].map(id => ({ ids: [id], includeBody: true })),
+  ...Array.from({ length: 12 }, () => ({ ids: ['first'], includeBody: true }))
+]);
+assert.deepEqual(stats.nativeWrites.violations, []);
+const writes = stats.nativeWrites.scenarios;
+assert.deepEqual(writes.flags.sets.map(s => s.patch), [{ 'keywords/$seen': true }, { 'keywords/$seen': null },
+  { 'keywords/$flagged': true }, { 'keywords/$flagged': null }]);
+assert.deepEqual(writes.flags.keywords, { '$custom': true });
+assert.deepEqual(writes.archive.sets.map(s => s.patch), [{ 'mailboxIds/inbox': null, 'mailboxIds/archive': true },
+  { 'mailboxIds/inbox': true, 'mailboxIds/archive': null }]);
+assert.deepEqual(writes.archive.keywords, { '$custom': true, '$other': true });
+assert.deepEqual(writes.already.sets.map(s => s.patch), [{ 'mailboxIds/inbox': null }, { 'mailboxIds/inbox': true }]);
+assert.equal(writes.already.mailboxIds.archive, true);
+assert.equal(writes.stale.sets.length, 1); assert.equal(writes.stale.mailboxIds.extra, true);
+assert.equal(writes.race.applied, 0); assert.equal(writes.race.sets.length, 1);
+for (const name of ['readonly', 'denied', 'limit', 'archiveDenied']) assert.equal(writes[name].sets.length, 0);
+assert.deepEqual(writes.readonly.methods, []); assert.deepEqual(writes.limit.methods, []);
+for (const name of ['forbidden', 'notFound', 'unknown', 'methodReadonly', 'conflicting', 'badValue', 'lost']) assert.equal(writes[name].sets.length, 1);
+assert.equal(writes.lost.applied, 1); assert.equal(writes.lost.keywords['$flagged'], true);
+assert.deepEqual(stats.nativeDrafts.violations, []); assert.equal(stats.nativeDrafts.submissions, 0);
+const drafts = stats.nativeDrafts.scenarios;
+assert.equal(drafts.snapshot.bodyBytes, 150000); assert.equal(drafts.snapshot.reads, 1); assert.equal(drafts.empty.reads, 1);
+assert.equal(drafts.validation, undefined); assert.equal(drafts.inputLimit, undefined);
+for (const name of ['snapshot', 'empty', 'reject', 'quota', 'large', 'invalid', 'future', 'lost', 'malformed', 'conflicting', 'method', 'http']) assert.equal(drafts[name].creates, 1);
+for (const name of ['unknown', 'readonly', 'missing', 'ambiguous', 'denied', 'limit']) assert.equal(drafts[name].creates, 0);
+for (const name of ['reject', 'quota', 'large', 'invalid', 'future', 'method', 'http']) assert.equal(drafts[name].applied, 0);
+assert.equal(drafts.lost.applied, 1); assert.equal(drafts.lost.reads, 1);
+console.log('PASS: native account, reader, changes, drafts, URLSession and original JMAP tests agree with fixture-side observations.');
+JS

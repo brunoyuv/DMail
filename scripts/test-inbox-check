@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Isolated native metadata polling against a strict loopback-only IMAP fixture.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+: "${HDC_TARGET:?Set the authorized MatePad or bounded emulator target}"
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+NODE="$ROOT/.tools/runtime/node_modules/node/bin/node"
+APP="$ROOT/.tools/imap-test-app-aarch64"; SIGNATURE=signed; CPU=aarch64; PREFIX=matepad
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 ]]; then
+  [[ "$HDC_TARGET" == 127.0.0.1:5555 ]]
+  APP="$ROOT/.tools/imap-test-app"; SIGNATURE=unsigned; CPU=x86_64; PREFIX=emulator
+else
+  [[ "$HDC_TARGET" == "${DMAIL_AUTHORIZED_MATEPAD_SERIAL:?Set the separately verified authorized MatePad serial}" ]]
+fi
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == "$CPU" ]]
+if [[ "$PREFIX" == matepad ]]; then
+  [[ "$(run_hdc -t "$HDC_TARGET" shell param get const.product.model | tr -d '[:space:]')" == MRO-W00 ]]
+fi
+for hap in "default/entry-default-${SIGNATURE}.hap" "ohosTest/entry-ohosTest-${SIGNATURE}.hap"; do
+  [[ -f "$APP/entry/build/default/outputs/$hap" ]] || { echo 'Build isolated polling test HAPs first.' >&2; exit 1; }
+done
+if run_hdc fport ls | grep -Eq 'tcp:976[0-6] '; then echo 'IMAP fixture ports are in use.' >&2; exit 1; fi
+FIXTURE_PID=''; FORWARDED=false; INSTALLED=false
+cleanup() {
+  local result=$?
+  trap - EXIT
+  curl --max-time 3 --fail --silent http://127.0.0.1:9760/stats > ".tools/${PREFIX}-inbox-check-stats.json" || true
+  if "$INSTALLED"; then run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true; fi
+  if "$FORWARDED"; then run_hdc -t "$HDC_TARGET" fport rm tcp:9761 tcp:9761 >/dev/null 2>&1 || true; fi
+  if [[ -n "$FIXTURE_PID" ]]; then kill "$FIXTURE_PID" 2>/dev/null || true; wait "$FIXTURE_PID" 2>/dev/null || true; fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+THUNDERBIRD_IMAP_OAUTH=0 "$NODE" port/swift-imap/fixture.cjs .tools/imap-test-certs > ".tools/${PREFIX}-inbox-check-fixture.log" 2>&1 & FIXTURE_PID=$!
+READY=false
+for ((i=0;i<30;i++)); do
+  if curl --max-time 1 --fail --silent http://127.0.0.1:9760/health >/dev/null; then READY=true; break; fi
+  sleep 0.1
+done
+"$READY"
+run_hdc -t "$HDC_TARGET" rport tcp:9761 tcp:9761 | grep -q 'Forwardport result:OK'; FORWARDED=true
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-${SIGNATURE}.hap"
+INSTALLED=true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-${SIGNATURE}.hap"
+timeout --foreground --kill-after=5s 65s "$HDC" -t "$HDC_TARGET" shell aa test -b org.thunderbird.harmony.imaptest -m entry_test \
+  -s unittest /ets/testrunner/InboxCheckRunner -s timeout 55000 | tee ".tools/${PREFIX}-inbox-check-tests.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' ".tools/${PREFIX}-inbox-check-tests.log"
+curl --max-time 3 --fail --silent http://127.0.0.1:9760/stats > ".tools/${PREFIX}-inbox-check-stats.json"
+"$NODE" - "$PREFIX" <<'JS'
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const prefix=process.argv[2]; assert.ok(['matepad','emulator'].includes(prefix));
+const stats=JSON.parse(fs.readFileSync(`.tools/${prefix}-inbox-check-stats.json`));
+assert.deepEqual(stats.violations,[]); assert.equal(stats.sessions.length,13); assert.equal(stats.active,0);
+assert.equal(stats.sessions.filter(s=>s.pollFetches===1).length,8);
+assert.equal(stats.sessions.reduce((n,s)=>n+(s.pollStatuses||0),0),1);
+assert.equal(stats.sessions.reduce((n,s)=>n+(s.pollCountStatuses||0),0),12);
+for(const session of stats.sessions){
+  assert.ok(session.closed); assert.ok(!session.violation,session.violation);
+  assert.ok(session.commands.every(command=>['CAPABILITY','LOGIN','EXAMINE','STATUS','FETCH','LOGOUT'].includes(command)));
+  assert.equal(session.pollExaminations,session.pollFetches?2:1);
+  assert.ok((session.pollFetches||0)<=1); assert.equal(session.fetches,0);
+  assert.equal(session.pollCountStatuses||0,session.mode==='poll-epoch'?0:1);
+}
+assert.equal(stats.sessions.filter(s=>s.mode==='poll-basic'&&!s.pollFetches).length,4);
+console.log('PASS: baseline/reset/regression/unchanged/empty polling skips FETCH; changed polling uses <=50 UID+FLAGS only; one optional same-session STATUS supplies full unread totals; rejected/missing/invalid/disconnected/stalled count replies preserve arrivals within the count deadline; missing UIDNEXT fallback; changed validity rejected; later arrival cursor preserved; malformed cursors open no session.');
+JS

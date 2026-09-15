@@ -1,0 +1,53 @@
+--- a/Core/Sources/JMAP/JMAPClient.swift
++++ b/Core/Sources/JMAP/JMAPClient.swift
+@@ -3,7 +3,14 @@
+ // file, You can obtain one at http://mozilla.org/MPL/2.0/
+ 
+ import Foundation
++#if canImport(FoundationNetworking)
++import FoundationNetworking
++#endif
++#if canImport(OSLog)
+ import OSLog
++#else
++import HarmonyLogging
++#endif
+ 
+ /// Configure `JMAPClient` with a single ``Server``.
+ public class JMAPClient {
+--- a/Core/Sources/JMAP/URLSession.swift
++++ b/Core/Sources/JMAP/URLSession.swift
+@@ -3,6 +3,9 @@
+ // file, You can obtain one at http://mozilla.org/MPL/2.0/
+ 
+ import Foundation
++#if canImport(FoundationNetworking)
++import FoundationNetworking
++#endif
+ 
+ extension URLSession {
+ 
+--- a/Core/Sources/JMAP/URLRequest.swift
++++ b/Core/Sources/JMAP/URLRequest.swift
+@@ -3,6 +3,9 @@
+ // file, You can obtain one at http://mozilla.org/MPL/2.0/
+ 
+ import Foundation
++#if canImport(FoundationNetworking)
++import FoundationNetworking
++#endif
+ 
+ extension URLRequest {
+ 
+--- a/Core/Sources/JMAP/Email.swift
++++ b/Core/Sources/JMAP/Email.swift
+@@ -4,7 +4,9 @@
+ 
+ import EmailAddress
+ import Foundation
++#if canImport(UniformTypeIdentifiers)
+ import UniformTypeIdentifiers
++#endif
+ 
+ /// `Email` represents a single message, pre-decoded and modeled, no client-side MIME parsing required; part of [JMAP mail protocol.](https://jmap.io/spec/rfc8621/#section-4)
+ public struct Email: Decodable, Equatable, Hashable, Identifiable, Sendable {

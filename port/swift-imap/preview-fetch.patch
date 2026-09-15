@@ -1,0 +1,30 @@
+--- a/Sources/IMAP/IMAPClient.swift
++++ b/Sources/IMAP/IMAPClient.swift
+@@ -264,9 +264,9 @@
+     }
+ 
+     /// Fetch a set of messages by ``UID``; fetches all headers and omits message body by default.
+-    public func fetch(uid set: UIDSet, attributes: [FetchAttribute] = .header) async throws -> MessageSet {
++    public func fetch(uid set: UIDSet, attributes: [FetchAttribute] = .header, timeout: Int64? = nil) async throws -> MessageSet {
+         logger?.info("Fetching messages by UID…")
+-        return try await execute(command: UIDFetchCommand(set, attributes: attributes.filtered(capabilities)))
++        return try await execute(command: UIDFetchCommand(set, attributes: attributes.filtered(capabilities), timeout: timeout))
+     }
+ 
+     /// Fetch a specific message by ``UID``; fetches complete message by default.
+--- a/Sources/IMAP/UIDFetchCommand.swift
++++ b/Sources/IMAP/UIDFetchCommand.swift
+@@ -9,10 +9,12 @@
+ struct UIDFetchCommand: IMAPCommand {
+     let identifiers: UIDSetNonEmpty
+     let attributes: [FetchAttribute]
++    let timeout: Int64
+ 
+-    init(_ identifiers: UIDSetNonEmpty, attributes: [FetchAttribute]) {
++    init(_ identifiers: UIDSetNonEmpty, attributes: [FetchAttribute], timeout: Int64? = nil) {
+         self.identifiers = identifiers
+         self.attributes = attributes
++        self.timeout = timeout ?? .timeout
+     }
+ 
+     // MARK: IMAPCommand

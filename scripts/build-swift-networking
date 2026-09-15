@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT/scripts/swift-target-env"
+cd "$ROOT"
+NATIVE="$ROOT/.tools/command-line-tools/sdk/default/openharmony/native"
+SDK="$SWIFT_TARGET_SDK"
+SOURCE="$ROOT/.tools/swift-corelibs-foundation-source"
+CMAKE="$ROOT/.tools/swift-build-tools/bin/cmake"
+[[ -f "$SDK/lib/libcurl.so" ]] || { echo 'Run scripts/build-native-tls and scripts/build-native-curl first.' >&2; exit 1; }
+[[ -f .tools/swift-ohos-corelibs${SWIFT_BUILD_SUFFIX}/CMakeCache.txt ]] || ./scripts/build-swift-foundation-compat
+./scripts/migrate-swift-architecture-paths
+if ! patch --dry-run --reverse --force -p1 -d "$SOURCE" < port/swift-runtime/corelibs-harmonyos.patch >/dev/null 2>&1; then
+  patch --dry-run --forward --force -p1 -d "$SOURCE" < port/swift-runtime/corelibs-harmonyos.patch
+  patch --forward --force -p1 -d "$SOURCE" < port/swift-runtime/corelibs-harmonyos.patch
+fi
+"$CMAKE" -S "$SOURCE" -B .tools/swift-ohos-corelibs${SWIFT_BUILD_SUFFIX} \
+  -DFOUNDATION_BUILD_NETWORKING=ON -DCURL_NO_CURL_CMAKE=TRUE \
+  -DHarmonyTrustSource="$ROOT/port/swift-runtime/HarmonyTrust.c" \
+  -DCURL_LIBRARY_RELEASE="$SDK/lib/libcurl.so" -DCURL_INCLUDE_DIR="$SDK/include"
+"$CMAKE" --build .tools/swift-ohos-corelibs${SWIFT_BUILD_SUFFIX} -j "${SWIFT_RUNTIME_JOBS:-4}"
+"$CMAKE" --install .tools/swift-ohos-corelibs${SWIFT_BUILD_SUFFIX}

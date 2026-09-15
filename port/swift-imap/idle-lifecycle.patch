@@ -1,0 +1,58 @@
+--- a/Sources/IMAP/IdleEvent.swift
++++ b/Sources/IMAP/IdleEvent.swift
+@@ -4,6 +4,9 @@
+ 
+ /// Updates to selected ``Mailbox`` during ``IMAPClient`` idle
+ public enum IdleEvent: Sendable {
++
++    /// The server accepted IDLE and is ready to stream updates.
++    case ready
+ 
+     /// IMAP ``Server`` disconnected during idle
+     case bye(String?)
+--- a/Sources/IMAP/IdleHandler.swift
++++ b/Sources/IMAP/IdleHandler.swift
+@@ -32,10 +32,25 @@
+         self.tag = tag
+     }
+ 
++    func channelInactive(context: ChannelHandlerContext) {
++        continuation?.finish()
++        promise.fail(IMAPError.serverDisconnected)
++        context.fireChannelInactive()
++    }
++
++    func errorCaught(context: ChannelHandlerContext, error: any Error) {
++        continuation?.finish()
++        promise.fail(error)
++        context.close(promise: nil)
++        context.fireErrorCaught(error)
++    }
++
+     func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+         let response: Response = unwrapInboundIn(data)
+         clientBug = response.clientBug
+         switch response {
++        case .idleStarted:
++            continuation?.yield(.ready)
+         case .tagged(let taggedResponse):
+             guard taggedResponse.tag == tag else {
+                 promise.fail(IMAPError.unexpectedResponse("Mismatched command tag"))
+--- a/Sources/IMAP/IMAPClient.swift
++++ b/Sources/IMAP/IMAPClient.swift
+@@ -393,6 +393,11 @@
+             throw IMAPError.notConnected
+         }
+         guard let idleHandler else { return }
++        // A dropped DONE response must not leave a foreground watch alive forever.
++        let timeout = channel.eventLoop.scheduleTask(in: .seconds(commandTimeout)) {
++            channel.close(promise: nil)
++        }
++        defer { timeout.cancel() }
+         try? await channel.writeAndFlush(IMAPClientHandler.OutboundIn.part(.idleDone)).get()
+         logger?.info("Idle done")
+         defer {
+@@ -405,2 +410,2 @@
+-    private func refreshCapabilities() async throws {
++    func refreshCapabilities() async throws {
+         logger?.info("Refreshing capabilities…")

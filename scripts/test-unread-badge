@@ -1,0 +1,46 @@
+#!/usr/bin/env bash
+# Native badge count gate restricted to synthetic data in the isolated emulator app.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+[[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 && "${HDC_TARGET:-}" == 127.0.0.1:5555 ]]
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app"
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == x86_64 ]]
+for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+  [[ -f "$APP/entry/build/default/outputs/$hap" ]] || { echo 'Build both isolated unread-badge HAPs first.' >&2; exit 1; }
+done
+OUT="$ROOT/.tools/emulator-unread-badge"
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  find "$OUT" -maxdepth 1 -type f -exec mv -t "$PREVIOUS" {} +
+fi
+INSTALLED=false
+cleanup() {
+  local result=$?
+  trap - EXIT
+  if "$INSTALLED"; then run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true; fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+INSTALLED=true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+timeout --foreground --kill-after=5s 55s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/UnreadBadgeRunner \
+  -s timeout 50000 | tee "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"
+grep -q 'UNREAD_BADGE_STAGE: committed notification lease acquire, contention and release passed' "$OUT/test.log"
+grep -q 'UNREAD_BADGE_RESULT: persisted 137 plus 8 excludes muted 900; OS badge 145 survives publication, then 8 and 0 after muting; zero mail service calls' "$OUT/test.log"
+python3 - "$OUT" <<'PY'
+from pathlib import Path
+import json,sys
+out=Path(sys.argv[1])
+(out/'result.json').write_text(json.dumps({'tests':1,'passed':1,
+    'scope':'Synthetic AccountStore persists counts 137 and 8 for enabled accounts and 900 for a muted account; MailBadgeService sets OS count 145 after reopen, publication preserves 145, account muting reduces to 8 and then 0; zero mail service calls.',
+    'limits':'OS badge getter verifies the stored count; no production app or mailbox is opened, and no physical launcher screenshot is captured.'},indent=2)+'\n')
+print('PASS: persisted enabled-account unread totals drive OS badge 145, 8 and 0.')
+PY

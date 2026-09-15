@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+"""Compare pinned original IMAP parsing in debug/release; synthetic host evidence only.
+
+Uses existing pinned dependency checkouts and a separate package/build directory.
+Does not prepare or alter shipping sources/artifacts and requires no network.
+"""
+from pathlib import Path
+import argparse
+import hashlib
+import json
+import os
+import resource
+import shutil
+import statistics
+import subprocess
+
+root = Path(__file__).resolve().parent.parent
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--iterations', type=int, default=12, choices=range(1, 201))
+parser.add_argument('--runs', type=int, default=5, choices=range(1, 12))
+args = parser.parse_args()
+stage = root / '.tools/swift-probe/imap-optimization'
+package = stage / 'package'
+source = package / 'Sources/ImapOptimizationBenchmark/main.swift'
+source.parent.mkdir(parents=True, exist_ok=True)
+shutil.copy2(root / 'tests/fixtures/ImapOptimizationBenchmark.swift', source)
+dependencies = {
+    name: root / '.tools/imap-dependencies' / name
+    for name in ['swift-nio-imap', 'swift-nio']
+}
+for name in ['swift-atomics', 'swift-collections', 'swift-system']:
+    dependencies[name] = root / '.tools/swift-probe/host-imap/package/.build/checkouts' / name
+for name, path in dependencies.items():
+    assert (path / 'Package.swift').is_file(), f'Existing pinned checkout required: {name}'
+manifest = json.loads((root / 'port/swift-imap/dependencies.json').read_text())
+for name in ['swift-nio-imap', 'swift-nio']:
+    actual = subprocess.check_output(['git', '-C', str(dependencies[name]), 'rev-parse', 'HEAD'], text=True).strip()
+    assert actual == manifest[name]['revision'], name
+    subprocess.run(['git', '-C', str(dependencies[name]), 'diff', '--exit-code', 'HEAD'], check=True, stdout=subprocess.DEVNULL)
+dependency_lines = ',\n'.join('        .package(path: ' + json.dumps(str(path)) + ')' for path in dependencies.values())
+(package / 'Package.swift').write_text('''// swift-tools-version: 6.2
+import PackageDescription
+let package = Package(name: "ImapOptimizationBenchmark", dependencies: [
+''' + dependency_lines + '''
+    ], targets: [.executableTarget(name: "ImapOptimizationBenchmark", dependencies: [
+        .product(name: "NIO", package: "swift-nio"),
+        .product(name: "NIOIMAP", package: "swift-nio-imap")
+    ])])
+''')
+swift = root / '.tools/swift/usr/bin/swift'
+env = dict(os.environ, SWIFTPM_MODULECACHE_OVERRIDE=str(stage / 'module-cache'))
+build = [str(swift), 'build', '--package-path', str(package), '--scratch-path', str(stage / 'build'),
+         '--cache-path', str(root / '.tools/swift-probe/host-imap/cache'),
+         '--config-path', str(root / '.tools/swift-probe/config'),
+         '--security-path', str(root / '.tools/swift-probe/security'),
+         '--disable-netrc', '--disable-sandbox', '--skip-update', '-j', '2',
+         '--product', 'ImapOptimizationBenchmark']
+binaries = {}
+compile_evidence = {}
+for configuration in ['debug', 'release']:
+    with (stage / f'{configuration}-build.log').open('w') as log:
+        subprocess.run(build + ['-c', configuration], env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
+    binaries[configuration] = stage / 'build' / configuration / 'ImapOptimizationBenchmark'
+    assert binaries[configuration].is_file()
+    plan_path = next((stage / 'build').glob(f'*-unknown-*/{configuration}/description.json'))
+    plan = json.loads(plan_path.read_text())
+    flags = {command['moduleName']: [flag for flag in command['otherArguments'] if flag.startswith('-O')]
+             for command in plan['swiftCommands'].values()
+             if command['moduleName'] in ['NIOIMAP', 'NIOIMAPCore', 'NIOCore', 'ImapOptimizationBenchmark']}
+    assert all(value == (['-Onone'] if configuration == 'debug' else ['-O']) for value in flags.values())
+    compile_evidence[configuration] = {'swiftFlags': flags, 'planSha256': hashlib.sha256(plan_path.read_bytes()).hexdigest(),
+                                       'binarySha256': hashlib.sha256(binaries[configuration].read_bytes()).hexdigest()}
+results = {'debug': [], 'release': []}
+semantic = None
+for run in range(args.runs + 1):
+    # Alternate order and discard one warm-up from each configuration.
+    for configuration in (['debug', 'release'] if run % 2 == 0 else ['release', 'debug']):
+        before = resource.getrusage(resource.RUSAGE_CHILDREN)
+        output = subprocess.check_output([str(binaries[configuration]), str(args.iterations)], text=True)
+        after = resource.getrusage(resource.RUSAGE_CHILDREN)
+        result = json.loads(output)
+        observed = {key: value for key, value in result.items() if key != 'elapsedNanoseconds'}
+        if semantic is None:
+            semantic = observed
+        assert observed == semantic, (configuration, observed, semantic)
+        result['processCpuSeconds'] = after.ru_utime + after.ru_stime - before.ru_utime - before.ru_stime
+        if run:
+            results[configuration].append(result)
+cpu = {key: statistics.median(run['processCpuSeconds'] for run in runs) for key, runs in results.items()}
+record = {
+    'scope': 'Synthetic host IMAP parsing only; no network, TLS, real mail or device-energy measurement',
+    'fixtureSha256': hashlib.sha256(source.read_bytes()).hexdigest(),
+    'dependencies': {name: subprocess.check_output(['git', '-C', str(path), 'rev-parse', 'HEAD'], text=True).strip()
+                     for name, path in dependencies.items()},
+    'swiftVersion': subprocess.check_output([str(swift), '--version'], text=True).strip(),
+    'compileEvidence': compile_evidence,
+    'samples': results, 'medianProcessCpuSeconds': cpu,
+    'releaseCpuRatio': cpu['release'] / cpu['debug'], 'matchingResults': semantic,
+}
+(stage / 'results.json').write_text(json.dumps(record, indent=2) + '\n')
+print(json.dumps({'medianProcessCpuSeconds': cpu, 'releaseCpuRatio': record['releaseCpuRatio'],
+                  'record': str(stage / 'results.json')}, indent=2))

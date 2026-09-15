@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+# One prepared synthetic UI gate; the wrapper stops the emulator on every exit.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PROFILE="${1:-pura-main}"
+case "$PROFILE" in pura-main|matepad-landscape) ;; *) echo 'Use pura-main or matepad-landscape.' >&2; exit 2;; esac
+for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+  [[ -f "$ROOT/.tools/imap-test-app/entry/build/default/outputs/$hap" ]] || { echo 'Build both isolated attachment HAPs first.' >&2; exit 1; }
+done
+export HDC_TARGET=127.0.0.1:5555 EMULATOR_SCREEN="$PROFILE" DMAIL_ATTACHMENTS_SCREEN="$PROFILE" EMULATOR_TEST_SECONDS=150
+exec "$ROOT/scripts/with-test-emulator" "$ROOT/scripts/test-compose-attachments"

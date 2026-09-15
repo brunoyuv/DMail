@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+  [[ -f "$ROOT/.tools/imap-test-app/entry/build/default/outputs/$hap" ]] || { echo 'Build both isolated test HAPs first.' >&2; exit 1; }
+done
+export HDC_TARGET=127.0.0.1:5555 EMULATOR_SCREEN=pura-main EMULATOR_TEST_SECONDS=230
+exec "$ROOT/scripts/with-test-emulator" "$ROOT/scripts/test-notifications-prepared"

@@ -1,0 +1,30 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT/scripts/swift-target-env"
+cd "$ROOT"
+./scripts/build-swift-platform
+NATIVE="$ROOT/.tools/command-line-tools/sdk/default/openharmony/native"
+SDK="$SWIFT_TARGET_SDK"
+SOURCE="$ROOT/.tools/swift-foundation-source"
+CMAKE="$ROOT/.tools/swift-build-tools/bin/cmake"
+./scripts/migrate-swift-architecture-paths
+if ! patch --dry-run --reverse --force -p1 -d "$SOURCE" < port/swift-runtime/foundation-harmonyos.patch >/dev/null 2>&1; then
+  patch --dry-run --forward --force -p1 -d "$SOURCE" < port/swift-runtime/foundation-harmonyos.patch
+  patch --forward --force -p1 -d "$SOURCE" < port/swift-runtime/foundation-harmonyos.patch
+fi
+"$CMAKE" -S "$SOURCE" -B .tools/swift-ohos-foundation${SWIFT_BUILD_SUFFIX} -G Ninja \
+  -DCMAKE_MAKE_PROGRAM="$NATIVE/build-tools/cmake/bin/ninja" \
+  -DCMAKE_TOOLCHAIN_FILE="$NATIVE/build/cmake/ohos.toolchain.cmake" \
+  -DOHOS_ARCH="$HARMONY_CPU" -DCMAKE_Swift_COMPILER="$ROOT/.tools/swift/usr/bin/swiftc" \
+  -DCMAKE_Swift_COMPILER_TARGET=${SWIFT_TARGET} -DCMAKE_Swift_COMPILER_WORKS=TRUE \
+  -DCMAKE_Swift_FLAGS="-sdk $NATIVE/sysroot -resource-dir $SDK/lib/swift -I $SDK/lib/swift/musl/SwiftMusl -module-cache-path $ROOT/.tools/swift-probe/foundation-cache${SWIFT_BUILD_SUFFIX}" \
+  -D_SwiftFoundationICU_SourceDIR="$ROOT/.tools/swift-foundation-icu-source" \
+  -D_SwiftCollections_SourceDIR="$ROOT/.tools/swift-collections-source" \
+  -DSwiftFoundation_MACRO="$ROOT/.tools/swift/usr/lib/swift/host/plugins/libFoundationMacros.so" \
+  -DSwiftCore_DIR="$SDK/lib/cmake/SwiftCore" -DHarmonySwiftSDK="$SDK" \
+  -DCMAKE_INSTALL_PREFIX="$SDK" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON \
+  -DSWIFT_SYSTEM_NAME=musl
+# The macro plugin runs in the host compiler; it is not a target runtime library.
+"$CMAKE" --build .tools/swift-ohos-foundation${SWIFT_BUILD_SUFFIX} -j "${SWIFT_RUNTIME_JOBS:-4}"
+"$CMAKE" --install .tools/swift-ohos-foundation${SWIFT_BUILD_SUFFIX}

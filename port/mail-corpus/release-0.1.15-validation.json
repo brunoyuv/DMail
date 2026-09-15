@@ -1,0 +1,202 @@
+{
+  "version": "0.1.15",
+  "versionCode": 100015,
+  "bundleName": "org.thunderbird.harmony.dev",
+  "status": "installed-and-verified",
+  "hostJavaScript": {
+    "tests": 411,
+    "pass": 411,
+    "fail": 0,
+    "skipped": 0,
+    "files": 44
+  },
+  "hostPython": {
+    "tests": 9,
+    "pass": 9
+  },
+  "swiftHost": {
+    "tests": 14,
+    "pass": 14,
+    "suites": 3,
+    "scope": "InboxWatch, InboxCheck and SMTP delivery cleanup using pinned upstream sources and explicit patches. Host execution, not HarmonyOS runtime evidence.",
+    "logSha256": "84cc25e6f82e287c298293596ceb3b2e5f51026f1d2fcb755658cced1b92bc1f"
+  },
+  "nativeStorage": {
+    "tests": 1,
+    "passed": 1,
+    "durationMs": 9529,
+    "scope": "Actual encrypted RDB header projection, original offline body retained through summary writes and reopen, close joins queued writes, stale cache handle rejected; zero mail calls.",
+    "logSha256": "7cf78e86ffde741c5da51472c7b70b32c8722d2bba642a7b1aae667f5d696626",
+    "sequence": "Passed before final UI-only request-state fix; storage code was unchanged afterward."
+  },
+  "nativeLargeInbox": [
+    {
+      "tests": 1,
+      "passed": 1,
+      "screen": "pura-main",
+      "scope": "2000 synthetic cached headers with one held page; actual upward/downward drags, read/star swipe acknowledgements and cached reader before release; one client construction, one page, two flag operations, no body/provider requests; late page preserves flags, reader and cache.",
+      "limitations": "This is a functional native gesture gate, not a frame-rate, temperature or power measurement. Accessibility row exposure does not count native component construction.",
+      "visualEvidence": [
+        "cached",
+        "held",
+        "up",
+        "down",
+        "actions",
+        "reader",
+        "released"
+      ],
+      "durationMs": 74887,
+      "logSha256": "ad9049e836ae2d13e51ff282e52001db06b7314e9ffe65ade35f9aaf546d3276",
+      "screenshotSha256": {
+        "cached": "aebf3cbd8401f77e0567f8f01ad337e2858a4189a7c963863dca9e30ff328f43",
+        "held": "b41d876e8564188a82cf62b50b9eba38c2d84d6ce35c1e52c0c1068efdeca96e",
+        "up": "5e5d07c7dbe048c1bb8dc3f8aaf7d461dd888b7e61824d44bed59d3c6f797966",
+        "down": "f06002dc4737cbd4b98db55a8080d857b599bf582a3af83f3b57c838ced3970e",
+        "actions": "d31d42c9b1c0e095360205a9fd9fa4cda031ce13eb18cb58640cd859037b4d68",
+        "reader": "84fca798394be04d8b742d43bc1f1434bd2903690efda59cbff4c40fb8728880",
+        "released": "84fca798394be04d8b742d43bc1f1434bd2903690efda59cbff4c40fb8728880"
+      }
+    },
+    {
+      "tests": 1,
+      "passed": 1,
+      "screen": "matepad-landscape",
+      "scope": "2000 synthetic cached headers with one held page; actual upward/downward drags, read/star swipe acknowledgements and cached reader before release; one client construction, one page, two flag operations, no body/provider requests; late page preserves flags, reader and cache.",
+      "limitations": "This is a functional native gesture gate, not a frame-rate, temperature or power measurement. Accessibility row exposure does not count native component construction.",
+      "visualEvidence": [
+        "cached",
+        "held",
+        "up",
+        "down",
+        "actions",
+        "reader",
+        "released"
+      ],
+      "durationMs": 75218,
+      "logSha256": "c20bd869c04a01fa32167cdeb4e645f8b3a4e207daae3a35ef318b3ddf0c597a",
+      "screenshotSha256": {
+        "cached": "2cbd432cd3bca5544d1b5d00b7a6a6c86ff1f9988aec5ff647a909701831b046",
+        "held": "5c5124dff8146b1871fb57986df036f7347a51e8f8f0d0cea130ea22b3c7d0fd",
+        "up": "6bd78c69804674d6cc8baf32af6747c9e489a599337d87e7a73bc73b2293f141",
+        "down": "f984d39a5e546a48d3d79bb95a85bf92b80d030f3438f7e59ee6c5dbd34c1d50",
+        "actions": "aae7f65fea56b9d04d03ef2485f7acc19202ffc7a6ea74fa316f7542613bd5af",
+        "reader": "456453fc7a1622e8c4e617b4d2b1eff3ed9e6f06d0df3b1bf1130274e5d2f66b",
+        "released": "456453fc7a1622e8c4e617b4d2b1eff3ed9e6f06d0df3b1bf1130274e5d2f66b"
+      }
+    }
+  ],
+  "nativeTabletPresentation": {
+    "tests": 1,
+    "passed": 1,
+    "screen": "matepad-landscape",
+    "scope": "Two held synthetic Inbox pages during native pull-to-refresh; retained80rows, no extra app spinners, stable header geometry; search hidden away and56vp at top; scrolling and cached reader open while second page remains pending, late response preserves reader/cache; tablet splitreader when wide; no body, real mail or provider requests.",
+    "visualEvidence": "pending, after, scrolled, returned, held-scrolled, held-reader and released-reader screenshots; split screenshot on tablet. Native Refresh internal spinner node count is logged where exposed.",
+    "durationMs": 38723,
+    "logSha256": "d793e6bef7e81683a6cf71e8d2d5f2038faa93d3038b435ff6b99eab1b3a612a"
+  },
+  "nativePictures": {
+    "tests": 1,
+    "passed": 1,
+    "scope": "Actual HtmlMail fitContent reader within Scroll; fresh HTTP200 PNG and200 replacement served as application/octet-stream pass NetworkKit ArrayBuffer handling, normalize to persisted image/png, and render natively; pending retry coalesces; two HTTP503 failures retain replacement bytes, timestamp, consent and visible colors. Four loopback requests only.",
+    "limits": "Synthetic main-HAP fixture and loopback only; no production accounts or external servers.",
+    "screenshots": {
+      "fresh": {
+        "originalColorPixels": [
+          27816,
+          27633,
+          27633
+        ],
+        "sha256": "062a7ee70c0df8b62527442cc373c675c2a0c6bb1e55781182f13047955bb8a4"
+      },
+      "replacement": {
+        "originalColorPixels": [
+          37149,
+          36966,
+          37149
+        ],
+        "sha256": "ee02b496ac5801595522837ab268eda339d31c30a8de062237daa8400cf704c9"
+      },
+      "failed-refresh": {
+        "originalColorPixels": [
+          37149,
+          36966,
+          37149
+        ],
+        "sha256": "73d97288b759e2c361739a63a6b6444da40a801df91d612cdc8bd5aa3408659d"
+      },
+      "retried": {
+        "originalColorPixels": [
+          37149,
+          36966,
+          37149
+        ],
+        "sha256": "73d97288b759e2c361739a63a6b6444da40a801df91d612cdc8bd5aa3408659d"
+      }
+    },
+    "durationMs": 16356,
+    "logSha256": "535d61912ce76c32d8f11096e73dd679f189521c5206e6c3f783781a857b0867"
+  },
+  "emulator": {
+    "status": "stopped",
+    "nativeProcessAbsenceVerified": true
+  },
+  "builds": {
+    "productionX86Sha256": "7a9b8bc783b59c9017fd99928ece24f6825d484e00dd8f5a469df674c3985f8c",
+    "signedArmSha256": "4df958af3bd54faa4f64a9385c5bb0444d480d63caf65c07a13ce360dfc28ab7",
+    "isolatedMainSha256": "3c7fb95fa5dcc620772314e42ee3372da6ece456188ce69fa45ebba7a376642c",
+    "isolatedTestSha256": "32f6fd719b6c99735833efbd183e5554e6c61e476b1d0b14dd46f68c4e26d52d"
+  },
+  "installations": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "versionCode": 100015,
+      "versionName": "0.1.15",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "4df958af3bd54faa4f64a9385c5bb0444d480d63caf65c07a13ce360dfc28ab7"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "versionCode": 100015,
+      "versionName": "0.1.15",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "4df958af3bd54faa4f64a9385c5bb0444d480d63caf65c07a13ce360dfc28ab7"
+    }
+  ],
+  "sourceParity": {
+    "signedArmVerified": true,
+    "isolatedShippingPageDataMailCoreModelFilesMatched": 52,
+    "rendererDiagnosticsEnabled": false
+  },
+  "evidence": {
+    "hostLogSha256": "98af6f497bfa79f7c1e3d44e048de83633c18a74313cf828cd650c422668f434",
+    "signedBuildLogSha256": "089c4e228b717b3bdb314ac456868b5cd13500beb5e66b725ee9787343df91f3"
+  },
+  "toolchain": {
+    "commandLineTools": "26.0.0.821",
+    "hvigor": "6.26.4",
+    "compileSdk": "26.0.0.105",
+    "targetApi": 22,
+    "minimumApi": 22,
+    "swiftNativeApi": 22
+  },
+  "privacy": {
+    "automatedTestsSyntheticOnly": true,
+    "mailboxAccessed": false,
+    "productionLaunched": false,
+    "realMessagesSent": false,
+    "physicalMailScreensCaptured": false
+  },
+  "limits": [
+    "Functional gestures and work counters do not measure physical frame rate, heat, power or battery life.",
+    "The first large native phone gate failed when spinner feedback changed while a request remained pending; the request-state fix passed final phone and tablet tests. Failed evidence is retained privately.",
+    "The review covers shipping application code and active Swift adaptations, not all vendored dependencies or platform internals.",
+    "Ordinary one-shot IMAP and JMAP operations still incur connection setup; persistent watch snapshots are exceptions.",
+    "Some IMAP transport/post-authentication failures are still classified as authenticationRequired; protocol-level outcome work remains.",
+    "MIME/CID edge cases and the exact unidentified missing picture remain documented follow-ups; picture tests cover synthetic transport/cache and native rendering.",
+    "AppGallery was not rebuilt."
+  ]
+}

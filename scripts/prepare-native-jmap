@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+"""Stage the pinned JMAP module and apply its explicit port patches."""
+from pathlib import Path
+import hashlib, json, shutil, subprocess
+
+root = Path(__file__).resolve().parent.parent
+upstream = root / 'upstream/thunderbird-ios'
+manifest = json.loads((root / 'port/swift-jmap/upstream-files.json').read_text())
+revision = subprocess.check_output(['git', '-C', str(upstream), 'rev-parse', 'HEAD'], text=True).strip()
+assert revision == manifest['revision'], 'Unexpected upstream revision'
+status = subprocess.check_output(['git', '-C', str(upstream), 'status', '--porcelain', '--',
+                                  'Core/Sources/JMAP', 'Core/Tests/JMAPTests'], text=True)
+assert not status, 'Upstream JMAP contains local changes'
+destination = root / '.tools/swift-probe/native-jmap/source'
+for entry in manifest['files']:
+    source = upstream / entry['upstreamPath']
+    assert hashlib.sha256(source.read_bytes()).hexdigest() == entry['sha256'], source
+    target = destination / entry['upstreamPath']
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(source, target)
+for patch in ['harmonyos-imports.patch', 'account-context.patch', 'response-correlation.patch', 'message-reader.patch', 'message-writes.patch', 'draft-creation.patch']:
+    subprocess.run(['patch', '--forward', '--force', '-p1', '-d', str(destination)],
+                   input=(root / 'port/swift-jmap' / patch).read_text(), text=True, check=True)
+print(f"Staged {len(manifest['files'])} pinned JMAP source/test/resource files")

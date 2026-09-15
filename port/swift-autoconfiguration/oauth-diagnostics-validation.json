@@ -1,0 +1,21 @@
+{
+  "date": "2026-09-14",
+  "scope": "Post-browser Google failure diagnostics; underlying live failure not yet identified",
+  "hostTestsPassed": 42,
+  "nativeTestsPassed": 13,
+  "emulatorCoreSHA256": "67ec302594efdffd5f782bc307619cee0d3a4924d4402c88c0884c02113f6200",
+  "signedHapSHA256": "ce65e4f37155e6bb0c9656f59cc0bd0544b6546dd1ffa32a11b47a309314802b",
+  "installed": [
+    "Pura X VDE-AL00 via Wi-Fi"
+  ],
+  "productionAppLaunched": false,
+  "realMailboxAccessAutomated": false,
+  "emulatorExitVerified": true,
+  "evidence": {
+    ".tools/oauth-diagnostics-host-tests.log": "fcfb41d7d609dd327e3195d403f0093a7880890c48b96f1819b23799497dc56c",
+    ".tools/oauth-diagnostics-emulator.log": "58820b92d6b2f70fd98e2bc3259eccf5ba4b7534886a70a6b2fc201cfaaeb3df",
+    ".tools/oauth-native-test/test.log": "f2822186d14548e6e8784a6b2a784b9ebeaba6440a769ea6c271eb07b6e38e12",
+    ".tools/oauth-diagnostics-device-build.log": "edac807fb837fb592e99c82637d6d2589c089c4b6eb04e28bfd34c6e3e81080a",
+    ".tools/oauth-diagnostics-pura-install.log": "a7c7f01aad5659daa03375cd6248b146f21db716dcdd99f52b45cbe785f4a370"
+  }
+}

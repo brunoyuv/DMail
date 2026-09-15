@@ -1,0 +1,76 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+[[ $# -gt 0 ]] || { echo 'Usage: scripts/with-test-emulator <prepared test command> [args...]' >&2; exit 2; }
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+exec 9>"$ROOT/.tools/emulator-test.lock"
+flock -n 9 || { echo 'An emulator test session is already running.' >&2; exit 1; }
+CONFIG="$HOME/.Huawei/Emulator/deployed/ThunderbirdPhone/config.ini"
+BACKUP=''
+if pgrep -f '[q]emu.*ThunderbirdPhone|[E]mulator -start ThunderbirdPhone' >/dev/null; then
+  echo 'Stop the existing emulator before starting a prepared test.' >&2; exit 1
+fi
+cleanup() {
+  local result=$?
+  trap - EXIT
+  if ! timeout 30 "$ROOT/scripts/deveco" emulator stop ThunderbirdPhone; then
+    echo 'ERROR: Emulator shutdown failed; inspect ThunderbirdPhone immediately.' >&2
+    result=1
+  fi
+  # The CLI can report stopped before the native process finishes exiting.
+  for ((attempt=0; attempt<60; attempt++)); do
+    pgrep -f '[q]emu.*ThunderbirdPhone|[E]mulator -start ThunderbirdPhone' >/dev/null || break
+    sleep 0.25
+  done
+  if pgrep -f '[q]emu.*ThunderbirdPhone|[E]mulator -start ThunderbirdPhone' >/dev/null; then
+    echo 'ERROR: Native emulator process has not exited.' >&2
+    result=1
+  elif [[ -n "$BACKUP" ]]; then
+    cp "$BACKUP" "$CONFIG"
+    rm "$BACKUP"
+  fi
+  "$ROOT/scripts/deveco" emulator list
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+if [[ -n "${EMULATOR_SCREEN:-}" ]]; then
+  BACKUP="$(mktemp "$ROOT/.tools/emulator-config.XXXXXX")"
+  cp "$CONFIG" "$BACKUP"
+  python3 - "$ROOT" "$CONFIG" "$EMULATOR_SCREEN" <<'PY'
+import json,sys
+from pathlib import Path
+root,config,name=sys.argv[1:]
+screen=json.loads((Path(root)/'port/mail-corpus/screens.json').read_text())[name]
+values={'hw.lcd.single.width':screen['width'],'hw.lcd.single.height':screen['height'],
+        'hw.lcd.density':screen['density'],'hw.lcd.phy.width':screen['physicalWidth'],
+        'hw.lcd.phy.height':screen['physicalHeight'],'hw.lcd.single.CutoutPath':'',
+        'hw.device.radius':0,'hw.realDevice.radius':0,'isCustomize':'true'}
+path=Path(config)
+lines=path.read_text().splitlines()
+path.write_text('\n'.join(f'{line.split("=",1)[0]}={values[line.split("=",1)[0]]}'
+    if line.split('=',1)[0] in values else line for line in lines)+'\n')
+print('Prepared screen profile:',name,screen)
+PY
+fi
+"$ROOT/.tools/deveco-26/command-line-tools/emulator/Emulator" -start ThunderbirdPhone -noWindow \
+  > "$ROOT/.tools/emulator-start.log" 2>&1 &
+READY=false
+for ((attempt=0; attempt<90; attempt++)); do
+  if grep -q 'Failed to start emulator' "$ROOT/.tools/emulator-start.log"; then
+    echo 'Native emulator launch failed.' >&2
+    exit 1
+  fi
+  if timeout 2 "$HDC" -t 127.0.0.1:5555 shell echo thunderbird-test-ready 2>/dev/null | grep -q '^thunderbird-test-ready'; then
+    READY=true
+    break
+  fi
+  sleep 1
+done
+"$READY" || { echo 'Emulator did not become ready.' >&2; exit 1; }
+# Bound even a hung test so the emulator cannot sit idle indefinitely.
+export THUNDERBIRD_EMULATOR_TEST=1
+TEST_SECONDS="${EMULATOR_TEST_SECONDS:-180}"
+[[ "$TEST_SECONDS" =~ ^[0-9]+$ && "$TEST_SECONDS" -ge 1 && "$TEST_SECONDS" -le 240 ]]
+timeout --foreground --kill-after=10s "${TEST_SECONDS}s" "$@"

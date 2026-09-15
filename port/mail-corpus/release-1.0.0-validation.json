@@ -1,0 +1,129 @@
+{
+  "version": "1.0.0",
+  "versionCode": 1000000,
+  "javascript": {
+    "tests": 716,
+    "passed": 716,
+    "files": 66
+  },
+  "pythonTests": 32,
+  "swift": {
+    "imapSmtpAccountTests": 119,
+    "newAttachmentArchiveTests": 16
+  },
+  "nativeArchitecturesRebuilt": [
+    "aarch64",
+    "x86_64"
+  ],
+  "hapBuildsPassed": [
+    "signed-arm",
+    "x86"
+  ],
+  "artifacts": {
+    "hapSha256": "0e77471849e7c5d76f1ca85ddf648f2c351932bd80c5042063fdcba0164d1cbd",
+    "native": {
+      "aarch64": "1cb93b98f41ddb80b4724281c5a776945948c8ff74ce1e03f5a58a6a8cbe58dd",
+      "x86_64": "b49248b1c0c1fa6bb851412a0151c7713cca805e5ea5f8c32655fb1bf3584681"
+    }
+  },
+  "scope": [
+    "Received attachment Open/Save with persistent private cache",
+    "Composer file picker and metadata-only draft references; ten files / ten MiB total",
+    "Original Swift MIME and SMTP attachment sending and server Sent copy",
+    "IMAP UID MOVE Archive/Undo and offline cache identity",
+    "Tablet account dropdown capped at 320 vp; split view preserved"
+  ],
+  "preservedFrom028": {
+    "harmony/entry/src/main/ets/pages/HtmlMail.ets": "e9a31563d98a3debc36dddcbe5dbf2c3dc86fe1d562f25bbfd8846529bb0d855",
+    "harmony/entry/src/main/ets/mail/AutomaticMailWork.ts": "4f1692f6e832d53372119ded2c0a1e192c82153d0499ebfea47f6b369958aad0",
+    "harmony/entry/src/main/ets/mail/MailSyncPacing.ts": "9abcc652b0cdab09158d592727dcba4fc6e53c6763a0363bfcfae68834f620fd",
+    "harmony/entry/src/main/ets/mail/MailMessageLoader.ets": "3152b2bf6bb28f6f378aef7ce297266a19f8fe8bbb90f04b919648de5097d65d",
+    "harmony/entry/src/main/ets/mail/html/HtmlDocument.ts": "bebe7a8019c1c3fce9654e92ddabe97a66eefe60873de5a449efc9a13425334e",
+    "harmony/entry/src/main/ets/data/PictureCache.ets": "9f8ee8e30ab7f611f36f1950b7655d560fb8d4d8989c06b7c7abc1dec011d418",
+    "port/swift-accountbody/InlineImages.swift": "0cfcb6a4e2131bda53a6bc5772104bc1093d81e2307a707605faf54e0a15c06d",
+    "port/swift-mime/html-entities.patch": "16cfdeea75c3e8ad723566f2d5d3463e4168ec1b2a45bd7871a9cf2381e00223",
+    "port/swift-imap/InboxWatch.swift": "1e0c662f79d33af4cad72ac2a12a49c1476fb36261c8c7ded34797f4d805f6e4"
+  },
+  "uiTests": [
+    {
+      "tests": 1,
+      "passed": 1,
+      "screen": "matepad-landscape",
+      "scope": "Production UI with synthetic cached received PDF metadata and two saved outgoing metadata references. Verifies received card/save control, Unicode names and sizes, draft removal persisted across reopen, and split reader on tablet.",
+      "limits": "No file picker, attachment viewer, network download, SMTP submission, or real mail. Actual byte import and deletion are covered separately by host file tests.",
+      "screenshots": [
+        "received.png",
+        "composer-before.png",
+        "composer-after.png",
+        "composer-reopened.png"
+      ],
+      "screenshotSha256": {
+        "received.png": "d707f3ff61562dfe97548251defe1e51bedae1be03d84e925fd886944383bfb0",
+        "composer-before.png": "2a9b43f555909f9e00e0e92b77684511d5b30fcbed5e49253a63e7c333a14574",
+        "composer-after.png": "e8565dbf7b8ae147617cd8a1537139b4c022af9054eebb3fa010f825d7f2a275",
+        "composer-reopened.png": "965d9c127858e312a028da3ab06f5927f2f8b780a1cf00c4e8b9152f97bcbe97",
+        "account-menu.png": "1099bec775be6cbf7a6e9d7319938e9f7eec2f80099b9ccda970660cd41e0638"
+      },
+      "visuallyInspected": [
+        "composer-reopened.png",
+        "composer-before.png",
+        "account-menu.png"
+      ],
+      "accountMenuMaxWidthVp": 320
+    },
+    {
+      "tests": 1,
+      "passed": 1,
+      "screen": "pura-main",
+      "scope": "Production UI with synthetic cached received PDF metadata and two saved outgoing metadata references. Verifies received card/save control, Unicode names and sizes, draft removal persisted across reopen, and split reader on tablet.",
+      "limits": "No file picker, attachment viewer, network download, SMTP submission, or real mail. Actual byte import and deletion are covered separately by host file tests.",
+      "screenshots": [
+        "received.png",
+        "composer-before.png",
+        "composer-after.png",
+        "composer-reopened.png"
+      ],
+      "screenshotSha256": {
+        "received.png": "4468be5a2a1e27aadc5a037d2bcc8c17eb3049ef2496550252c71ebb810c899b",
+        "composer-before.png": "412a39e3a74051e31bc70d07442d0ba481f66be28566b65e42047cc959374485",
+        "composer-after.png": "4907592c42159231fd49113bfb29024c89c0bd7d9419587f2565f3298f54c439",
+        "composer-reopened.png": "fdd9a03fa484aef25c1995526841db90e1aa5e290ba0497666de7e5c7616c608"
+      },
+      "visuallyInspected": [
+        "composer-reopened.png"
+      ]
+    }
+  ],
+  "installedDevices": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "versionCode": 1000000,
+      "versionName": "1.0.0",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "0e77471849e7c5d76f1ca85ddf648f2c351932bd80c5042063fdcba0164d1cbd"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "versionCode": 1000000,
+      "versionName": "1.0.0",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "0e77471849e7c5d76f1ca85ddf648f2c351932bd80c5042063fdcba0164d1cbd"
+    }
+  ],
+  "limits": [
+    "Synthetic tests only; no real mail, provider account tests, or production SMTP sending.",
+    "Received encoded-part limit: four MiB. Outgoing attachment total: ten MiB.",
+    "IMAP Archive requires MOVE and an unambiguous writable existing destination.",
+    "Uncertain sends/moves are not retried automatically; offline Archive is not queued."
+  ],
+  "emulatorStopped": true,
+  "uiHarnessCorrections": [
+    "Unlock the emulator before launching the isolated main ability.",
+    "Mark the synthetic main host foreground so canceled offscreen work is not mistaken for a cache failure.",
+    "Allow native menu/draft dismissal animations to settle before the next tap."
+  ]
+}

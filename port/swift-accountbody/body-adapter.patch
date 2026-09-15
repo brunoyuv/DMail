@@ -1,0 +1,436 @@
+--- a/Sources/ImapAccountCore/EmailBody.swift
++++ b/Sources/ImapAccountCore/EmailBody.swift
+@@ -3,7 +3,7 @@
+ // file, You can obtain one at http://mozilla.org/MPL/2.0/
+ 
+ import Foundation
+-import JMAP
++import CoreFoundation
+ import MIME
+ 
+ /// Common email body interface decoded from either `IMAP.Message` or `JMAP.Email`, encodable to `SMTP.Email`.
+@@ -21,6 +21,7 @@
+ 
+     /// Every ``EmailAttachment`` decoded from `MIME.Body`, including both `ContentDisposition.attached` and `.inline`
+     public let attachments: [EmailAttachment]
++    public let decodingHadErrors: Bool
+ 
+     /// Plain-text only or alternative message body
+     public let text: String?
+@@ -30,10 +31,24 @@
+     /// By default, related media attachments are inlined as base64-encoded data attributes`.
+     public func html(_ format: HTMLFormat = .inlineAttachments) -> String? {
+         switch format {
+-        case .inlineAttachments: _html?.inlining(attachments: attachments)
++        case .inlineAttachments: renderedHTML().html
+         case .stripped: _html?.htmlTagsStripped().htmlEntitiesDecoded()
+         case .none: _html
+         }
++    }
++
++    /// Inline each selected MIME fragment with its own resource scope. The
++    /// shared output limit counts completed HTML tokens and data URLs, not a
++    /// prefix of a fully expanded document that could cut a picture in half.
++    public func renderedHTML(limit: Int = 2_000_000) -> (html: String?, truncated: Bool) {
++        guard !_fragments.isEmpty else { return (nil, false) }
++        var output = "", truncated = false
++        for fragment in _fragments {
++            let value = fragment.source.inliningImages(attachments: fragment.attachments,
++                limit: max(0, limit - output.utf16.count), baseLocation: fragment.baseLocation)
++            output += value.html; truncated = truncated || value.truncated
++        }
++        return (output, truncated)
+     }
+ 
+     /// Plain text excerpt or summary of body contents, currently limited to server-provided values, described in [RFC 8970](https://www.rfc-editor.org/info/rfc8970)
+@@ -42,129 +57,243 @@
+         _preview
+     }
+ 
+-    public init(html: String? = nil, text: String? = nil, attachments: [EmailAttachment] = [], preview: String? = nil) {
++    public init(html: String? = nil, text: String? = nil, attachments: [EmailAttachment] = [], preview: String? = nil, decodingHadErrors: Bool = false) {
+         self.attachments = attachments
++        self.decodingHadErrors = decodingHadErrors
+         self.text = text
+         _preview = preview
+         _html = html
++        _fragments = html.map { [ScopedHTML(source: $0, attachments: attachments, baseLocation: nil)] } ?? []
+     }
+ 
+     private let _preview: String?
+     private let _html: String?
++    private let _fragments: [ScopedHTML]
+ 
+     // MARK: CustomStringConvertible
+     public var description: String { "" }
+ }
+ 
+ extension EmailBody {
+-    init(body: MIME.Body?) throws {
++    public init(body: MIME.Body?) throws {
+         guard let body, !body.isEmpty else {
+-            throw AccountError.mime(.dataNotFound)
+-        }
+-        let components: MIME.Part.Components = try body.part.components()
+-        let html: String? = !components.html.isEmpty ? components.html.joined() : nil
++            throw MIMEError.dataNotFound
++        }
++        var remaining = 512, hadErrors = false
++        let components = try body.part.components(remaining: &remaining, hadErrors: &hadErrors)
++        let html: String? = !components.html.isEmpty ? components.html.map(\.source).joined() : nil
+         let text: String? = !components.text.isEmpty ? components.text.joined() : nil
+         let preview: String? = nil  // TODO: Generate preview text
+-        self.init(html: html, text: text, attachments: components.0, preview: preview)
+-    }
+-
+-    init(email: JMAP.Email) throws {
+-        // TODO: JMAP email body decoding and assembly not implemented
+-        throw URLError(.cancelled)
+-    }
++        self.attachments = components.attachments; self.decodingHadErrors = hadErrors
++        self.text = text; self._preview = preview; self._html = html; self._fragments = components.html
++    }
++
+ }
+ 
+ extension MIME.Body {
+     var isEmpty: Bool { part.data.count < 1 }
+ }
+ 
+-extension MIME.Part {
+-    typealias Components = ([EmailAttachment], html: [String], text: [String])
+-
+-    // Recursively decode and collect all subparts into component arrays
+-    func components(appendedTo components: Components? = nil) throws -> Components {
+-        var components: Components = components ?? ([], [], [])
+-        do {
+-            switch contentType {
+-            case .multipart:
+-                for part in try parts {
+-                    components = try part.components(appendedTo: components)
+-                }
+-            case .text(let subtype, let characterSet):
+-                let string: String = try String(
+-                    contentTransferEncoding,
+-                    data: data,
+-                    encoding: characterSet?.encoding ?? .utf8
+-                )
+-                switch subtype {
+-                case .html:
+-                    components.html.append(string)
+-                case .plain:
+-                    fallthrough
+-                default:  // All non-HTML email is plain text
+-                    components.text.append(string)
+-                }
+-            case .message:
+-                // Single `message/rfc822` type identifier exists for type `message`
+-                // "No encoding other than 7bit, 8bit, or binary is permitted for messages or parts of type message"
+-                // https://www.w3.org/Protocols/rfc1341/7_3_Message.html
+-                if let body: Body = try? Body(data) {
+-                    // TODO: Handle forwarded/attached message
+-                    print(body)
+-                } else if let text: String = try? String(contentTransferEncoding, data: data, encoding: .ascii) {
+-                    // TODO: Handle inline plain text message
+-                    print(text)
+-                }
+-            default:
+-                components.0.append(
+-                    EmailAttachment(
+-                        data: try data.decoded(from: contentTransferEncoding),
+-                        contentType: contentType,
+-                        contentDisposition: contentDisposition,
+-                        contentID: contentID
+-                    ))
+-            }
+-        } catch {
+-            throw error
+-        }
+-        // TODO: Encode inline attachments into HTML as base64 strings
+-        return components
++private struct ScopedHTML: Sendable {
++    let source: String
++    var attachments: [EmailAttachment]
++    let baseLocation: String?
++}
++
++private struct BodyComponents {
++    var attachments: [EmailAttachment] = []
++    var html: [ScopedHTML] = []
++    var text: [String] = []
++    var readable: Bool { !html.isEmpty || !text.isEmpty }
++    var imageResource: Bool { attachments.contains { if case .image = $0.contentType { return true }; return false } }
++}
++
++private func resolvedBodyLocation(_ location: String?, against base: String?) -> String? {
++    guard let location, !location.isEmpty else { return base }
++    guard let value = URL(string: location, relativeTo: base.flatMap(URL.init(string:))) else { return base }
++    return value.absoluteURL.absoluteString
++}
++
++private extension MIME.Part {
++    func components(depth: Int = 0, remaining: inout Int, hadErrors: inout Bool,
++                    baseLocation: String? = nil, ignoreAttachment: Bool = false) throws -> BodyComponents {
++        guard depth < 32, remaining > 0 else { throw MIMEError.dataNotFound }
++        remaining -= 1
++        let base = resolvedBodyLocation(contentLocation, against: baseLocation)
++        func attachment() throws -> EmailAttachment {
++            EmailAttachment(data: try data.decoded(from: contentTransferEncoding), contentType: contentType,
++                contentDisposition: contentDisposition, contentID: contentID,
++                contentLocation: contentLocation.map { resolvedBodyLocation($0, against: baseLocation) ?? $0 })
++        }
++        if case .attachment = contentDisposition, !ignoreAttachment {
++            return BodyComponents(attachments: [try attachment()])
++        }
++        switch contentType {
++        case .multipart(let subtype, _):
++            let decoded = try decodedParts
++            var parts: [MIME.Part?] = []
++            for value in decoded {
++                do { parts.append(try value.get()) }
++                catch { parts.append(nil); hadErrors = true }
++            }
++            if subtype == .related {
++                // The start parameter names a direct child's Content-ID. A
++                // missing/invalid root must not silently promote an auxiliary
++                // HTML resource or an image to the visible message body.
++                func identifier(_ value: String) -> String {
++                    value.trimmingCharacters(in: .whitespacesAndNewlines)
++                        .trimmingCharacters(in: CharacterSet(charactersIn: "<>"))
++                }
++                let root: Int?
++                if let start = contentTypeParameters["start"] {
++                    let matches = parts.indices.filter { parts[$0]?.contentID.map { identifier($0.description) == identifier(start) } ?? false }
++                    root = matches.count == 1 ? matches.first : nil
++                } else if let first = parts.first ?? nil, case .image = first.contentType,
++                          let declared = contentTypeParameters["type"]?.lowercased(),
++                          ["text/html", "text/plain", "multipart/alternative", "multipart/related"].contains(declared) {
++                    // Some MHTML writers put the image before the declared HTML
++                    // root and omit start. Recover only one exact declared body
++                    // type; an explicit missing root or omitted slot never
++                    // promotes another part.
++                    let matches = parts.indices.filter {
++                        parts[$0]?.contentType.description.components(separatedBy: ";").first == declared
++                    }
++                    root = matches.count == 1 ? matches.first : 0
++                } else { root = parts.isEmpty ? nil : 0 }
++                guard let root, let rootPart = parts[root] else { hadErrors = true; return BodyComponents() }
++                var result: BodyComponents
++                do { result = try rootPart.components(depth: depth + 1, remaining: &remaining, hadErrors: &hadErrors,
++                    baseLocation: base, ignoreAttachment: true) }
++                catch { hadErrors = true; result = BodyComponents() }
++                var resources: [EmailAttachment] = []
++                for index in parts.indices where index != root {
++                    guard let part = parts[index] else { continue }
++                    do {
++                        let child = try part.components(depth: depth + 1, remaining: &remaining, hadErrors: &hadErrors, baseLocation: base)
++                        result.attachments += child.attachments
++                        // Nested related/mixed documents own their resources;
++                        // only direct resources or a selected image alternative
++                        // are visible to this related document.
++                        if !part.contentType.isMultipart || (part.contentType.subtype == .alternative && !child.readable) { resources += child.attachments }
++                    } catch { hadErrors = true }
++                }
++                for index in result.html.indices { result.html[index].attachments += resources }
++                return result
++            }
++            var children: [(MIME.Part, BodyComponents)] = []
++            for part in parts.compactMap({ $0 }) {
++                do { children.append((part, try part.components(depth: depth + 1, remaining: &remaining, hadErrors: &hadErrors, baseLocation: base))) }
++                catch { hadErrors = true }
++            }
++            if subtype == .alternative {
++                guard var selected = (children.last(where: { $0.1.readable }) ?? children.last(where: { $0.1.imageResource }))?.1 else { return BodyComponents() }
++                // Retain a plain fallback for reply/preview, but never append
++                // the HTML or inline resources of an unselected alternative.
++                if selected.readable && selected.text.isEmpty {
++                    selected.text = children.last(where: { !$0.1.text.isEmpty })?.1.text ?? []
++                }
++                return selected
++            }
++            var result = BodyComponents(), resources: [EmailAttachment] = []
++            for (part, child) in children {
++                result.attachments += child.attachments; result.html += child.html; result.text += child.text
++                if !part.contentType.isMultipart || (part.contentType.subtype == .alternative && !child.readable) { resources += child.attachments }
++            }
++            // Preserve common legacy mixed HTML+image siblings without leaking
++            // a nested related document's private images into another branch.
++            for index in result.html.indices { result.html[index].attachments += resources }
++            return result
++        case .text(let subtype, let characterSet):
++            let string = try String(contentTransferEncoding, data: data, encoding: characterSet?.encoding ?? .utf8)
++            if subtype == .html { return BodyComponents(html: [ScopedHTML(source: string, attachments: [], baseLocation: base)]) }
++            return BodyComponents(text: [string])
++        case .application(let subtype) where subtype == "x-dmail-omitted":
++            // Selective IMAP fetching preserves omitted child positions so an
++            // unavailable related root cannot turn a later sibling into root.
++            return BodyComponents()
++        case .message:
++            return BodyComponents(attachments: [EmailAttachment(data: data, contentType: contentType,
++                contentDisposition: contentDisposition, contentID: contentID, contentLocation: contentLocation)])
++        default:
++            return BodyComponents(attachments: [try attachment()])
++        }
+     }
+ }
+ 
+ extension MIME.CharacterSet {
+     var encoding: String.Encoding? {
+         switch self {
+-        case .ascii: .ascii
+-        case .iso8859: .isoLatin1
+-        case .utf8: .utf8
+-        default: nil
++        case .ascii: return .ascii
++        case .iso8859: return .isoLatin1
++        case .utf8: return .utf8
++        default:
++            let name = CFStringCreateWithCString(nil, rawValue, CFStringBuiltInEncodings.UTF8.rawValue)
++            let encoding = CFStringConvertIANACharSetNameToEncoding(name)
++            return encoding == kCFStringEncodingInvalidId ? nil : String.Encoding(rawValue: CFStringConvertEncodingToNSStringEncoding(encoding))
+         }
+     }
+ }
+ 
+ extension String {
+ 
+-    // Decode `MIME.Part` data with any `ContentTransferEncoding` to `String` of any `String.Encoding`
++    // Decode transfer bytes completely before converting the text's charset.
++    // Multibyte/stateful charsets can span escaped and literal QP bytes.
+     init(_ transferEncoding: ContentTransferEncoding?, data: Data, encoding: Encoding = .utf8) throws {
++        let decoded: Data
+         switch transferEncoding {
+         case .base64:
+-            do {
+-                try self.init(base64: data, encoding: encoding)  // Try strict decode first
+-            } catch {
+-                try self.init(nil, data: data, encoding: encoding)  // Try fuzzy (default) decode
+-            }
++            // Keep the previous tolerance for a malformed transfer declaration,
++            // but never return encoded transport text after a charset failure.
++            decoded = Data(base64Encoded: data, options: .ignoreUnknownCharacters) ?? data
+         case .quotedPrintable:
+-            do {
+-                try self.init(quotedPrintable: data, encoding: encoding)  // Try strict decode first
+-            } catch {
+-                try self.init(nil, data: data, encoding: encoding)  // Try fuzzy (default) decode
+-            }
+-        default:  // ASCII and unknown content transfer encodings
+-            guard let string: Self = Self(data: data, encoding: encoding) else {
+-                throw MIMEError.dataNotDecoded(data, encoding: encoding)
+-            }
+-            self = string
+-        }
+-    }
+-}
++            decoded = data.bodyQuotedPrintableDecoded()
++        default:
++            decoded = data
++        }
++        // Some messages omit the charset (ASCII by MIME default), or label a
++        // valid UTF-8 body as ASCII. Recover only if the declared decode fails;
++        // do not reinterpret successfully decoded legacy text as UTF-8.
++        guard let string = Self(data: decoded, encoding: encoding) ??
++            (encoding == .utf8 ? nil : Self(data: decoded, encoding: .utf8)) else {
++            throw MIMEError.dataNotDecoded(decoded, encoding: encoding)
++        }
++        self = string
++    }
++}
++
++private extension Data {
++    func bodyQuotedPrintableDecoded() -> Data {
++        let bytes = Array(self)
++        var result = Data(capacity: count), index = 0
++        func hex(_ byte: UInt8) -> UInt8? {
++            switch byte {
++            case 48...57: byte - 48
++            case 65...70: byte - 55
++            case 97...102: byte - 87
++            default: nil
++            }
++        }
++        while index < bytes.count {
++            if bytes[index] == 61 {
++                // Accept transport-added whitespace before a soft line break.
++                var end = index + 1
++                while end < bytes.count && (bytes[end] == 32 || bytes[end] == 9) { end += 1 }
++                if end < bytes.count && bytes[end] == 13 { end += 1 }
++                if end < bytes.count && bytes[end] == 10 {
++                    index = end + 1
++                    continue
++                }
++                if index + 2 < bytes.count, let high = hex(bytes[index + 1]), let low = hex(bytes[index + 2]) {
++                    result.append(high * 16 + low)
++                    index += 3
++                    continue
++                }
++            }
++            // Preserve a malformed escape locally instead of abandoning all
++            // correctly encoded characters in the rest of the body.
++            result.append(bytes[index])
++            index += 1
++        }
++        return result
++    }
++}
+--- a/Sources/ImapAccountCore/EmailAttachment.swift
++++ b/Sources/ImapAccountCore/EmailAttachment.swift
+@@ -11,6 +11,7 @@
+ 
+     public let contentDisposition: ContentDisposition
+     public let contentID: ContentID?
++    public let contentLocation: String?
+     public let contentType: ContentType
+     public let data: Data
+ 
+@@ -18,9 +19,11 @@
+         data: Data,
+         contentType: ContentType,
+         contentDisposition: ContentDisposition? = nil,
+-        contentID: ContentID? = nil
++        contentID: ContentID? = nil,
++        contentLocation: String? = nil
+     ) {
+         self.contentDisposition = contentDisposition ?? .attachment
++        self.contentLocation = contentLocation
+         self.contentID = contentID
+         self.contentType = contentType
+         self.data = data
+@@ -28,6 +31,7 @@
+ 
+     var links: [String] {
+         var links: [String] = []
++        if let contentLocation, !contentLocation.isEmpty { links.append(contentLocation) }
+         if let contentID {
+             links.append(contentID.description)
+             if let url: URL = try? URL(contentID: contentID) {
+--- a/Sources/ImapAccountCore/String.swift
++++ b/Sources/ImapAccountCore/String.swift
+@@ -33,8 +33,26 @@
+     }
+ 
+     func htmlTagsStripped() -> Self {
+-        replacing(/<[^>]*>/, with: "")
++        // A regex search restarts at every unmatched '<', rescanning a malformed
++        // suffix quadratically. Walk each Character boundary once instead.
++        // Character delimiters preserve the original regex's Unicode semantics;
++        // copied slices preserve the source bytes, including unmatched markup.
++        var stripped = ""
++        stripped.reserveCapacity(utf8.count)
++        var kept = startIndex, opening: Index?
++        for index in indices {
++            let character = self[index]
++            if character == "<", opening == nil {
++                opening = index
++            } else if character == ">", let start = opening {
++                stripped.append(contentsOf: self[kept..<start])
++                kept = self.index(after: index)
++                opening = nil
++            }
++        }
++        stripped.append(contentsOf: self[kept...])
++        return stripped
+             .components(separatedBy: "\n")
+             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+             .filter { !$0.isEmpty }

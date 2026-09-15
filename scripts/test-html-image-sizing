@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+# Synthetic-only native rendering comparison; no remote images or accounts.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+[[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 && "${HDC_TARGET:-}" == 127.0.0.1:5555 ]]
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app"
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == x86_64 ]]
+OUT="$ROOT/.tools/emulator-html-image-sizing"
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  find "$OUT" -maxdepth 1 -type f -exec mv -t "$PREVIOUS" {} +
+fi
+cleanup() {
+  local result=$?
+  trap - EXIT
+  for name in current authored-height; do
+    run_hdc -t "$HDC_TARGET" file recv "/data/local/tmp/html-image-sizing-$name.png" "$OUT/$name.png" >/dev/null 2>&1 || true
+  done
+  run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+for variant in default ohosTest; do
+  run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/$variant/entry-$variant-unsigned.hap"
+done
+for name in current authored-height; do
+  run_hdc -t "$HDC_TARGET" shell rm -f "/data/local/tmp/html-image-sizing-$name.png"
+done
+timeout --foreground --kill-after=5s 55s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/HtmlImageSizingRunner \
+  -s timeout 50000 | tee "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"
+grep -q 'HTML_IMAGE_SIZING: four generated failures and valid inline logo captured in both height modes' "$OUT/test.log"

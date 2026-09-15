@@ -1,0 +1,229 @@
+{
+  "versionName": "0.1.21",
+  "versionCode": 100021,
+  "status": "Validated and installed in place on Pura X and MatePad; sync downloads bodies and pictures before opening",
+  "privacy": {
+    "syntheticOnly": true,
+    "productionLaunched": false,
+    "realMailReadOrSent": false,
+    "physicalScreenshots": false
+  },
+  "host": {
+    "javascriptTests": 504,
+    "javascriptFiles": 51,
+    "javascriptFailures": 0,
+    "pythonTests": 13
+  },
+  "builds": {
+    "productionX86": true,
+    "productionArm": true,
+    "isolatedMainAndTests": true,
+    "swiftRebuiltThisUpdate": false,
+    "nativeSwiftUnchangedFrom": "0.1.19",
+    "compileSdk": "26.0.0.105",
+    "targetApi": 22,
+    "minimumApi": 22,
+    "signedHapSha256": "6a2e95a99609a789e8d03da69cc06ecf3c589af37dd3305aef549d9dabef9b33"
+  },
+  "sourceParity": {
+    "shippingSourceFiles": 59,
+    "localizedResourcesEqual": true,
+    "testCountersIsolatedOnly": true,
+    "testCounterKinds": [
+      "snapshot",
+      "link",
+      "sync-scan",
+      "picture-batch"
+    ],
+    "coreSha256": {
+      "x86_64": "6a9fe2143f45fbb4f0497429a7e36d5579cd412ca9e89177da00042a39b33681",
+      "arm64-v8a": "c49bce38888f2ff0382b0d0a4a09d4afa28c49de9592b74fa2a1ac33be0cffdb"
+    }
+  },
+  "syncAndReader": {
+    "bodyAndPictureDownloadDuringSync": true,
+    "preparedHtmlSavedBeforePictures": true,
+    "freshSavedDocumentImmutable": true,
+    "completedPictureFailuresNotRetried": true,
+    "readerUsesLocalStorageOnly": true,
+    "readerHtmlScans": false,
+    "readerBodyRequests": false,
+    "readerPictureBatches": false,
+    "readerRetryButton": false,
+    "readerPictureWarning": false,
+    "syncCompletionReplacesOpenDocument": false,
+    "browserNetworkingBlocked": true,
+    "browserScriptDisabled": true,
+    "browserResourcesUseFixedMemoryOnly": true,
+    "metadataAcknowledgementsPreserveVisibleBody": true,
+    "backgroundWorkScopedToJobDeadlineAndSettings": true
+  },
+  "bounds": {
+    "maxQueuedMessageIds": 200,
+    "bodyRequestsSerialized": true,
+    "maxDistinctPictureUrls": 256,
+    "maxEncodedPictureBytes": 67108864,
+    "maxConcurrentPictureDownloads": 4,
+    "newPictureDownloadStartCutoffSeconds": 30,
+    "cutoffIsTotalCompletionDeadline": false,
+    "activeDownloadsUseExistingConnectionAndReadTimeouts": true,
+    "existingRetentionDays": 7,
+    "attachmentsRemainOnDemand": true
+  },
+  "nativePictureSnapshot": {
+    "tests": 1,
+    "passed": 1,
+    "scope": "Actual MailBodySync, AccountStore and saved-document reader in an isolated synthetic main HAP with loopback HTTP only.",
+    "syncBeforeReader": true,
+    "sourcesOfflineBeforeFirstOpen": true,
+    "documentMounts": 2,
+    "documentLoads": 2,
+    "bodyRequests": 1,
+    "htmlScans": 1,
+    "pictureBatches": 1,
+    "readerBodyScanBatchHttpDelta": 0,
+    "perImageRequests": [
+      1,
+      1,
+      1
+    ],
+    "nonContentRequests": 0,
+    "savedBodyHtmlBytesAndTimestampsIntact": true,
+    "brokenImagesStayBroken": true,
+    "reopenThroughNewStoreWithoutHttp": true,
+    "foregroundAndScrollAddNoHttpOrDocumentLoads": true,
+    "maximumNativeScrollVp": 2349.1418178248277,
+    "testLogSha256": "65902aa0114c951e57f4571b0b31f53d1432e08f80f67a2039a91d8d1ccbee54",
+    "emulatorVisualProof": {
+      "initial": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "replacementColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "visibleWebCropPx": [
+          51,
+          340,
+          1269,
+          2049
+        ],
+        "sha256": "eb6206cb039a1da8446ebc465078d16d16b6fadf036b46cc0daec3b5ecf96625"
+      },
+      "scrolled": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "replacementColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "visibleWebCropPx": [
+          51,
+          340,
+          1269,
+          2049
+        ],
+        "sha256": "88cc55315083b01dc49267e5cda0f059dc140e1dfd90bbb92810c6ff170bc2ad"
+      },
+      "reopened": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "replacementColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "visibleWebCropPx": [
+          51,
+          340,
+          1269,
+          2049
+        ],
+        "sha256": "a0334ef0e7f19d9607da709baa64e960baa42c22c083abe743d08f32e7a05e2c"
+      },
+      "reopened-scrolled": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "replacementColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "visibleWebCropPx": [
+          51,
+          340,
+          1269,
+          2049
+        ],
+        "sha256": "88cc55315083b01dc49267e5cda0f059dc140e1dfd90bbb92810c6ff170bc2ad"
+      }
+    },
+    "limits": "Synthetic content, x86 emulator screenshots and simulated picture foreground lifecycle; no physical captures, app battery measurement, production mail or external servers."
+  },
+  "nativeLinks": {
+    "passed": true,
+    "injectedOpenerCalls": 1,
+    "localAnchorsPreserved": true,
+    "externalBrowserLaunched": false
+  },
+  "nativeLongReader": {
+    "rows": 1500,
+    "htmlUtf16Units": 233428,
+    "controllerLoads": 1,
+    "documentLoads": 1,
+    "drags": 5,
+    "durationMs": 13201,
+    "scrollCallbacks": 785,
+    "maximumOffsetVp": 1791.5142798239442,
+    "closeDelayIncludingDriverMs": 1077,
+    "reloadsDuringScrolling": 0,
+    "target": "bounded x86 emulator"
+  },
+  "emulatorStopped": true,
+  "isolatedEmulatorAppRemoved": true,
+  "nativeTestSetupCorrection": "Initial run stopped before the fixture because a startup monitor missed an already created test ability. Use current top test ability with a single monitor fallback; final bounded run passed.",
+  "limitations": [
+    "No app battery or thermal measurements were made in this update; the real-email heat cause remains unconfirmed.",
+    "HTML still performs native layout, image decoding and scrolling.",
+    "Sync downloads the bounded pages it has discovered; it does not enumerate every historic mailbox message.",
+    "A never-downloaded body remains pending sync; opening does not fetch it.",
+    "Unsupported or unresolved relative picture URLs remain blocked.",
+    "Foreground transitions in the snapshot fixture were simulated; no production account was opened.",
+    "Swift tests were not rerun because native source/libraries are unchanged from 0.1.19.",
+    "AppGallery was not rebuilt."
+  ],
+  "installedDevices": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "versionCode": 100021,
+      "versionName": "0.1.21",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "6a2e95a99609a789e8d03da69cc06ecf3c589af37dd3305aef549d9dabef9b33"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "versionCode": 100021,
+      "versionName": "0.1.21",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "6a2e95a99609a789e8d03da69cc06ecf3c589af37dd3305aef549d9dabef9b33"
+    }
+  ]
+}

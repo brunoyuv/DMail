@@ -1,0 +1,14 @@
+{
+  "swift-nio-imap": {
+    "repository": "https://github.com/apple/swift-nio-imap",
+    "revision": "26a69caf8487bc91da4fd10aaa119776b526e18c"
+  },
+  "swift-nio": {
+    "repository": "https://github.com/apple/swift-nio",
+    "revision": "a8a8f22d99d2114304d0ea331da4019e6cf8f67b"
+  },
+  "swift-nio-ssl": {
+    "repository": "https://github.com/apple/swift-nio-ssl",
+    "revision": "322f3c2a4a21df31c84ca416bf65ee5e9059e440"
+  }
+}

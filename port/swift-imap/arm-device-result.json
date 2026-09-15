@@ -1,0 +1,50 @@
+{
+  "date": "2026-09-13",
+  "deviceModel": "Huawei Pura X / VDE-AL00",
+  "osReportedByUser": "HarmonyOS 7.0.0",
+  "osReportedByHdc": "OpenHarmony-7.0.0.105",
+  "target": "aarch64-unknown-linux-ohos",
+  "signedAppInstalled": true,
+  "appLaunched": true,
+  "nativeImapTests": {
+    "passed": 25,
+    "failed": 0,
+    "uiScenarioExcluded": true,
+    "sameShippingCore": true,
+    "logSha256": "e60c5e5f68b726ceef8e636d949e699626867b5327531cacf7a03e389a4d1ac2"
+  },
+  "coreSha256": "b1ae7477e350a1d31654f305af7018177ffa14b7dd0ce3832dd5ce16b7c6a870",
+  "signedHapSha256": "56cd12ad048cf4ea64f19054e2350c07847eaeb990239f6b97c0a534f49af769",
+  "fixtureStatsSha256": "4449950ecd29a0cd1705dbd528dc412dc08ac61cd5cd4a7f4757dc272ff9a745",
+  "liveAccount": {
+    "folderListingObserved": true,
+    "messageListObserved": true,
+    "readerBodyObserved": true,
+    "liveFlagChangesVerified": false
+  },
+  "emulator": "stopped throughout ARM work",
+  "sourceSha256": {
+    "port/swift-imap/ImapAccountCore.swift": "7aca31ae4d5818de18fb657e5e62ce4a8d9415df7466c4c4b786fa54def626cc",
+    "port/swift-imap/selection-status.patch": "3bd979189d1cd8a2f6a88d8d87aeaf03f2becae0e7a24245f5bc8a8f01e0f50e",
+    "harmony/entry/src/main/ets/pages/ConnectedMail.ets": "81bfe2839b8a4ac8c52a9fb4cfbb4af1a914d4df24a2aec22a3688abc5bc5f75",
+    "harmony/entry/src/main/ets/pages/Index.ets": "ed96d23b25954f220d2c7eb78a7be2d2ca0ba35e21e7b4fb1233a3c361ba6d56"
+  },
+  "ui": {
+    "realMailboxAtNavigationRoot": true,
+    "previousInboxDesignRestored": true,
+    "initialSearchHidden": true,
+    "initialAccountFormHidden": true,
+    "pullToRefreshImplemented": true,
+    "completeGestureVerification": true,
+    "gestureTests": {
+      "passed": 1,
+      "failed": 0,
+      "syntheticMailbox": true,
+      "updatedServerMessageObserved": true,
+      "mutations": 0,
+      "testSha256": "4d63982f7f364d866f4401b66e83660bf01be2f996400c927145991418aea6b9",
+      "logSha256": "a97bb8a3465f423a62857cf88af00a017586cc14939713c43997f164e19a7b8b",
+      "statsSha256": "2a1aa7080e12e5655d9d90fd3fdbb7fb33b4db3c8309b38b7f581fed42087301"
+    }
+  }
+}

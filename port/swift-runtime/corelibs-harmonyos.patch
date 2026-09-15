@@ -1,0 +1,460 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -38,7 +38,7 @@
+ endif()
+ 
+ project(Foundation
+-    LANGUAGES C Swift)
++    LANGUAGES C Swift CXX)
+ 
+ if(NOT SWIFT_SYSTEM_NAME)
+   if(CMAKE_SYSTEM_NAME STREQUAL Darwin)
+@@ -254,3 +254,35 @@
+ 
+ add_subdirectory(Sources)
+ add_subdirectory(cmake/modules)
++
++if(CMAKE_SYSTEM_NAME STREQUAL "OHOS")
++    find_package(SwiftCore CONFIG REQUIRED)
++    foreach(cf_target CoreFoundation _CFXMLInterface)
++        target_compile_definitions(${cf_target} PRIVATE _GNU_SOURCE __musl__)
++        target_include_directories(${cf_target} PUBLIC "${HarmonySwiftSDK}/include")
++    endforeach()
++    foreach(foundation_target Foundation FoundationXML)
++        set_target_properties(${foundation_target} PROPERTIES LINKER_LANGUAGE CXX)
++        target_link_directories(${foundation_target} PRIVATE
++            "${HarmonySwiftSDK}/lib/swift/musl/${CMAKE_SYSTEM_PROCESSOR}" "${HarmonySwiftSDK}/lib")
++        target_link_libraries(${foundation_target} PRIVATE
++            swiftCore swift_Concurrency swiftMusl swiftSynchronization
++            swift_StringProcessing swift_RegexParser fts)
++    endforeach()
++endif()
++
++if(CMAKE_SYSTEM_NAME STREQUAL "OHOS" AND TARGET FoundationNetworking)
++    if(NOT HarmonyTrustSource)
++        message(FATAL_ERROR "HarmonyTrustSource is required for native networking")
++    endif()
++    target_sources(_CFURLSessionInterface PRIVATE "${HarmonyTrustSource}")
++    target_link_libraries(_CFURLSessionInterface PRIVATE net_ssl)
++    target_compile_definitions(_CFURLSessionInterface PRIVATE _GNU_SOURCE __musl__)
++    target_include_directories(_CFURLSessionInterface PUBLIC "${HarmonySwiftSDK}/include")
++    set_target_properties(FoundationNetworking PROPERTIES LINKER_LANGUAGE CXX)
++    target_link_directories(FoundationNetworking PRIVATE
++        "${HarmonySwiftSDK}/lib/swift/musl/${CMAKE_SYSTEM_PROCESSOR}" "${HarmonySwiftSDK}/lib")
++    target_link_libraries(FoundationNetworking PRIVATE
++        swiftCore swift_Concurrency swiftMusl swiftSynchronization
++        swift_StringProcessing swift_RegexParser fts)
++endif()
+--- a/Sources/CoreFoundation/CFPlatform.c
++++ b/Sources/CoreFoundation/CFPlatform.c
+@@ -2324,7 +2324,8 @@
+   #elif defined(__ANDROID__) && __ANDROID_API__ < 34
+   // Android versions prior to 14 (API level 34) don't support posix_spawn_file_actions_addchdir_np
+   return ENOSYS;
+-  #elif defined(__OpenBSD__) || defined(__QNX__)
++  #elif defined(__OpenBSD__) || defined(__QNX__) || defined(__OHOS__)
++  // HarmonyOS API 22 also omits this symbol; preserve the ENOSYS fallback.
+   // Currently missing as of:
+   //  - OpenBSD 7.5 (April 2024)
+   //  - QNX 8 (December 2023)
+--- a/Sources/Foundation/CGFloat.swift
++++ b/Sources/Foundation/CGFloat.swift
+@@ -37,7 +37,7 @@
+         self.native = NativeType(value)
+     }
+     
+-#if !(os(Windows) || os(Android)) && (arch(i386) || arch(x86_64))
++#if false // HarmonyOS uses binary128 long double and has no Swift Float80.
+     @_transparent public init(_ value: Float80) {
+         self.native = NativeType(value)
+     }
+--- a/Sources/_CFURLSessionInterface/CFURLSessionInterface.c
++++ b/Sources/_CFURLSessionInterface/CFURLSessionInterface.c
+@@ -106,7 +106,16 @@
+     return info;
+ }
+ 
++#if defined(__OHOS__)
++extern CURLcode ThunderbirdConfigureTrust(CURL *handle, const char *url);
++#endif
+ CFURLSessionEasyCode CFURLSession_easy_setopt_ptr(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, void *_Nullable a) {
++#if defined(__OHOS__)
++    if (option.value == CURLOPT_URL) {
++        CURLcode trust = ThunderbirdConfigureTrust(curl, a);
++        if (trust != CURLE_OK) return MakeEasyCode(trust);
++    }
++#endif
+     return MakeEasyCode(curl_easy_setopt(curl, option.value, a));
+ }
+ CFURLSessionEasyCode CFURLSession_easy_setopt_int(CFURLSessionEasyHandle _Nonnull curl, CFURLSessionOption option, int a) {
+--- a/Sources/FoundationNetworking/URLSession/libcurl/EasyHandle.swift
++++ b/Sources/FoundationNetworking/URLSession/libcurl/EasyHandle.swift
+@@ -188,7 +188,7 @@
+                                   userInfo: [NSLocalizedDescriptionKey: "URLSession and curl did not agree on URL host"])
+                 }
+             }
+-            try! CFURLSession_easy_setopt_ptr(rawHandle, CFURLSessionOptionURL, UnsafeMutablePointer(mutating: urlPtr)).asError()
++            try CFURLSession_easy_setopt_ptr(rawHandle, CFURLSessionOptionURL, UnsafeMutablePointer(mutating: urlPtr)).asError()
+         }
+     }
+ 
+--- a/Sources/CoreFoundation/CFBundle_Main.c
++++ b/Sources/CoreFoundation/CFBundle_Main.c
+@@ -10,6 +10,9 @@
+ 
+ #include "CFBundle.h"
+ #include "CFBundle_Internal.h"
++#if defined(__OHOS__)
++#include <sys/stat.h>
++#endif
+ 
+ 
+ 
+@@ -86,6 +89,18 @@
+             if (!executableURL) executableURL = CFURLCreateWithFileSystemPath(kCFAllocatorSystemDefault, str, PLATFORM_PATH_STYLE, false);
+         }
+         if (executableURL) bundleURL = _CFBundleCopyBundleURLForExecutableURL(executableURL);
++#if defined(__OHOS__)
++        // HAP processes are spawned from a system executable outside the app's
++        // sandbox. Their application bundle lives at this platform mount point.
++        // Keep the executable-based behavior for standalone command-line tools.
++        const char *hapRoot = "/data/storage/el1/bundle";
++        struct stat hapInfo;
++        if (stat(hapRoot, &hapInfo) == 0 && S_ISDIR(hapInfo.st_mode)) {
++            if (bundleURL) CFRelease(bundleURL);
++            bundleURL = CFURLCreateFromFileSystemRepresentation(kCFAllocatorSystemDefault,
++                (const UInt8 *)hapRoot, strlen(hapRoot), true);
++        }
++#endif
+         if (bundleURL) {
+             // make sure that main bundle has executable path
+             //??? what if we are not the main executable in the bundle?
+--- a/Sources/FoundationNetworking/URLSession/libcurl/MultiHandle.swift
++++ b/Sources/FoundationNetworking/URLSession/libcurl/MultiHandle.swift
+@@ -39,13 +39,14 @@
+     /// `DispatchQueue` -- thus keeping is simple.
+     ///
+     /// - SeeAlso: _EasyHandle
+-    internal final class _MultiHandle {
++    internal final class _MultiHandleImpl {
+         let rawHandle = CFURLSessionMultiHandleInit()
+         let queue: DispatchQueue
+         let group = DispatchGroup()
+         fileprivate var easyHandles: [_EasyHandle] = []
+         fileprivate var socketReferences: [CFURLSession_socket_t: _SocketReference] = [:]
+         fileprivate var timeoutSource: _TimeoutSource? = nil
++        fileprivate var isClosing = false
+         private var reentrantInUpdateTimeoutTimer = false
+         
+         init(configuration: URLSession._Configuration, workQueue: DispatchQueue) {
+@@ -53,17 +54,10 @@
+             setupCallbacks()
+             configure(with: configuration)
+         }
+-        deinit {
+-            // C.f.: <https://curl.haxx.se/libcurl/c/curl_multi_cleanup.html>
+-            easyHandles.forEach {
+-                try! CFURLSessionMultiHandleRemoveHandle(rawHandle, $0.rawHandle).asError()
+-            }
+-            try! CFURLSessionMultiHandleDeinit(rawHandle).asError()
+-        }
+-    }
+-}
+-
+-extension URLSession._MultiHandle {
++    }
++}
++
++extension URLSession._MultiHandleImpl {
+     func configure(with configuration: URLSession._Configuration) {
+         if maxHostConnectionsSupported() {
+             try! CFURLSession_multi_setopt_l(rawHandle, CFURLSessionMultiOptionMAX_HOST_CONNECTIONS, numericCast(configuration.httpMaximumConnectionsPerHost)).asError()
+@@ -76,20 +70,20 @@
+     }
+ }
+ 
+-fileprivate extension URLSession._MultiHandle {
+-    static func from(callbackUserData userdata: UnsafeMutableRawPointer?) -> URLSession._MultiHandle? {
++fileprivate extension URLSession._MultiHandleImpl {
++    static func from(callbackUserData userdata: UnsafeMutableRawPointer?) -> URLSession._MultiHandleImpl? {
+         guard let userdata = userdata else { return nil }
+-        return Unmanaged<URLSession._MultiHandle>.fromOpaque(userdata).takeUnretainedValue()
+-    }
+-}
+-
+-fileprivate extension URLSession._MultiHandle {
++        return Unmanaged<URLSession._MultiHandleImpl>.fromOpaque(userdata).takeUnretainedValue()
++    }
++}
++
++fileprivate extension URLSession._MultiHandleImpl {
+     /// Forward the libcurl callbacks into Swift methods
+     func setupCallbacks() {
+         // Socket
+         try! CFURLSession_multi_setopt_ptr(rawHandle, CFURLSessionMultiOptionSOCKETDATA, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())).asError()
+         try! CFURLSession_multi_setopt_sf(rawHandle, CFURLSessionMultiOptionSOCKETFUNCTION) { (easyHandle: CFURLSessionEasyHandle, socket: CFURLSession_socket_t, what: Int32, userdata: UnsafeMutableRawPointer?, socketptr: UnsafeMutableRawPointer?) -> Int32 in
+-            guard let handle = URLSession._MultiHandle.from(callbackUserData: userdata) else { fatalError() }
++            guard let handle = URLSession._MultiHandleImpl.from(callbackUserData: userdata) else { fatalError() }
+             return handle.register(socket: socket, for: easyHandle, what: what, socketSourcePtr: socketptr)
+             }.asError()
+         // Timeout:
+@@ -100,7 +94,7 @@
+         typealias CFURLSessionMultiOption = Int
+ #endif
+         try! CFURLSession_multi_setopt_tf(rawHandle, CFURLSessionMultiOptionTIMERFUNCTION) { (_, timeout: CFURLSessionMultiOption, userdata: UnsafeMutableRawPointer?) -> Int32 in
+-            guard let handle = URLSession._MultiHandle.from(callbackUserData: userdata) else { fatalError() }
++            guard let handle = URLSession._MultiHandleImpl.from(callbackUserData: userdata) else { fatalError() }
+             handle.updateTimeoutTimer(to: numericCast(timeout))
+             return 0
+             }.asError()
+@@ -162,7 +156,7 @@
+   }
+ }
+ 
+-private extension URLSession._MultiHandle {
++private extension URLSession._MultiHandleImpl {
+     class _SocketReference {
+         let socket: CFURLSession_socket_t
+         var shouldClose: Bool
+@@ -246,16 +240,16 @@
+ 
+ }
+ 
+-internal extension URLSession._MultiHandle {
++internal extension URLSession._MultiHandleImpl {
+     /// Add an easy handle -- start its transfer.
+     func add(_ handle: _EasyHandle) {
+         // Set CLOSESOCKETFUNCTION. Note that while the option belongs to easy_handle,
+         // the connection cache is managed by CURL multi_handle, and sockets can actually
+         // outlive easy_handle (even after curl_easy_cleanup call). That's why
+-        // socket management lives in _MultiHandle.
++        // socket management lives in _MultiHandleImpl.
+         try! CFURLSession_easy_setopt_ptr(handle.rawHandle, CFURLSessionOptionCLOSESOCKETDATA, UnsafeMutableRawPointer(Unmanaged.passUnretained(self).toOpaque())).asError()
+         try! CFURLSession_easy_setopt_scl(handle.rawHandle, CFURLSessionOptionCLOSESOCKETFUNCTION) {  (clientp: UnsafeMutableRawPointer?, item: CFURLSession_socket_t) in
+-            guard let handle = URLSession._MultiHandle.from(callbackUserData: clientp) else { fatalError() }
++            guard let handle = URLSession._MultiHandleImpl.from(callbackUserData: clientp) else { fatalError() }
+             handle.scheduleClose(for: item)
+             return 0
+         }.asError()
+@@ -283,15 +277,17 @@
+     }
+ }
+ 
+-fileprivate extension URLSession._MultiHandle {
++fileprivate extension URLSession._MultiHandleImpl {
+     /// This gets called when we should ask curl to perform action on a socket.
+     func performAction(for socket: CFURLSession_socket_t) {
++        guard !isClosing else { return }
+         try! readAndWriteAvailableData(on: socket)
+     }
+     /// This gets called when our timeout timer fires.
+     ///
+     /// libcurl relies on us calling curl_multi_socket_action() every now and then.
+     func timeoutTimerFired() {
++        guard !isClosing else { return }
+         try! readAndWriteAvailableData(on: CFURLSessionSocketTimeout)
+     }
+     /// reads/writes available data given an action
+@@ -394,7 +390,7 @@
+     return lhs == rhs
+ }
+ 
+-fileprivate extension URLSession._MultiHandle._SocketRegisterAction {
++fileprivate extension URLSession._MultiHandleImpl._SocketRegisterAction {
+     init(rawValue: CFURLSessionPoll) {
+         switch rawValue {
+         case CFURLSessionPollNone:
+@@ -413,7 +409,7 @@
+     }
+ }
+ 
+-fileprivate extension URLSession._MultiHandle._SocketRegisterAction {
++fileprivate extension URLSession._MultiHandleImpl._SocketRegisterAction {
+     /// Should a libdispatch source be registered for **read** readiness?
+     var needsReadSource: Bool {
+         switch self {
+@@ -467,7 +463,7 @@
+     }
+ }
+ 
+-fileprivate extension URLSession._MultiHandle {
++fileprivate extension URLSession._MultiHandleImpl {
+ 
+     /// <https://curl.haxx.se/libcurl/c/CURLMOPT_TIMERFUNCTION.html>
+     func updateTimeoutTimer(to value: Int) {
+@@ -475,6 +471,7 @@
+     }
+     
+     func updateTimeoutTimer(to timeout: _Timeout) {
++        guard !isClosing else { return }
+         nonisolated(unsafe) let nonisolatedSelf = self
+         // Set up a timeout timer based on the given value:
+         switch timeout {
+@@ -499,7 +496,7 @@
+     }
+ }
+ 
+-fileprivate extension URLSession._MultiHandle._Timeout {
++fileprivate extension URLSession._MultiHandleImpl._Timeout {
+     init(timeout: Int) {
+         switch timeout {
+         case -1:
+@@ -548,7 +545,7 @@
+         s.resume()
+     }
+ 
+-    func tearDown(handle: URLSession._MultiHandle, socket: CFURLSession_socket_t, queue: DispatchQueue) {
++    func tearDown(handle: URLSession._MultiHandleImpl, socket: CFURLSession_socket_t, queue: DispatchQueue) {
+         handle.cancelWorkItem(for: socket) // There could be pending register action which needs to be cancelled
+         
+         guard readSource != nil || writeSource != nil else {
+@@ -578,12 +575,12 @@
+ }
+ extension _SocketSources {
+     /// Create a read and/or write source as specified by the action.
+-    func createSources(with action: URLSession._MultiHandle._SocketRegisterAction, handle: URLSession._MultiHandle, socket: CFURLSession_socket_t, queue: DispatchQueue, handler: DispatchWorkItem) {
++    func createSources(with action: URLSession._MultiHandleImpl._SocketRegisterAction, handle: URLSession._MultiHandleImpl, socket: CFURLSession_socket_t, queue: DispatchQueue, handler: DispatchWorkItem) {
+         // CURL casually requests to unregister and register handlers for same 
+         // socket in a row. There is (pretty low) chance of overlapping tear-down operation
+         // with "register" request. Bad things could happen if we create 
+         // a new Dispatch Source while other is being cancelled for the same socket.
+-        // We're using `_MultiHandle.schedule(_:for:)` here to postpone sources creation until
++        // We're using `_MultiHandleImpl.schedule(_:for:)` here to postpone sources creation until
+         // pending operation is finished (if there is none, submitted work item is performed
+         // immediately).
+         // Also, CURL may request unregister even before we perform any postponed work,
+@@ -627,3 +624,31 @@
+         throw NSError(domain: "libcurl.multi", code: Int(self.value))
+     }
+ }
++
++// Adapted from Wes Tarle's upstream Swift PR #5491 (13899dd72ac76d3129272567f678cfaa74a2cec3).
++// Keep the callback owner alive while curl closes TLS connections.
++extension URLSession {
++    internal final class _MultiHandle {
++        private let impl: _MultiHandleImpl
++
++        init(configuration: URLSession._Configuration, workQueue: DispatchQueue) {
++            impl = _MultiHandleImpl(configuration: configuration, workQueue: workQueue)
++        }
++
++        deinit {
++            nonisolated(unsafe) let owner = impl
++            owner.queue.async {
++                owner.isClosing = true
++                owner.timeoutSource = nil
++                owner.easyHandles.forEach {
++                    try! CFURLSessionMultiHandleRemoveHandle(owner.rawHandle, $0.rawHandle).asError()
++                }
++                owner.easyHandles.removeAll()
++                try! CFURLSessionMultiHandleDeinit(owner.rawHandle).asError()
++            }
++        }
++
++        func add(_ handle: _EasyHandle) { impl.add(handle) }
++        func remove(_ handle: _EasyHandle) { impl.remove(handle) }
++    }
++}
+--- a/Sources/FoundationNetworking/URLSession/URLSessionTask.swift
++++ b/Sources/FoundationNetworking/URLSession/URLSessionTask.swift
+@@ -415,6 +415,15 @@
+         }
+         set {
+             self.syncQ.sync { self._state = newValue }
++        }
++    }
++    // Success and cancellation can arrive from different queues. Claim the
++    // terminal callback before invoking user code or accessing its registry entry.
++    fileprivate func _claimCompletion() -> Bool {
++        syncQ.sync {
++            guard _state != .completed else { return false }
++            _state = .completed
++            return true
+         }
+     }
+     fileprivate var _state: URLSessionTask.State = .suspended
+@@ -1164,6 +1173,7 @@
+             }
+         }
+         
++        guard task._claimCompletion() else { return }
+         switch session.behaviour(for: task) {
+         case .taskDelegate(let delegate):
+             if let downloadDelegate = delegate as? URLSessionDownloadDelegate, let downloadTask = task as? URLSessionDownloadTask {
+@@ -1178,16 +1188,12 @@
+                 }
+             }
+             session.delegateQueue.addOperation {
+-                guard task.state != .completed else { return }
+                 delegate.urlSession(session, task: task, didCompleteWithError: nil)
+-                task.state = .completed
+                 session.workQueue.async {
+                     session.taskRegistry.remove(task)
+                 }
+             }
+         case .noDelegate:
+-            guard task.state != .completed else { break }
+-            task.state = .completed
+             session.workQueue.async {
+                 session.taskRegistry.remove(task)
+             }
+@@ -1195,9 +1201,7 @@
+              .dataCompletionHandlerWithTaskDelegate(let completion, _):
+             nonisolated(unsafe) let nonisolatedURLProtocol = urlProtocol
+             let dataCompletion : @Sendable () -> () = {
+-                guard task.state != .completed else { return }
+                 completion(nonisolatedURLProtocol.properties[URLProtocol._PropertyKey.responseData] as? Data ?? Data(), task.response, nil)
+-                task.state = .completed
+                 session.workQueue.async {
+                     session.taskRegistry.remove(task)
+                 }
+@@ -1213,9 +1217,7 @@
+              .downloadCompletionHandlerWithTaskDelegate(let completion, _):
+             nonisolated(unsafe) let nonisolatedURLProtocol = urlProtocol
+             let downloadCompletion : @Sendable () -> () = {
+-                guard task.state != .completed else { return }
+                 completion(nonisolatedURLProtocol.properties[URLProtocol._PropertyKey.temporaryFileURL] as? URL, task.response, nil)
+-                task.state = .completed
+                 session.workQueue.async {
+                     session.taskRegistry.remove(task)
+                 }
+@@ -1333,28 +1335,23 @@
+ 
+     func urlProtocol(task: URLSessionTask, didFailWithError error: Error) {
+         guard let session = task.session as? URLSession else { fatalError() }
++        guard task._claimCompletion() else { return }
+         switch session.behaviour(for: task) {
+         case .taskDelegate(let delegate):
+             session.delegateQueue.addOperation {
+-                guard task.state != .completed else { return }
+                 delegate.urlSession(session, task: task, didCompleteWithError: error as Error)
+-                task.state = .completed
+                 session.workQueue.async {
+                     session.taskRegistry.remove(task)
+                 }
+             }
+         case .noDelegate:
+-            guard task.state != .completed else { break }
+-            task.state = .completed
+             session.workQueue.async {
+                 session.taskRegistry.remove(task)
+             }
+         case .dataCompletionHandler(let completion),
+              .dataCompletionHandlerWithTaskDelegate(let completion, _):
+             let dataCompletion : @Sendable () -> () = {
+-                guard task.state != .completed else { return }
+                 completion(nil, nil, error)
+-                task.state = .completed
+                 session.workQueue.async {
+                     session.taskRegistry.remove(task)
+                 }
+@@ -1369,9 +1366,7 @@
+         case .downloadCompletionHandler(let completion),
+              .downloadCompletionHandlerWithTaskDelegate(let completion, _):
+             let downloadCompletion : @Sendable () -> () = {
+-                guard task.state != .completed else { return }
+                 completion(nil, nil, error)
+-                task.state = .completed
+                 session.workQueue.async {
+                     session.taskRegistry.remove(task)
+                 }

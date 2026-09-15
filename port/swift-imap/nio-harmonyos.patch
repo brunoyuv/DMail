@@ -1,0 +1,43 @@
+--- a/Sources/CNIOLinux/include/CNIOLinux.h
++++ b/Sources/CNIOLinux/include/CNIOLinux.h
+@@ -38,6 +38,14 @@
+ #include <linux/udp.h>
+ #else
+ #include <netinet/udp.h>
++#endif
++// Huawei's musl sys/socket.h owns sockaddr_storage. Its generated kernel
++// header redeclares that type; retain the SDK vsock definitions using musl's
++// matching address-family type without importing the conflicting declaration.
++#if defined(__OHOS__) && !defined(_UAPI_LINUX_SOCKET_H)
++#define _UAPI_LINUX_SOCKET_H
++#define _K_SS_MAXSIZE 128
++typedef sa_family_t __kernel_sa_family_t;
+ #endif
+ #include <linux/vm_sockets.h>
+ #include <fcntl.h>
+--- a/Sources/CNIOLinux/shim.c
++++ b/Sources/CNIOLinux/shim.c
+@@ -98,7 +98,11 @@
+ #ifdef __ANDROID__
+     return sched_setaffinity(pthread_gettid_np(thread), cpusetsize, cpuset);
+ #else
++#if defined(__OHOS__)
++    return ENOTSUP; // Not exported by the HarmonyOS SDK's libc.
++#else
+     return pthread_setaffinity_np(thread, cpusetsize, cpuset);
++#endif
+ #endif
+ }
+ 
+@@ -106,7 +110,11 @@
+ #ifdef __ANDROID__
+     return sched_getaffinity(pthread_gettid_np(thread), cpusetsize, cpuset);
+ #else
++#if defined(__OHOS__)
++    return ENOTSUP;
++#else
+     return pthread_getaffinity_np(thread, cpusetsize, cpuset);
++#endif
+ #endif
+ }
+ 

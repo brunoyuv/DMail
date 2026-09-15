@@ -1,0 +1,392 @@
+{
+  "versionName": "0.1.23",
+  "versionCode": 100023,
+  "status": "Validated and installed in place on Pura X and MatePad; repeated sync work repaired, durable backlog paced with thermal pauses",
+  "privacy": {
+    "syntheticOnly": true,
+    "productionLaunched": false,
+    "realMailReadOrSent": false,
+    "physicalScreenshots": false
+  },
+  "host": {
+    "javascriptTests": 542,
+    "javascriptFiles": 53,
+    "javascriptFailures": 0,
+    "pythonTests": 13
+  },
+  "builds": {
+    "productionX86": true,
+    "productionArm": true,
+    "isolatedMainAndTests": true,
+    "swiftRebuiltThisUpdate": false,
+    "nativeSwiftUnchangedFrom": "0.1.19",
+    "compileSdk": "26.0.0.105",
+    "targetApi": 22,
+    "minimumApi": 22,
+    "signedHapSha256": "016832927bc3d1ca81a6055d3c7e9eee0fe3928d746e62b756d92ef526807ad5"
+  },
+  "sourceParity": {
+    "shippingSourceFiles": 63,
+    "localizedResourcesEqual": true,
+    "testCountersIsolatedOnly": true,
+    "testCounterKinds": [
+      "snapshot",
+      "link",
+      "sync-scan",
+      "picture-batch",
+      "idle-sync-query",
+      "idle-job-complete"
+    ],
+    "coreSha256": {
+      "x86_64": "6a9fe2143f45fbb4f0497429a7e36d5579cd412ca9e89177da00042a39b33681",
+      "arm64-v8a": "c49bce38888f2ff0382b0d0a4a09d4afa28c49de9592b74fa2a1ac33be0cffdb"
+    }
+  },
+  "busyLoopReproduction": {
+    "scope": "Synthetic host worker plus SQLite; no real mail or HTTP; repair guard only, before pacing changes",
+    "before": {
+      "emptyIdle": {
+        "intervalMs": 250,
+        "additionalQueries": 0,
+        "additionalYieldTimers": 0
+      },
+      "backlog": {
+        "wallMs": 160.84386100000006,
+        "cpuMicros": {
+          "user": 188202,
+          "system": 7244
+        },
+        "reads": 60,
+        "scans": 60,
+        "pictureBatches": 60,
+        "queries": 483,
+        "yieldTimers": 120
+      },
+      "completedIdle": {
+        "intervalMs": 250,
+        "additionalQueries": 0,
+        "additionalYieldTimers": 0
+      },
+      "futureTimestampLoop": {
+        "wallMs": 99.63438799999994,
+        "cpuMicros": {
+          "user": 119511,
+          "system": 2058
+        },
+        "reads": 0,
+        "scans": 260,
+        "pictureBatches": 0,
+        "queries": 1820,
+        "yieldTimers": 520,
+        "jobs": [
+          {
+            "stage": "body",
+            "attempts": 0,
+            "retryAt": 0
+          }
+        ]
+      }
+    },
+    "after": {
+      "emptyIdle": {
+        "intervalMs": 250,
+        "additionalQueries": 0,
+        "additionalYieldTimers": 0,
+        "cpuMicros": {
+          "user": 8657,
+          "system": 220
+        }
+      },
+      "backlog": {
+        "wallMs": 158.48429099999998,
+        "cpuMicros": {
+          "user": 180681,
+          "system": 4492
+        },
+        "reads": 60,
+        "scans": 60,
+        "pictureBatches": 60,
+        "queries": 483,
+        "yieldTimers": 120
+      },
+      "completedIdle": {
+        "intervalMs": 250,
+        "additionalQueries": 0,
+        "additionalYieldTimers": 0
+      },
+      "futureTimestampLoop": {
+        "wallMs": 100.78300399999989,
+        "cpuMicros": {
+          "user": 11591,
+          "system": 1039
+        },
+        "reads": 0,
+        "scans": 1,
+        "pictureBatches": 1,
+        "queries": 11,
+        "yieldTimers": 2,
+        "jobs": [
+          {
+            "stage": "done",
+            "attempts": 0,
+            "retryAt": 0
+          }
+        ]
+      }
+    },
+    "limitations": "Host CPU is not device power and does not identify the reported real-account heat cause."
+  },
+  "bulkPacing": {
+    "coolMinimumMs": 250,
+    "coolWorkDurationMultiplier": 1,
+    "coolMaximumMs": 5000,
+    "normalMinimumMs": 1000,
+    "normalWorkDurationMultiplier": 2,
+    "normalMaximumMs": 10000,
+    "pauseThermalLevelAtLeast": 2,
+    "coolingCallbackResumes": true,
+    "thermalApiFailureFallback": "ordinary pacing",
+    "sharedThermalSubscription": true,
+    "emptyOrBackedOffQueueTimer": false,
+    "pauseAndCloseCancelRest": true,
+    "wakeCannotBypassRest": true,
+    "pendingJobsAndPagesPreserved": true,
+    "workerRegressionMessageCount": 275,
+    "workerRegressionTests": 26,
+    "powerHelperTests": 7
+  },
+  "nativeInboxIdle": {
+    "tests": 1,
+    "phases": {
+      "active": {
+        "counts": [
+          6,
+          4,
+          0,
+          4,
+          4,
+          0,
+          0
+        ]
+      },
+      "settled-start": {
+        "counts": [
+          20,
+          16,
+          0,
+          16,
+          16,
+          0,
+          0
+        ]
+      },
+      "settled-end": {
+        "counts": [
+          20,
+          16,
+          0,
+          16,
+          16,
+          0,
+          0
+        ]
+      },
+      "events-settled": {
+        "counts": [
+          33,
+          16,
+          0,
+          16,
+          16,
+          1,
+          0
+        ]
+      }
+    },
+    "counterOrder": [
+      "syncQueries",
+      "scans",
+      "pictureBatches",
+      "completedJobs",
+      "bodyCalls",
+      "pageCalls",
+      "violations"
+    ],
+    "scope": "Actual visible ConnectedMail and encrypted sync storage with an in-memory synthetic service. No CPU, energy or real-mail claim.",
+    "bodyRequestGapsMs": [
+      280,
+      273,
+      266,
+      266,
+      264,
+      269,
+      268,
+      918,
+      265,
+      264,
+      272,
+      267,
+      265,
+      267,
+      271
+    ],
+    "firstToLastBodyMs": 4675,
+    "settledObservationMs": 10001,
+    "idleAdditionalCounts": [
+      0,
+      0,
+      0,
+      0,
+      0,
+      0,
+      0
+    ],
+    "testDurationMs": 29356
+  },
+  "nativePictureSnapshot": {
+    "tests": 1,
+    "passed": 1,
+    "scope": "Actual MailBodySync, AccountStore and saved-document reader in an isolated synthetic main HAP with loopback HTTP only.",
+    "syncBeforeReader": true,
+    "sourcesOfflineBeforeFirstOpen": true,
+    "documentMounts": 2,
+    "documentLoads": 2,
+    "bodyRequests": 7,
+    "htmlScans": 7,
+    "pictureBatches": 1,
+    "readerBodyScanBatchHttpDelta": 0,
+    "mailboxPages": [
+      0,
+      3,
+      6
+    ],
+    "savedMessages": 7,
+    "checkpointSavedMessages": 2,
+    "workerAndEncryptedStoreRestartBeforeCompletion": true,
+    "allMessageBodiesAndDocumentsSavedBeforeOpening": true,
+    "perImageRequests": [
+      1,
+      1,
+      1
+    ],
+    "nonContentRequests": 0,
+    "savedBodyHtmlBytesAndTimestampsIntact": true,
+    "brokenImagesStayBroken": true,
+    "reopenThroughNewStoreWithoutHttp": true,
+    "foregroundAndScrollAddNoHttpOrDocumentLoads": true,
+    "maximumNativeScrollVp": 2104.58586196499,
+    "testLogSha256": "68851de9dd72edea1bf297d23ad35a0dfadca678f74a45e02fd376ef41ba0626",
+    "emulatorVisualProof": {
+      "initial": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "replacementColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "visibleWebCropPx": [
+          51,
+          340,
+          1269,
+          2049
+        ],
+        "sha256": "9ede039656fa85419d6cff9da0ffa11d0bf8c84be0b0aa0ac9f3b3bf3f979605"
+      },
+      "scrolled": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "replacementColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "visibleWebCropPx": [
+          51,
+          340,
+          1269,
+          2049
+        ],
+        "sha256": "ee34ddaf9e7afb6cecd27032ad484517c046e9e2b19e4e234169e16a2986984b"
+      },
+      "reopened": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "replacementColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "visibleWebCropPx": [
+          51,
+          340,
+          1269,
+          2049
+        ],
+        "sha256": "1ffca67211c31b78ed3180adfbb413da7745f49e7df382ae6e64b19d7e0107ab"
+      },
+      "reopened-scrolled": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "replacementColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "visibleWebCropPx": [
+          51,
+          340,
+          1269,
+          2049
+        ],
+        "sha256": "ee34ddaf9e7afb6cecd27032ad484517c046e9e2b19e4e234169e16a2986984b"
+      }
+    },
+    "limits": "Synthetic content, x86 emulator screenshots and simulated picture foreground lifecycle; no physical captures, app battery measurement, production mail or external servers."
+  },
+  "nativePictureSnapshotDurationMs": 28443,
+  "emulatorStopped": true,
+  "isolatedEmulatorAppRemoved": true,
+  "installedDevices": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "versionCode": 100023,
+      "versionName": "0.1.23",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "016832927bc3d1ca81a6055d3c7e9eee0fe3928d746e62b756d92ef526807ad5"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "versionCode": 100023,
+      "versionName": "0.1.23",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "016832927bc3d1ca81a6055d3c7e9eee0fe3928d746e62b756d92ef526807ad5"
+    }
+  ],
+  "limitations": [
+    "Synthetic busy-loop reproduction does not prove the exact real-account heat cause; host CPU and emulator operation counts are not device energy measurements.",
+    "Thermal transitions were injected in host tests; physical device temperature and thermal throttling were not measured.",
+    "Initial bulk preparation may take longer because it now rests; foreground header refresh does not await the body/picture worker.",
+    "Native idle counters cover sync queries, not all UI/cache/database work or native IDLE watchers.",
+    "Existing seven-day retention, MIME/picture bounds and on-demand separate file attachments remain.",
+    "SDK26 unchanged; no app-wide CPU quota or public background interval change.",
+    "Native Swift tests and earlier long-reader/link/performance checks remain prior evidence, not new runs.",
+    "AppGallery packaging was not rebuilt."
+  ]
+}

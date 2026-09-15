@@ -1,0 +1,171 @@
+{
+  "version": "0.1.12",
+  "versionCode": 100012,
+  "bundleName": "org.thunderbird.harmony.dev",
+  "status": "installed-and-verified",
+  "hostJavaScript": {
+    "tests": 311,
+    "pass": 311,
+    "fail": 0,
+    "skipped": 0
+  },
+  "hostPython": {
+    "tests": 9,
+    "pass": 9
+  },
+  "focusedSwift": {
+    "tests": 14,
+    "pass": 14
+  },
+  "native": {
+    "phoneInbox": {
+      "tests": 1,
+      "pass": 1,
+      "durationMs": 26911,
+      "logSha256": "06881bfbeb2646a4f4bfc5bf4e1e5885a7ba574c66cab239dd4bd1dce0a24279",
+      "scope": "One native pull indicator, 80 retained rows, stable header/row geometry, search hidden away and visible at the top."
+    },
+    "tabletInbox": {
+      "tests": 1,
+      "pass": 1,
+      "durationMs": 29724,
+      "logSha256": "74d577b544d8a3a2bc8c3465e5e97644abd6ca031aa631f113f7579f2b8c6b3e",
+      "scope": "Same inbox checks plus side-by-side inbox and cached reader in landscape."
+    },
+    "swipes": {
+      "tests": 1,
+      "pass": 1,
+      "durationMs": 31185,
+      "logSha256": "ee552ce5f409571e8722f40fd7cec0b64b31242c45c200ad71051205e2a15c76",
+      "actions": 4,
+      "scope": "Read/unread and star/unstar center/edge taps, one dispatch on a pending double-tap; no reader opening or body download."
+    },
+    "previews": {
+      "tests": 1,
+      "pass": 1,
+      "durationMs": 2061,
+      "logSha256": "2e22b9d83b32bc2332da81b06f9e30a56e9759f2a370510b455e9e10a615c3a8",
+      "sessions": 7,
+      "sampleFetches": 5,
+      "fullBodyOrAttachmentFetches": 0,
+      "protocolViolations": 0,
+      "scope": "Server PREVIEW, cached skip, plain/HTML fallback, UTF-8 sample boundaries, missing/duplicate/oversized samples and one-second stalled fetch."
+    },
+    "pictures": {
+      "tests": 1,
+      "pass": 1,
+      "durationMs": 14705,
+      "logSha256": "10f435ab9033866722e570b5fc52bca200660790ee90d5d79449ff85ebfe1813",
+      "scope": "Actual HtmlMail two-frame refresh and ArkWeb image display; a pending retry coalesces to one loopback request; controlled HTTP 503 responses retain cached PNG bytes, original retention timestamp, consent and visible colors; later retry remains usable.",
+      "screenshots": {
+        "cached": {
+          "originalColorPixels": [
+            27968,
+            27784,
+            27784
+          ],
+          "sha256": "fc74f67b6d31b1bbb9dba84cab5c7fde0be63aba6812ac247a134bf0dd26aafb"
+        },
+        "failed-refresh": {
+          "originalColorPixels": [
+            27968,
+            27784,
+            27784
+          ],
+          "sha256": "fc74f67b6d31b1bbb9dba84cab5c7fde0be63aba6812ac247a134bf0dd26aafb"
+        },
+        "retried": {
+          "originalColorPixels": [
+            27968,
+            27784,
+            27784
+          ],
+          "sha256": "fc74f67b6d31b1bbb9dba84cab5c7fde0be63aba6812ac247a134bf0dd26aafb"
+        }
+      },
+      "shippingRendererParity": true,
+      "rendererDiagnosticsEnabled": false
+    }
+  },
+  "emulator": {
+    "status": "stopped",
+    "nativeProcessAbsenceVerified": true,
+    "screenProfileRestored": true,
+    "isolatedTestAppCleanupRequested": true,
+    "os": "HarmonyOS 6.0.2(22)"
+  },
+  "privacy": {
+    "syntheticOnly": true,
+    "realAccountsAccessed": false,
+    "productionLaunched": false,
+    "realMessagesSent": false
+  },
+  "builds": {
+    "x86": {
+      "compileSdkVersion": "26.0.0.105",
+      "targetAPIVersion": 60002022,
+      "minAPIVersion": 60002022,
+      "hapSha256": "2bf0fa020ac367797acc9d98893cc23174111c7413172c3e74df9bce5b028926",
+      "swiftCoreSha256": "a3646d96a5f24a4f8975df7388ce9b187826dc58b52cbc3247992bbf7a5d6b95"
+    },
+    "arm": {
+      "compileSdkVersion": "26.0.0.105",
+      "targetAPIVersion": 60002022,
+      "minAPIVersion": 60002022,
+      "hapSha256": "519c4ffb0d81d6ef37ccfd933a997480bab4d38622bc00d3eca97b00c0b65221",
+      "swiftCoreSha256": "52b0e3d494acabf5721f289ebdac8d290facf4b97b194ff8ac7ca98315c15118"
+    },
+    "isolated": {
+      "compileSdkVersion": "26.0.0.105",
+      "targetAPIVersion": 60002022,
+      "minAPIVersion": 60002022,
+      "hapSha256": "fda43e682f93f00eec9ebc19f4e79331b24d9ea6db4d18de1e240ce03fbf130c",
+      "swiftCoreSha256": "a3646d96a5f24a4f8975df7388ce9b187826dc58b52cbc3247992bbf7a5d6b95"
+    }
+  },
+  "installations": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "versionCode": 100012,
+      "versionName": "0.1.12",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "519c4ffb0d81d6ef37ccfd933a997480bab4d38622bc00d3eca97b00c0b65221"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "versionCode": 100012,
+      "versionName": "0.1.12",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "519c4ffb0d81d6ef37ccfd933a997480bab4d38622bc00d3eca97b00c0b65221"
+    }
+  ],
+  "toolchain": {
+    "commandLineTools": "26.0.0.821",
+    "hvigor": "6.26.4",
+    "compileSdk": "26.0.0.105",
+    "targetApi": 22,
+    "minimumApi": 22,
+    "swiftNativeApi": 22
+  },
+  "evidence": {
+    "hostLogSha256": "bc4d04ed44d33bab9fbb9d1bfda4d9b11c96aff9909c9c71143bc7d67d0efefc",
+    "swiftLogSha256": "74d847ae95147ce78c4a52d8ad6ad9d5fb04002588a654936d3bd481bf7b51c3",
+    "signedBuildLogSha256": "e0b79d3cee2dca322e29677c6978929ee43b316ddff3cb19271f8bc958e137fa"
+  },
+  "limits": [
+    "A bounded text sample can be empty; existing usable previews remain available.",
+    "Common raster payloads are signature-checked, not fully image-decoded.",
+    "Remote downloads may fail; retries preserve an existing good cached image and consent.",
+    "An untagged capability advertisement is tested. The original client ignores tagged-only LOGIN capability codes and uses bounded text fallback instead.",
+    "The loopback HTTP allowance belongs only to the isolated fixture package."
+  ],
+  "initialGateFindings": [
+    "Corrected synthetic PREVIEW advertisement and fixture scenario parser before passing native preview gate.",
+    "Native picture reload stopped before document interception; the exact current local URL now remains allowed even when marked as a user gesture.",
+    "Fixture HTTP was initially blocked by its isolated TLS-only policy; only 127.0.0.1 cleartext is allowed for its local picture server."
+  ]
+}

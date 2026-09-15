@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Synthetic native OAuth bridge tests. Never opens a provider login or sends tokens.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+APP="$ROOT/.tools/imap-test-app"
+OUT="$ROOT/.tools/oauth-native-test"
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" != 1 ]]; then
+  for hap in default/entry-default-unsigned.hap ohosTest/entry-ohosTest-unsigned.hap; do
+    [[ -f "$APP/entry/build/default/outputs/$hap" ]]
+  done
+  export EMULATOR_SCREEN=pura-main EMULATOR_TEST_SECONDS=120
+  exec "$ROOT/scripts/with-test-emulator" "$0"
+fi
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+mkdir -p "$OUT"
+cleanup() {
+  local result=$?
+  trap - EXIT
+  "$HDC" -t 127.0.0.1:5555 shell hilog -x > "$OUT/hilog.txt" 2>&1 || true
+  "$HDC" -t 127.0.0.1:5555 uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+"$HDC" -t 127.0.0.1:5555 uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+"$HDC" -t 127.0.0.1:5555 install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+"$HDC" -t 127.0.0.1:5555 install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+timeout --foreground --kill-after=5s 75s "$HDC" -t 127.0.0.1:5555 shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/BrowserOAuthRunner \
+  -s timeout 60000 | tee "$OUT/test.log"
+grep -q 'Tests run: 13, Failure: 0, Error: 0, Pass: 13, Ignore: 0' "$OUT/test.log"
+python3 - "$ROOT" "$OUT" <<'PY'
+from pathlib import Path
+import hashlib,json,sys,zipfile
+root,out=map(Path,sys.argv[1:])
+with zipfile.ZipFile(root/'.tools/imap-test-app/entry/build/default/outputs/default/entry-default-unsigned.hap') as hap:
+    core=hap.read('libs/x86_64/libThunderbirdCore.so')
+assert core==(root/'harmony/entry/libs/x86_64/libThunderbirdCore.so').read_bytes()
+(out/'result.json').write_text(json.dumps({'tests':13,'nativeCoreSHA256':hashlib.sha256(core).hexdigest(),
+    'scope':'Synthetic native bridge and real HarmonyOS localhost socket callbacks, cancellation and timeout; no live token exchange'},indent=2)+'\n')
+PY

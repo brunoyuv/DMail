@@ -1,0 +1,1008 @@
+{
+  "versionName": "0.1.24",
+  "versionCode": 100024,
+  "status": "Validated and installed in place on Pura X and MatePad",
+  "privacy": {
+    "syntheticOnly": true,
+    "productionLaunched": false,
+    "realMailReadOrSent": false,
+    "physicalScreenshots": false
+  },
+  "host": {
+    "tests": 572,
+    "pass": 572,
+    "fail": 0,
+    "cancelled": 0,
+    "skipped": 0,
+    "files": 54,
+    "pythonTests": 20
+  },
+  "swift": {
+    "tests": 97,
+    "suites": 30,
+    "logSha256": "a0b1c8911595f5d867d572bb643fed84be857219df9b8042be7c26baf6ae4a09",
+    "scope": "Original IMAP/SMTP host suite plus eight TLS session lifecycle tests; final core empty-body classification additionally tested through shipping native bridge."
+  },
+  "builds": {
+    "productionX86": true,
+    "productionArm": true,
+    "isolatedMainAndTests": true,
+    "swiftRebuiltThisUpdate": true,
+    "compileSdk": "26.0.0.105",
+    "targetApi": 22,
+    "minimumApi": 22,
+    "signedHapSha256": "1f8aaa00f6eb7012791ab019debc9139a37d61cdf2d5b6d171249f4145f1d564"
+  },
+  "sourceParity": {
+    "shippingSourceFiles": 65,
+    "localizedResourcesEqual": true,
+    "testCountersIsolatedOnly": true,
+    "testCounterKinds": [
+      "snapshot",
+      "link",
+      "sync-scan",
+      "picture-batch",
+      "idle-sync-query",
+      "idle-job-complete"
+    ],
+    "coreSha256": {
+      "x86_64": "ed7c189cffb1b0db13ef1977513314a77759162bd8a3d45b459bff07d8d961a7",
+      "arm64-v8a": "1c91e67de118d00a2ab0ceb918fdbed69c55aa4d09d18f102782947f3cf61693"
+    }
+  },
+  "nativeBuildOptimization": {
+    "x86_64": {
+      "configuration": "release",
+      "descriptionSha256": "f6cfe280fb56f9e24fe62d71c7cb60767e1aafd03f61fd3b560dfafbd3e30d89",
+      "manifestSha256": "707a9f386e2c7384d623450fe9eb82c0d46dd64070f22daf6f6660c489abbf8b",
+      "swift": {
+        "Atomics": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "ContainersPreview": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "DequeModule": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "IMAP": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "ImapAccountCore": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "InternalCollectionsUtilities": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "NIO": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "NIOConcurrencyHelpers": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "NIOCore": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "NIOEmbedded": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "NIOIMAP": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "NIOIMAPCore": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "NIOPosix": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "NIOSSL": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "NIOTLS": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "OrderedCollections": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "SMTP": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "_NIOBase64": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "_NIODataStructures": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        }
+      },
+      "clang": {
+        "CHarmonyIMAPTrust": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 1
+        },
+        "CNIOAtomics": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 2
+        },
+        "CNIOBoringSSL": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 399
+        },
+        "CNIOBoringSSLShims": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 1
+        },
+        "CNIODarwin": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 1
+        },
+        "CNIOFreeBSD": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 1
+        },
+        "CNIOLinux": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 2
+        },
+        "CNIOOpenBSD": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 1
+        },
+        "CNIOPosix": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 1
+        },
+        "CNIOWASI": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 1
+        },
+        "CNIOWindows": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 2
+        },
+        "_AtomicsShims": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 1
+        }
+      }
+    },
+    "arm64-v8a": {
+      "configuration": "release",
+      "descriptionSha256": "fb0f21e4f120fb76162d547ff4b253d1f6d3fef39be24c2fc33ce75eb7880961",
+      "manifestSha256": "50ab10ed7e6e1e61601b177cd452285cf3962dea65a855cb6792497bdc044dcf",
+      "swift": {
+        "Atomics": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "ContainersPreview": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "DequeModule": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "IMAP": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "ImapAccountCore": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "InternalCollectionsUtilities": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "NIO": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "NIOConcurrencyHelpers": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "NIOCore": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "NIOEmbedded": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "NIOIMAP": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "NIOIMAPCore": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "NIOPosix": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "NIOSSL": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "NIOTLS": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "OrderedCollections": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "SMTP": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "_NIOBase64": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        },
+        "_NIODataStructures": {
+          "flags": [
+            "-O"
+          ],
+          "wholeModuleOptimization": true
+        }
+      },
+      "clang": {
+        "CHarmonyIMAPTrust": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 1
+        },
+        "CNIOAtomics": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 2
+        },
+        "CNIOBoringSSL": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 399
+        },
+        "CNIOBoringSSLShims": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 1
+        },
+        "CNIODarwin": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 1
+        },
+        "CNIOFreeBSD": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 1
+        },
+        "CNIOLinux": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 2
+        },
+        "CNIOOpenBSD": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 1
+        },
+        "CNIOPosix": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 1
+        },
+        "CNIOWASI": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 1
+        },
+        "CNIOWindows": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 2
+        },
+        "_AtomicsShims": {
+          "flags": [
+            "-O2"
+          ],
+          "objectCount": 1
+        }
+      }
+    }
+  },
+  "parserBenchmark": {
+    "scope": "Synthetic host IMAP parsing only; no network, TLS, real mail or device-energy measurement",
+    "fixtureSha256": "13d0ef8e6f9705a3219818289b0312de5951742cbeb6d827dd9fd5b1dd1246ce",
+    "dependencies": {
+      "swift-nio-imap": "26a69caf8487bc91da4fd10aaa119776b526e18c",
+      "swift-nio": "a8a8f22d99d2114304d0ea331da4019e6cf8f67b",
+      "swift-atomics": "0442cb5a3f98ab802acb777929fdb446bda11a34",
+      "swift-collections": "a0cb0954ecb21e4e31b0070e6ed5674e8556685a",
+      "swift-system": "869129b7bf4ecc57b97d0193ad29690ca2134750"
+    },
+    "swiftVersion": "Swift version 6.2.3 (swift-6.2.3-RELEASE)\nTarget: x86_64-unknown-linux-gnu",
+    "compileEvidence": {
+      "debug": {
+        "swiftFlags": {
+          "ImapOptimizationBenchmark": [
+            "-Onone"
+          ],
+          "NIOCore": [
+            "-Onone"
+          ],
+          "NIOIMAP": [
+            "-Onone"
+          ],
+          "NIOIMAPCore": [
+            "-Onone"
+          ]
+        },
+        "planSha256": "5e3c97f9099592fcf8ff5d96fdae1564ed8dfc785bcbcd0abdaf68ca5192ab21",
+        "binarySha256": "eb5e645c1163d5fa892cd04823e0b35f976df17a794eb0a897cfb065ebb09c04"
+      },
+      "release": {
+        "swiftFlags": {
+          "ImapOptimizationBenchmark": [
+            "-O"
+          ],
+          "NIOCore": [
+            "-O"
+          ],
+          "NIOIMAP": [
+            "-O"
+          ],
+          "NIOIMAPCore": [
+            "-O"
+          ]
+        },
+        "planSha256": "5346e48b1c260674c07634c0165cf63d79991971928c69e38f7fc922e5ffe10e",
+        "binarySha256": "b71b384c49dca9077bcfda02206b1e8937f40a4e791030856c63cd891f8d4536"
+      }
+    },
+    "samples": {
+      "debug": [
+        {
+          "bodyBytes": 12651840,
+          "bodyChunks": 4524,
+          "elapsedNanoseconds": 865741618,
+          "fetchFinishes": 2880,
+          "fetchStarts": 2880,
+          "inputBytes": 1116824,
+          "iterations": 12,
+          "messagesPerIteration": 120,
+          "responses": 20400,
+          "processCpuSeconds": 0.8732560000000001
+        },
+        {
+          "bodyBytes": 12651840,
+          "bodyChunks": 4524,
+          "elapsedNanoseconds": 891017189,
+          "fetchFinishes": 2880,
+          "fetchStarts": 2880,
+          "inputBytes": 1116824,
+          "iterations": 12,
+          "messagesPerIteration": 120,
+          "responses": 20400,
+          "processCpuSeconds": 0.8985939999999998
+        },
+        {
+          "bodyBytes": 12651840,
+          "bodyChunks": 4524,
+          "elapsedNanoseconds": 872179040,
+          "fetchFinishes": 2880,
+          "fetchStarts": 2880,
+          "inputBytes": 1116824,
+          "iterations": 12,
+          "messagesPerIteration": 120,
+          "responses": 20400,
+          "processCpuSeconds": 0.8792530000000001
+        },
+        {
+          "bodyBytes": 12651840,
+          "bodyChunks": 4524,
+          "elapsedNanoseconds": 863024460,
+          "fetchFinishes": 2880,
+          "fetchStarts": 2880,
+          "inputBytes": 1116824,
+          "iterations": 12,
+          "messagesPerIteration": 120,
+          "responses": 20400,
+          "processCpuSeconds": 0.8718140000000004
+        },
+        {
+          "bodyBytes": 12651840,
+          "bodyChunks": 4524,
+          "elapsedNanoseconds": 868730295,
+          "fetchFinishes": 2880,
+          "fetchStarts": 2880,
+          "inputBytes": 1116824,
+          "iterations": 12,
+          "messagesPerIteration": 120,
+          "responses": 20400,
+          "processCpuSeconds": 0.8762589999999995
+        }
+      ],
+      "release": [
+        {
+          "bodyBytes": 12651840,
+          "bodyChunks": 4524,
+          "elapsedNanoseconds": 97117141,
+          "fetchFinishes": 2880,
+          "fetchStarts": 2880,
+          "inputBytes": 1116824,
+          "iterations": 12,
+          "messagesPerIteration": 120,
+          "responses": 20400,
+          "processCpuSeconds": 0.10412100000000002
+        },
+        {
+          "bodyBytes": 12651840,
+          "bodyChunks": 4524,
+          "elapsedNanoseconds": 96068996,
+          "fetchFinishes": 2880,
+          "fetchStarts": 2880,
+          "inputBytes": 1116824,
+          "iterations": 12,
+          "messagesPerIteration": 120,
+          "responses": 20400,
+          "processCpuSeconds": 0.10346499999999992
+        },
+        {
+          "bodyBytes": 12651840,
+          "bodyChunks": 4524,
+          "elapsedNanoseconds": 95552008,
+          "fetchFinishes": 2880,
+          "fetchStarts": 2880,
+          "inputBytes": 1116824,
+          "iterations": 12,
+          "messagesPerIteration": 120,
+          "responses": 20400,
+          "processCpuSeconds": 0.10190299999999969
+        },
+        {
+          "bodyBytes": 12651840,
+          "bodyChunks": 4524,
+          "elapsedNanoseconds": 96239535,
+          "fetchFinishes": 2880,
+          "fetchStarts": 2880,
+          "inputBytes": 1116824,
+          "iterations": 12,
+          "messagesPerIteration": 120,
+          "responses": 20400,
+          "processCpuSeconds": 0.10526299999999933
+        },
+        {
+          "bodyBytes": 12651840,
+          "bodyChunks": 4524,
+          "elapsedNanoseconds": 96767713,
+          "fetchFinishes": 2880,
+          "fetchStarts": 2880,
+          "inputBytes": 1116824,
+          "iterations": 12,
+          "messagesPerIteration": 120,
+          "responses": 20400,
+          "processCpuSeconds": 0.10425500000000015
+        }
+      ]
+    },
+    "medianProcessCpuSeconds": {
+      "debug": 0.8762589999999995,
+      "release": 0.10412100000000002
+    },
+    "releaseCpuRatio": 0.11882445715250865,
+    "matchingResults": {
+      "bodyBytes": 12651840,
+      "bodyChunks": 4524,
+      "fetchFinishes": 2880,
+      "fetchStarts": 2880,
+      "inputBytes": 1116824,
+      "iterations": 12,
+      "messagesPerIteration": 120,
+      "responses": 20400
+    }
+  },
+  "pictureCacheBenchmark": {
+    "scope": "Synthetic host-only PictureCache inventory optimization; no real accounts, devices, or battery measurements",
+    "recordedAt": "2026-09-15",
+    "provenance": "Recorded from the before/after measurements already executed and reported in this task. This record was written later without rerunning the benchmark. Durations below retain the previously reported rounded values; the original one-shot benchmark script was not retained.",
+    "implementation": "harmony/entry/src/main/ets/data/PictureCache.ets",
+    "regressionScript": "tests/picture-cache.test.cjs",
+    "regressionTests": [
+      "Saving small pictures reads one budget scalar without transferring the account image inventory",
+      "Pooled budget eviction reads only required oldest victims and excludes the incoming replacement"
+    ],
+    "fixture": {
+      "runtime": "Host Node.js executing transpiled production PictureCache.ets against actual SQLite",
+      "database": "Synthetic account-local image rows in SQLite",
+      "transport": "Mock HTTP returning a valid 76-byte PNG, no external network",
+      "newImagesPerCase": 16,
+      "existingImagesPerCase": [
+        0,
+        1000,
+        4000,
+        8000
+      ],
+      "accountBudgetBytes": 134217728,
+      "evictionExpected": false,
+      "costCounter": "Image-identity inventory rows transferred through the database result interface into JavaScript, plus new scalar budget reads"
+    },
+    "results": [
+      {
+        "existingImages": 0,
+        "beforeMs": 1.15,
+        "afterMs": 0.95,
+        "beforeInventoryRows": 120,
+        "afterInventoryRows": 0,
+        "afterBudgetScalars": 16
+      },
+      {
+        "existingImages": 1000,
+        "beforeMs": 11.07,
+        "afterMs": 3.43,
+        "beforeInventoryRows": 16120,
+        "afterInventoryRows": 0,
+        "afterBudgetScalars": 16
+      },
+      {
+        "existingImages": 4000,
+        "beforeMs": 41.55,
+        "afterMs": 9.68,
+        "beforeInventoryRows": 64120,
+        "afterInventoryRows": 0,
+        "afterBudgetScalars": 16
+      },
+      {
+        "existingImages": 8000,
+        "beforeMs": 78.52,
+        "afterMs": 18.41,
+        "beforeInventoryRows": 128120,
+        "afterInventoryRows": 0,
+        "afterBudgetScalars": 16
+      }
+    ],
+    "change": {
+      "before": "Every saved image selected the account image inventory in SQL eviction order and transferred all rows into JavaScript to total bytes and choose victims.",
+      "after": "One SQL SUM scalar determines the account budget; only over-budget saves retrieve oldest victim identities, stopping after enough bytes are evicted.",
+      "index": "picture_cache_expiry(account_id, saved_at, message_key, url)",
+      "queryPlanObservation": "The tested oldest-victim query used the index without a temporary sort."
+    },
+    "boundsAndLimitations": [
+      "Under-budget saves now transfer one scalar per image, independent of existing image count; they avoid the ordered full-inventory result and JavaScript row iteration.",
+      "SQL SUM still scans the applicable account rows inside SQLite; this does not make total database work constant-time.",
+      "Over-budget saves transfer only selected victim identities and delete only the required victims, preserving timestamp/message-key/URL ordering and incoming-image self-protection.",
+      "The separate regression uses a file-backed WAL database and a committed-only reader to verify account isolation, expiry, replacement and eviction guards.",
+      "Host timings are synthetic elapsed-time evidence, not HarmonyOS CPU, battery, thermal or real-mail measurements.",
+      "The benchmark was not rerun when this record was created, and the original one-shot measurement script is unavailable. The committed regression script exercises the production implementation and deterministic inventory bounds."
+    ]
+  },
+  "bodyRetryBefore": {
+    "afterFailure": {
+      "bodyReads": 1,
+      "bodies": 0,
+      "stage": "body",
+      "attempts": 1,
+      "retryDelayMs": 60000,
+      "timers": 0
+    },
+    "afterRestartBeforeDueThenHourQuiet": {
+      "bodyReads": 1,
+      "bodies": 0,
+      "dueJobs": 1,
+      "timers": 0
+    },
+    "afterExplicitWake": {
+      "bodyReads": 2,
+      "bodies": 1,
+      "stage": "done"
+    }
+  },
+  "failedEmptyBodyBefore": {
+    "afterFailedDecode": {
+      "bodyReads": 1,
+      "textBody": null,
+      "htmlBody": null,
+      "bodyEncodingProblem": true,
+      "bodySavedAtSet": true,
+      "preparedDocumentExists": true,
+      "stage": "done",
+      "scans": 1
+    },
+    "afterLaterRealSync": {
+      "bodyReads": 1,
+      "scans": 1,
+      "stage": "done",
+      "textBody": null,
+      "htmlBody": null
+    }
+  },
+  "recovery": {
+    "workerTests": 40,
+    "storeTests": 18,
+    "migrationTests": 6,
+    "oneTimeMigration": true,
+    "migrationBatchSize": 8,
+    "successfulBodiesAndPictureAttemptsPreserved": true,
+    "oneWakeForPersistedRetry": true,
+    "retryMinimumMs": 60000,
+    "retryMaximumMs": 3600000,
+    "emptyQueuePolling": false,
+    "dueCrossingRaceCovered": true,
+    "corruptQueueNoWakeLoopCovered": true
+  },
+  "nativeSyncSession": {
+    "tests": 2,
+    "nativeFailedEmptyRecovery": true,
+    "ordinaryBodies": 3,
+    "ordinaryTlsSessions": 3,
+    "pooledBodies": 3,
+    "pooledTlsSessions": 1,
+    "totalTlsSessions": 6,
+    "emptyBodyCases": 6,
+    "emptyBodyTlsSessions": 1,
+    "changedOwnerExtraSessions": 0,
+    "retiredIdExtraSessions": 0,
+    "allConnectionsClosed": true,
+    "scope": "Actual shipping Swift core and ArkTS adapter over synthetic loopback TLS; UTF8, quoted-printable, ShiftJIS, HTML and metadata preserved. No real mail, CPU or battery claim."
+  },
+  "nativeInboxIdle": {
+    "tests": 1,
+    "phases": {
+      "active": {
+        "counts": [
+          6,
+          4,
+          0,
+          4,
+          4,
+          0,
+          0
+        ]
+      },
+      "settled-start": {
+        "counts": [
+          21,
+          16,
+          0,
+          16,
+          16,
+          0,
+          0
+        ]
+      },
+      "settled-end": {
+        "counts": [
+          21,
+          16,
+          0,
+          16,
+          16,
+          0,
+          0
+        ]
+      },
+      "events-settled": {
+        "counts": [
+          38,
+          16,
+          0,
+          16,
+          16,
+          1,
+          0
+        ]
+      }
+    },
+    "counterOrder": [
+      "syncQueries",
+      "scans",
+      "pictureBatches",
+      "completedJobs",
+      "bodyCalls",
+      "pageCalls",
+      "violations"
+    ],
+    "scope": "Actual visible ConnectedMail and encrypted sync storage with an in-memory synthetic service. No CPU, energy or real-mail claim.",
+    "bodyRequestGapsMs": [
+      283,
+      269,
+      273,
+      275,
+      266,
+      269,
+      264,
+      264,
+      265,
+      271,
+      265,
+      265,
+      269,
+      263,
+      272
+    ],
+    "firstToLastBodyMs": 4033
+  },
+  "nativePictureSnapshot": {
+    "tests": 1,
+    "passed": 1,
+    "scope": "Actual MailBodySync, AccountStore and saved-document reader in an isolated synthetic main HAP with loopback HTTP only.",
+    "syncBeforeReader": true,
+    "sourcesOfflineBeforeFirstOpen": true,
+    "documentMounts": 2,
+    "documentLoads": 2,
+    "bodyRequests": 7,
+    "htmlScans": 7,
+    "pictureBatches": 1,
+    "readerBodyScanBatchHttpDelta": 0,
+    "mailboxPages": [
+      0,
+      3,
+      6
+    ],
+    "savedMessages": 7,
+    "checkpointSavedMessages": 2,
+    "workerAndEncryptedStoreRestartBeforeCompletion": true,
+    "allMessageBodiesAndDocumentsSavedBeforeOpening": true,
+    "perImageRequests": [
+      1,
+      1,
+      1
+    ],
+    "nonContentRequests": 0,
+    "savedBodyHtmlBytesAndTimestampsIntact": true,
+    "brokenImagesStayBroken": true,
+    "reopenThroughNewStoreWithoutHttp": true,
+    "foregroundAndScrollAddNoHttpOrDocumentLoads": true,
+    "maximumNativeScrollVp": 2413.4206946395557,
+    "testLogSha256": "61d09daf0b602c89be9bc5d5373a65c14e62efbc7943fc76cc666325c0e1efdc",
+    "emulatorVisualProof": {
+      "initial": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "replacementColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "visibleWebCropPx": [
+          51,
+          340,
+          1269,
+          2049
+        ],
+        "sha256": "104de672bcfd4fd84256246ac4959a117829b890fe488b55ced2398482150588"
+      },
+      "scrolled": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "replacementColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "visibleWebCropPx": [
+          51,
+          340,
+          1269,
+          2049
+        ],
+        "sha256": "dc65651323177f085a6b7ff3f010aef765e017273ac47dd7cf41ef5b304c05ae"
+      },
+      "reopened": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "replacementColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "visibleWebCropPx": [
+          51,
+          340,
+          1269,
+          2049
+        ],
+        "sha256": "7d900fae7f04ebe0db1fb218b7dc238a5d797001387b14e19d42d027f75e4252"
+      },
+      "reopened-scrolled": {
+        "originalColorPixels": [
+          27968,
+          27784,
+          27784
+        ],
+        "replacementColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "visibleWebCropPx": [
+          51,
+          340,
+          1269,
+          2049
+        ],
+        "sha256": "67ab970fe727d08473ace4882dc83c1acf4096a6342330d6258cdbb196291820"
+      }
+    },
+    "limits": "Synthetic content, x86 emulator screenshots and simulated picture foreground lifecycle; no physical captures, app battery measurement, production mail or external servers."
+  },
+  "emulatorStopped": true,
+  "isolatedEmulatorAppRemoved": true,
+  "installedDevices": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "versionCode": 100024,
+      "versionName": "0.1.24",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "1f8aaa00f6eb7012791ab019debc9139a37d61cdf2d5b6d171249f4145f1d564"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "versionCode": 100024,
+      "versionName": "0.1.24",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "1f8aaa00f6eb7012791ab019debc9139a37d61cdf2d5b6d171249f4145f1d564"
+    }
+  ],
+  "history": {
+    "userReportedPeriod": "Around development 0.1.11, before Google sign-in removal and separate D-Mail packaging",
+    "unoptimizedImapPredatesPackaging": true,
+    "automaticCompleteBodySyncIntroduced": "0.1.21\u20130.1.22",
+    "exactOnsetIdentified": false,
+    "sameVersionReusedAcrossSourceChanges": true
+  },
+  "limits": [
+    "Synthetic host parser CPU reduction is not device battery or whole-sync energy savings.",
+    "The exact historical battery spike and user blank-email causes cannot be confirmed from synthetic fixtures.",
+    "Native thermal transitions were not measured; existing pacing and thermal pauses remain.",
+    "Existing retention, MIME/picture bounds, on-demand attachment bytes and OS background scheduling remain.",
+    "No real account or production UI was accessed; AppGallery packaging was not rebuilt."
+  ],
+  "testCorrections": [
+    "Initial native fixture wrongly expected malformed Base64 Y to fail. Existing decoder preserves raw Y by design. Corrected to invalid UTF-8 /w==, with a separate Y compatibility case; no decoder compatibility change."
+  ]
+}

@@ -1,0 +1,334 @@
+{
+  "versionName": "0.1.18",
+  "versionCode": 100018,
+  "status": "Validated and installed on both devices; bounded review complete",
+  "privacy": {
+    "syntheticOnly": true,
+    "productionLaunched": false,
+    "realMailReadOrSent": false
+  },
+  "host": {
+    "javascriptTests": 453,
+    "javascriptFiles": 45,
+    "pythonTests": 9,
+    "imapSwiftTests": 89,
+    "imapSwiftSuites": 29,
+    "mimeSwiftTests": 100,
+    "mimeSwiftSuites": 23,
+    "localTlsAuthenticationScenarios": 19,
+    "localTlsCleanupScenarios": 6
+  },
+  "native": {
+    "oauthTestsPassed": 7,
+    "storageTestsPassed": 1,
+    "pictureTestsPassed": 1,
+    "linkDispatchAndAnchorsPassed": true,
+    "longScrolling": {
+      "target": "MatePad",
+      "osReported": "HarmonyOS6.1.1.120",
+      "testsPassed": 1,
+      "rows": 1500,
+      "htmlUtf16Units": 233428,
+      "controllerLoads": 1,
+      "documentLoads": 1,
+      "drags": 6,
+      "durationMs": 11558,
+      "scrollCallbacks": 1686,
+      "maximumOffsetVp": 1952.365010579427,
+      "closeDelayIncludingDriverMs": 1602,
+      "reloadsDuringScrolling": 0,
+      "initialEmulatorFixtureFailed": true,
+      "fixtureCorrection": "Match production container layout, guard scene ownership, clamp gestures to visible viewport, record geometry and offsets."
+    },
+    "matepadSourceParity": {
+      "copiedShippingFiles": 52,
+      "coreMatchesShippingArm": true,
+      "coreSha256": "1c074e12a6c71d2e0f563c7df7145c841a8b74c9b8eb6c2a2111ed4a8a238e91",
+      "testTraceOnly": true
+    },
+    "matepadSyntheticScreenshots": {
+      "long-before": "5b7832ab55c787f9226b3511340646d31a89122de3cc9d866b0e107a150ff68c",
+      "long-after": "857b6f5f33a3e4abb227a7c877480ac5518fdd99db22bc81bfc8ef97fc73b080"
+    }
+  },
+  "sourceParity": {
+    "shippingEtsFilesEqualAfterRemovingTwoExplicitTestCounters": 52,
+    "localizedResourcesEqual": true,
+    "pictureTrace": false,
+    "linkTraceIsolatedOnly": true,
+    "coreSha256": {
+      "x86_64": "31800e0db02bbd3cfb15dc346d7c89f5f73d800a592b41386cf6922423aa05db",
+      "aarch64": "1c074e12a6c71d2e0f563c7df7145c841a8b74c9b8eb6c2a2111ed4a8a238e91"
+    }
+  },
+  "nativePictureCache": {
+    "tests": 1,
+    "passed": 1,
+    "scope": "Actual HtmlMail fitContent reader within Scroll; three PNG URLs served as application/octet-stream. One good image survives two missing-image failures and a held/coalesced retry without re-fetch. Both missing images then recover; all three retain image/png bytes, timestamps and consent. Retry and warning disappear, including after remount with all resources returning HTTP503. Exactly seven loopback requests, per URL counts 1/3/3; remount adds zero. Screenshots verify original colors throughout and recovered colors only after success.",
+    "limits": "Synthetic main-HAP fixture and loopback only; no production accounts or external servers.",
+    "screenshots": {
+      "partial": {
+        "originalColorPixels": [
+          52416,
+          52164,
+          52164
+        ],
+        "recoveredColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "sha256": "e766dac6d5e2a22afb8a4a79492143897308e92798d8e50e7b3e7cd740bdfb59"
+      },
+      "held": {
+        "originalColorPixels": [
+          52416,
+          52164,
+          52164
+        ],
+        "recoveredColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "sha256": "88ab4c7cebc49e3676d7a7a8d0c811ca7fe98ab174454f66b1252d0c71f3e2c5"
+      },
+      "failed-retry": {
+        "originalColorPixels": [
+          52416,
+          52164,
+          52164
+        ],
+        "recoveredColorPixels": [
+          0,
+          0,
+          0
+        ],
+        "sha256": "e766dac6d5e2a22afb8a4a79492143897308e92798d8e50e7b3e7cd740bdfb59"
+      },
+      "recovered": {
+        "originalColorPixels": [
+          52416,
+          52164,
+          52164
+        ],
+        "recoveredColorPixels": [
+          140112,
+          139104,
+          140112
+        ],
+        "sha256": "1cf142adce30c5cca4509bf9e922b607ac7c9f0e1f06d54ce69050cf8d85593b"
+      },
+      "reopened": {
+        "originalColorPixels": [
+          52416,
+          52164,
+          52164
+        ],
+        "recoveredColorPixels": [
+          140112,
+          139104,
+          140112
+        ],
+        "sha256": "1cf142adce30c5cca4509bf9e922b607ac7c9f0e1f06d54ce69050cf8d85593b"
+      }
+    }
+  },
+  "longHtmlHostBenchmark": {
+    "runtime": "v22.23.2",
+    "scope": "Synthetic V8 host helper and actual document() method measurements; no ArkWeb layout or device power measurements",
+    "records": [
+      {
+        "case": "paragraphs",
+        "version": "baseline011",
+        "method": "mailDocument",
+        "inputCharacters": 2000000,
+        "medianMs": 10.89,
+        "outputCharacters": 2002364
+      },
+      {
+        "case": "paragraphs",
+        "version": "baseline011",
+        "method": "hasRemotePictures",
+        "inputCharacters": 2000000,
+        "medianMs": 2.65,
+        "outputCharacters": null
+      },
+      {
+        "case": "paragraphs",
+        "version": "current",
+        "method": "mailDocument",
+        "inputCharacters": 2000000,
+        "medianMs": 18.24,
+        "outputCharacters": 2002354
+      },
+      {
+        "case": "paragraphs",
+        "version": "current",
+        "method": "hasRemotePictures",
+        "inputCharacters": 2000000,
+        "medianMs": 5.58,
+        "outputCharacters": null
+      },
+      {
+        "case": "tables",
+        "version": "baseline011",
+        "method": "mailDocument",
+        "inputCharacters": 2000000,
+        "medianMs": 32.74,
+        "outputCharacters": 2658124
+      },
+      {
+        "case": "tables",
+        "version": "baseline011",
+        "method": "hasRemotePictures",
+        "inputCharacters": 2000000,
+        "medianMs": 4.14,
+        "outputCharacters": null
+      },
+      {
+        "case": "tables",
+        "version": "current",
+        "method": "mailDocument",
+        "inputCharacters": 2000000,
+        "medianMs": 51.82,
+        "outputCharacters": 2641721
+      },
+      {
+        "case": "tables",
+        "version": "current",
+        "method": "hasRemotePictures",
+        "inputCharacters": 2000000,
+        "medianMs": 24.13,
+        "outputCharacters": null
+      },
+      {
+        "case": "inlineData",
+        "version": "baseline011",
+        "method": "mailDocument",
+        "inputCharacters": 1999939,
+        "medianMs": 3.13,
+        "outputCharacters": 2002303
+      },
+      {
+        "case": "inlineData",
+        "version": "baseline011",
+        "method": "hasRemotePictures",
+        "inputCharacters": 1999939,
+        "medianMs": 4.51,
+        "outputCharacters": null
+      },
+      {
+        "case": "inlineData",
+        "version": "current",
+        "method": "mailDocument",
+        "inputCharacters": 1999939,
+        "medianMs": 4.7,
+        "outputCharacters": 2002293
+      },
+      {
+        "case": "inlineData",
+        "version": "current",
+        "method": "hasRemotePictures",
+        "inputCharacters": 1999939,
+        "medianMs": 3.32,
+        "outputCharacters": null
+      },
+      {
+        "case": "quotes",
+        "version": "baseline011",
+        "method": "mailDocument",
+        "inputCharacters": 2000000,
+        "medianMs": 63.63,
+        "outputCharacters": 6885914
+      },
+      {
+        "case": "quotes",
+        "version": "baseline011",
+        "method": "hasRemotePictures",
+        "inputCharacters": 2000000,
+        "medianMs": 3.72,
+        "outputCharacters": null
+      },
+      {
+        "case": "quotes",
+        "version": "current",
+        "method": "mailDocument",
+        "inputCharacters": 2000000,
+        "medianMs": 73.2,
+        "outputCharacters": 6885904
+      },
+      {
+        "case": "quotes",
+        "version": "current",
+        "method": "hasRemotePictures",
+        "inputCharacters": 2000000,
+        "medianMs": 17.41,
+        "outputCharacters": null
+      }
+    ],
+    "cached": [
+      {
+        "case": "paragraphs",
+        "firstMs": 20.448,
+        "cachedMedianMs": 0.001,
+        "changedConsentMs": 0.001,
+        "fullTransformsAcross7Calls": 1,
+        "outputCharacters": 2002367
+      },
+      {
+        "case": "tables",
+        "firstMs": 54.203,
+        "cachedMedianMs": 0.001,
+        "changedConsentMs": 0.001,
+        "fullTransformsAcross7Calls": 1,
+        "outputCharacters": 2641734
+      },
+      {
+        "case": "inlineData",
+        "firstMs": 4.392,
+        "cachedMedianMs": 0.001,
+        "changedConsentMs": 0.001,
+        "fullTransformsAcross7Calls": 1,
+        "outputCharacters": 2002306
+      },
+      {
+        "case": "quotes",
+        "firstMs": 70.07,
+        "cachedMedianMs": 0.001,
+        "changedConsentMs": 0.001,
+        "fullTransformsAcross7Calls": 1,
+        "outputCharacters": 6885917
+      }
+    ]
+  },
+  "installedDevices": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "versionCode": 100018,
+      "versionName": "0.1.18",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "708775557af2347ced34a118c13575bcbcf66407810aaf2c413c0a72478e7935"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "versionCode": 100018,
+      "versionName": "0.1.18",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "708775557af2347ced34a118c13575bcbcf66407810aaf2c413c0a72478e7935"
+    }
+  ],
+  "limitations": [
+    "No real-device heat or power measurement.",
+    "Native browser dispatch uses an injected opener in synthetic tests; the default platform call is covered by host control-flow tests.",
+    "Existing cached bodies/pictures are preserved; previously lost attachment names and changed MIME rendering apply on the next body fetch.",
+    "AppGallery not rebuilt."
+  ],
+  "reviewRoundsCompleted": 3,
+  "emulatorStopped": true,
+  "isolatedMatePadTestRemoved": true
+}

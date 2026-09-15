@@ -1,0 +1,29 @@
+--- a/Sources/IMAP/IMAPClient.swift
++++ b/Sources/IMAP/IMAPClient.swift
+@@ -116,9 +116,9 @@
+     }
+ 
+     /// Log out from connected IMAP ``Server``; leave active NIO channel connection intact.
+-    public func logout() async throws {
++    public func logout(timeout: Int64? = nil) async throws {
+         logger?.info("Logging out…")
+-        try await execute(command: VoidCommand(.logout))
++        try await execute(command: VoidCommand(.logout, timeout: timeout))
+     }
+ 
+     /// Fetch namespaces available to authenticated user.`
+--- a/Sources/IMAP/VoidCommand.swift
++++ b/Sources/IMAP/VoidCommand.swift
+@@ -9,9 +9,11 @@
+ // Generic wrapper for void-result commands that succeed or fail only
+ struct VoidCommand: IMAPCommand {
+     let command: Command
++    let timeout: Int64
+ 
+-    init(_ command: Command) {
++    init(_ command: Command, timeout: Int64? = nil) {
+         self.command = command
++        self.timeout = timeout ?? .timeout
+     }
+ 
+     // MARK: IMAPCommand

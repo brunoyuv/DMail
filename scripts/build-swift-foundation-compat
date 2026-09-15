@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+source "$ROOT/scripts/swift-target-env"
+cd "$ROOT"
+./scripts/build-swift-foundation
+./scripts/build-swift-libxml2
+./scripts/build-swift-dispatch-overlay
+NATIVE="$ROOT/.tools/command-line-tools/sdk/default/openharmony/native"
+SDK="$SWIFT_TARGET_SDK"
+SOURCE="$ROOT/.tools/swift-corelibs-foundation-source"
+CMAKE="$ROOT/.tools/swift-build-tools/bin/cmake"
+./scripts/migrate-swift-architecture-paths
+if ! patch --dry-run --reverse --force -p1 -d "$SOURCE" < port/swift-runtime/corelibs-harmonyos.patch >/dev/null 2>&1; then
+  patch --dry-run --forward --force -p1 -d "$SOURCE" < port/swift-runtime/corelibs-harmonyos.patch
+  patch --forward --force -p1 -d "$SOURCE" < port/swift-runtime/corelibs-harmonyos.patch
+fi
+"$CMAKE" -S "$SOURCE" -B .tools/swift-ohos-corelibs${SWIFT_BUILD_SUFFIX} -G Ninja \
+  -DCMAKE_MAKE_PROGRAM="$NATIVE/build-tools/cmake/bin/ninja" \
+  -DCMAKE_TOOLCHAIN_FILE="$NATIVE/build/cmake/ohos.toolchain.cmake" \
+  -DOHOS_ARCH="$HARMONY_CPU" -DCMAKE_Swift_COMPILER="$ROOT/.tools/swift/usr/bin/swiftc" \
+  -DCMAKE_Swift_COMPILER_TARGET=${SWIFT_TARGET} -DCMAKE_Swift_COMPILER_WORKS=TRUE \
+  -DCMAKE_Swift_FLAGS="-sdk $NATIVE/sysroot -resource-dir $SDK/lib/swift -I $SDK/lib/swift/musl/SwiftMusl -I $SDK/lib/swift/ohos -module-cache-path $ROOT/.tools/swift-probe/corelibs-cache${SWIFT_BUILD_SUFFIX}" \
+  -D_SwiftFoundation_SourceDIR="$ROOT/.tools/swift-foundation-source" \
+  -D_SwiftFoundationICU_SourceDIR="$ROOT/.tools/swift-foundation-icu-source" \
+  -D_SwiftCollections_SourceDIR="$ROOT/.tools/swift-collections-source" \
+  -DSwiftFoundation_MACRO="$ROOT/.tools/swift/usr/lib/swift/host/plugins/libFoundationMacros.so" \
+  -DSwiftCore_DIR="$SDK/lib/cmake/SwiftCore" -DHarmonySwiftSDK="$SDK" \
+  -Ddispatch_DIR="$ROOT/.tools/swift-ohos-dispatch-overlay${SWIFT_BUILD_SUFFIX}/cmake/modules" \
+  -DLIBXML2_INCLUDE_DIR="$SDK/include/libxml2" -DLIBXML2_LIBRARY="$SDK/lib/libxml2.so" \
+  -DFOUNDATION_BUILD_NETWORKING=OFF -DFOUNDATION_BUILD_TOOLS=OFF \
+  -DCMAKE_INSTALL_PREFIX="$SDK" -DCMAKE_BUILD_TYPE=Release -DBUILD_SHARED_LIBS=ON \
+  -DSWIFT_SYSTEM_NAME=musl
+# Networking is a subsequent dependency gate, not a supported mail feature yet.
+"$CMAKE" --build .tools/swift-ohos-corelibs${SWIFT_BUILD_SUFFIX} -j "${SWIFT_RUNTIME_JOBS:-4}"
+"$CMAKE" --install .tools/swift-ohos-corelibs${SWIFT_BUILD_SUFFIX}

@@ -1,0 +1,107 @@
+--- a/Sources/SMTP/Server.swift
++++ b/Sources/SMTP/Server.swift
+@@ -8,6 +8,7 @@
+     public let hostname: String
+     public let username: String
+     public let password: String
++    public let accessToken: String?
+     public let port: Int
+ 
+     public init(
+@@ -15,13 +16,15 @@
+         hostname: String,
+         username: String,
+         password: String,
+-        port: Int = 587
++        port: Int = 587,
++        accessToken: String? = nil
+     ) {
+         self.connectionSecurity = connectionSecurity
+         self.hostname = hostname
+         self.username = username
+         self.password = password
+         self.port = port
++        self.accessToken = accessToken
+     }
+ 
+     // MARK: CustomStringConvertible
+--- a/Sources/SMTP/SMTPClient.swift
++++ b/Sources/SMTP/SMTPClient.swift
+@@ -23,6 +23,7 @@
+ 
+     public func send(_ email: Email) async throws {
+         guard server.connectionSecurity != .none else { throw SMTPError.requiredTLSNotConfigured }
++        if let token = server.accessToken { _ = try xoauth2Payload(username: server.username, accessToken: token) }
+         try validateMessage(email)
+         let tls = try NIOSSLContext(configuration: configuration)
+         let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+--- a/Sources/SMTP/RequestEncoder.swift
++++ b/Sources/SMTP/RequestEncoder.swift
+@@ -11,6 +11,8 @@
+     case hello(String)
+     case startTLS
+     case authPlain(String, String)
++    case authXOAuth2(String, String)
++    case authOAuthErrorEnd
+     case authLogin
+     case authUser(String)
+     case authPassword(String)
+@@ -34,6 +36,10 @@
+             out.writeString("STARTTLS")
+         case .authPlain(let user, let password):
+             out.writeString("AUTH PLAIN \(Data(("\0" + user + "\0" + password).utf8).base64EncodedString())")
++        case .authXOAuth2(let user, let token):
++            out.writeString("AUTH XOAUTH2 " + (try xoauth2Payload(username: user, accessToken: token)))
++        case .authOAuthErrorEnd:
++            break // SMTP's empty response terminates an OAuth error challenge.
+         case .authLogin:
+             out.writeString("AUTH LOGIN")
+         case .authUser(let value), .authPassword(let value):
+--- a/Sources/SMTP/SendHandler.swift
++++ b/Sources/SMTP/SendHandler.swift
+@@ -19,7 +19,7 @@
+     private var recipients: [EmailAddress]
+     private var recipientIndex = 0
+     private var finished = false
+-    private enum Expect { case greeting, hello, startTLS, handshake, authBegin, username, password, mailFrom, recipient, data, transfer }
++    private enum Expect { case greeting, hello, startTLS, handshake, authBegin, username, password, oauth, oauthError, mailFrom, recipient, data, transfer }
+     private var expect: Expect = .greeting
+ 
+     init(_ email: Email, server: Server, tlsContext: NIOSSLContext,
+@@ -58,7 +58,7 @@
+         case .reply(let value, let text): code = value; lines = text
+         }
+         if code >= 400 {
+-            let authentication = expect == .authBegin || expect == .username || expect == .password
++            let authentication = expect == .authBegin || expect == .username || expect == .password || expect == .oauth || expect == .oauthError
+             fail(context, authentication ? SMTPError.authenticationRequired : SMTPError.rejected, explicitRejection: true)
+             return
+         }
+@@ -81,7 +81,10 @@
+             } else {
+                 let mechanisms = capabilities.filter { $0.first == "AUTH" || $0.first?.hasPrefix("AUTH=") == true }
+                     .flatMap { $0 }.map { $0.replacingOccurrences(of: "AUTH=", with: "") }
+-                if mechanisms.contains("PLAIN") {
++                if let token = server.accessToken {
++                    guard mechanisms.contains("XOAUTH2") else { fail(context, SMTPError.authenticationRequired); return }
++                    send(context, .authXOAuth2(server.username, token), expecting: .oauth)
++                } else if mechanisms.contains("PLAIN") {
+                     send(context, .authPlain(server.username, server.password), expecting: .password)
+                 } else if mechanisms.contains("LOGIN") {
+                     send(context, .authLogin, expecting: .authBegin)
+@@ -100,6 +103,15 @@
+             guard require([334]) else { return }; send(context, .authPassword(server.password), expecting: .password)
+         case .password:
+             guard require([235]) else { return }; send(context, .mailFrom(email.sender), expecting: .mailFrom)
++        case .oauth:
++            if code == 334 { send(context, .authOAuthErrorEnd, expecting: .oauthError) }
++            else {
++                guard require([235]) else { return }
++                send(context, .mailFrom(email.sender), expecting: .mailFrom)
++            }
++        case .oauthError:
++            // Even a later 235 cannot turn a rejected exchange into a send.
++            fail(context, SMTPError.authenticationRequired)
+         case .mailFrom:
+             guard require([250]) else { return }; send(context, .recipient(recipients[0]), expecting: .recipient)
+         case .recipient:

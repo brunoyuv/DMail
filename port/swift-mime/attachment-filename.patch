@@ -1,0 +1,41 @@
+--- a/Sources/MIME/ContentDisposition.swift
++++ b/Sources/MIME/ContentDisposition.swift
+@@ -10,7 +10,7 @@
+ public enum ContentDisposition: CustomStringConvertible, Equatable, RawRepresentable, Sendable {
+     public struct File: CustomStringConvertible, RawRepresentable, Sendable {
+ 
+-        /// Suggested attachment filename and extension; expressed in ASCII characters
++        /// Suggested attachment filename and extension; decoded Unicode for display and local file APIs
+         public let filename: String?
+         public let creationDate: Date?
+         public let modificationDate: Date?
+@@ -22,9 +22,9 @@
+         /// Decode `File`from `ContentDisposition` parameter string.
+         public init(_ description: String) {
+             lazy var formatter: RFC822DateFormatter = RFC822DateFormatter()
+-            let parameters: [String: String] = description.parameters
++            let parameters: [String: String] = AttachmentFilename.parameters(description)
+             self.init(
+-                filename: parameters[.filename],
++                filename: AttachmentFilename.value(parameters, key: .filename),
+                 creationDate: try? formatter.date(from: parameters[.creationDate] ?? ""),
+                 modificationDate: try? formatter.date(from: parameters[.modificationDate] ?? ""),
+                 readDate: try? formatter.date(from: parameters[.readDate] ?? ""),
+@@ -39,7 +39,7 @@
+             readDate: Date? = nil,
+             size: Int? = nil
+         ) {
+-            self.filename = !(filename?.ascii ?? "").isEmpty ? filename : nil  // Prevent empty name
++            self.filename = !(filename ?? "").isEmpty ? filename : nil  // Prevent empty name without rejecting Unicode
+             self.creationDate = creationDate
+             self.modificationDate = modificationDate
+             self.readDate = readDate
+@@ -54,7 +54,7 @@
+             lazy var formatter: RFC822DateFormatter = RFC822DateFormatter()
+             var rawValue: [String] = []
+             if let filename {
+-                rawValue.append("\(String.filename)=\"\(filename)\"")
++                rawValue.append(AttachmentFilename.serialized(filename))
+             }
+             if let creationDate {
+                 rawValue.append("\(String.creationDate)=\"\(formatter.string(from: creationDate))\"")

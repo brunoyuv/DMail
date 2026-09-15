@@ -1,0 +1,81 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+source "$ROOT/scripts/swift-target-env"
+MODE="${1:-build}"
+case "$MODE" in build|device) ;; *) echo 'Usage: scripts/test-native-email [build|device]' >&2; exit 1;; esac
+./scripts/prepare-swift-probe
+NATIVE="$ROOT/.tools/command-line-tools/sdk/default/openharmony/native"
+SDK="$SWIFT_TARGET_SDK"
+OUT="$ROOT/.tools/swift-probe/native-email${SWIFT_BUILD_SUFFIX}"
+mkdir -p "$OUT"
+SWIFT_FLAGS=(-target ${SWIFT_TARGET} -sdk "$NATIVE/sysroot"
+  -resource-dir "$SDK/lib/swift" -I "$SDK/lib/swift/ohos"
+  -I "$SDK/lib/swift/musl/SwiftMusl" -I "$SDK/lib/swift/musl/${SWIFT_CPU}"
+  -module-cache-path "$OUT/cache" -parse-as-library -O)
+.tools/swift/usr/bin/swiftc "${SWIFT_FLAGS[@]}" -module-name EmailAddress \
+  -module-link-name ThunderbirdCore -emit-object -emit-module \
+  -emit-module-path "$OUT/EmailAddress.swiftmodule" \
+  "$ROOT"/upstream/thunderbird-ios/Core/Sources/EmailAddress/*.swift \
+  -whole-module-optimization -o "$OUT/EmailAddress.o"
+.tools/swift/usr/bin/swiftc "${SWIFT_FLAGS[@]}" -I "$OUT" -emit-object \
+  port/swift-probe/native-email-probe.swift -o "$OUT/probe.o"
+.tools/swift/usr/bin/swiftc "${SWIFT_FLAGS[@]}" -I "$OUT" -emit-object \
+  port/swift-bridge/EmailAddressBridge.swift -o "$OUT/bridge.o"
+"$NATIVE/llvm/bin/clang" -target ${SWIFT_CLANG_TARGET} --sysroot="$NATIVE/sysroot" \
+  -shared "$OUT/EmailAddress.o" "$OUT/probe.o" "$OUT/bridge.o" \
+  "$SDK/lib/swift/musl/${SWIFT_CPU}/swiftrt.o" \
+  -L "$SDK/lib/swift/musl" -L "$SDK/lib/swift/musl/${SWIFT_CPU}" \
+  -L "$SDK/lib/swift/ohos" -L "$SDK/lib" \
+  -lFoundation -lFoundationEssentials -lFoundationInternationalization -l_FoundationICU \
+  -lswiftCore -lswift_Concurrency -lswiftMusl -lswiftSynchronization \
+  -lswift_StringProcessing -lswift_RegexParser -lswiftDispatch \
+  -ldispatch -lBlocksRuntime -lfts -lxml2 -Wl,--no-undefined \
+  -Wl,-soname,libThunderbirdCore.so -Wl,-rpath,'$ORIGIN' -o "$OUT/libThunderbirdCore.so"
+"$NATIVE/llvm/bin/clang" -target ${SWIFT_CLANG_TARGET} --sysroot="$NATIVE/sysroot" \
+  port/swift-probe/native-email-probe.c -L "$OUT" -lThunderbirdCore \
+  -Wl,-rpath,'$ORIGIN' -o "$OUT/probe"
+python3 - <<'PY'
+from pathlib import Path
+import hashlib, json, shutil, os
+sdk = Path(os.environ['SWIFT_TARGET_SDK'])
+cpu = os.environ['SWIFT_CPU']
+out = Path('.tools/swift-probe/native-email'+os.environ['SWIFT_BUILD_SUFFIX'])/'deploy'
+out.mkdir(exist_ok=True)
+files = []
+for name in ('Foundation','FoundationEssentials','FoundationInternationalization','swiftDispatch','dispatch','BlocksRuntime'):
+    files.append((sdk / f'lib/swift/musl/lib{name}.so', f'lib{name}.so'))
+for name in ('swiftCore','swift_Concurrency','swiftMusl','swiftSynchronization','swift_StringProcessing','swift_RegexParser'):
+    files.append((sdk / f'lib/swift/musl/{cpu}/lib{name}.so', f'lib{name}.so'))
+files += [(sdk / 'lib/swift/ohos/lib_FoundationICU.so', 'lib_FoundationICU.so'),
+          (sdk / 'lib/libfts.so', 'libfts.so'), (sdk / 'lib/libxml2.so.16', 'libxml2.so.16'),
+          (out.parent / 'libThunderbirdCore.so', 'libThunderbirdCore.so'), (out.parent / 'probe', 'probe')]
+for source, name in files:
+    shutil.copy2(source, out / name)
+sources = Path('upstream/thunderbird-ios/Core/Sources/EmailAddress')
+manifest = {
+    'target': os.environ['SWIFT_TARGET'],
+    'upstreamRevision': '61c78d9ebe39ac5b61f31fce371bdfe8c001f7bf',
+    'sourcePatches': [],
+    'sourceFiles': {p.name: hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(sources.glob('*.swift'))},
+    'payload': {name: hashlib.sha256((out / name).read_bytes()).hexdigest() for _, name in files},
+}
+(out.parent / 'provenance.json').write_text(json.dumps(manifest, indent=2) + '\n')
+PY
+if [[ "$MODE" == device ]]; then
+  HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+  if [[ "$SWIFT_CPU" == aarch64 && -z "${HDC_TARGET:-}" ]]; then
+    echo 'Set HDC_TARGET to an authorized ARM device.' >&2; exit 2
+  fi
+  TARGET="${HDC_TARGET:-127.0.0.1:5555}"
+  [[ "$("$HDC" -t "$TARGET" shell uname -m | tr -d '\r\n')" == "$SWIFT_CPU" ]] || { echo 'Device CPU differs from build.' >&2; exit 1; }
+  DEST=/data/local/tmp/thunderbird-native-core${SWIFT_BUILD_SUFFIX}
+  "$HDC" -t "$TARGET" shell mkdir -p "$DEST"
+  for file in "$OUT"/deploy/*; do
+    "$HDC" -t "$TARGET" file send "$file" "$DEST/$(basename "$file")"
+  done
+  "$HDC" -t "$TARGET" shell chmod 755 "$DEST/probe"
+  "$HDC" -t "$TARGET" shell "$DEST/probe" | tee "$OUT/device.log"
+  grep -qx 'THUNDERBIRD_NATIVE_EMAIL_ADDRESS_OK' "$OUT/device.log"
+fi

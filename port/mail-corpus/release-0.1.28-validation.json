@@ -1,0 +1,95 @@
+{
+  "version": "0.1.28",
+  "scope": "HTML scan progress only; extra pacing and IDLE changes deferred by user",
+  "javascript": {
+    "tests": 654,
+    "passed": 654,
+    "files": 60
+  },
+  "pythonTests": 32,
+  "swift": {
+    "mimeAndAccountBodyTests": 112,
+    "newRegressionTests": 4,
+    "watchdogSeconds": 30
+  },
+  "htmlScanFindings": [
+    "InlineImages attribute matching restarted within failed long names.",
+    "InlineImages token matching retried an unfinished suffix at each opening tag.",
+    "InlineImages CSS URL matching retried nested unfinished calls.",
+    "ImapAccountCore bodyPreview raw-block regex retried unfinished opening tags."
+  ],
+  "optimizedSameInputMilliseconds": {
+    "failedAttributeName": {
+      "before": 187.751,
+      "after": 1.682
+    },
+    "unfinishedOpeningTags": {
+      "before": 1666.877,
+      "after": 4.721
+    },
+    "unfinishedCSSCalls": {
+      "before": 724.772,
+      "after": 3.174
+    },
+    "previewUnfinishedOpeningTags": {
+      "before": 591.429,
+      "after": 2.989
+    }
+  },
+  "additionalReview": {
+    "semanticProbes": 10,
+    "unicodeProbes": 15,
+    "unicodeMaxCharacters": 400000,
+    "findings": "No blocking regression found; current-source semantic and progress checks, not a full historical differential"
+  },
+  "artifacts": {
+    "version": "0.1.28",
+    "hapSha256": "e0b279a85571884af0ea65eed245a2a87a74e46d5be4a4360cf55ceadaeb4624",
+    "native": {
+      "aarch64": "ad670ec17672cf2f315e38e22ced525bd56968ac583edc7b8d22444196c5f11c",
+      "x86_64": "6042e810589d5c0a6a0694bbedd494dd3245d5456557b9c1916853c9b77f421e"
+    },
+    "mimePatchSha256": "16cfdeea75c3e8ad723566f2d5d3463e4168ec1b2a45bd7871a9cf2381e00223"
+  },
+  "sourceHashes": {
+    "port/swift-accountbody/InlineImages.swift": "0cfcb6a4e2131bda53a6bc5772104bc1093d81e2307a707605faf54e0a15c06d",
+    "port/swift-accountbody/InlineImagesTests.swift": "3b04c9fb4c8fe5fee991106b58610360aecdb96b34122cd10a4b97df03c34f37",
+    "port/swift-imap/ImapAccountCore.swift": "6ecaddd2bc591118a86334a227fe06ca7e3e7860484608581002cdf62642a688",
+    "port/swift-mime/html-entities.patch": "16cfdeea75c3e8ad723566f2d5d3463e4168ec1b2a45bd7871a9cf2381e00223"
+  },
+  "nativeArchitecturesRebuilt": [
+    "aarch64",
+    "x86_64"
+  ],
+  "hapBuildsPassed": [
+    "signed-arm",
+    "x86"
+  ],
+  "installedDevices": [
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "versionCode": 100028,
+      "versionName": "0.1.28",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "e0b279a85571884af0ea65eed245a2a87a74e46d5be4a4360cf55ceadaeb4624"
+    },
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "versionCode": 100028,
+      "versionName": "0.1.28",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "e0b279a85571884af0ea65eed245a2a87a74e46d5be4a4360cf55ceadaeb4624"
+    }
+  ],
+  "emulatorStarted": false,
+  "uiSourcesIdenticalTo027": true,
+  "limits": [
+    "Synthetic host timings do not measure per-device energy or establish the cause of every real slow message.",
+    "No production UI, mail contents, provider tests, network capture, or production launch by tools.",
+    "Actual progressive image rendering remains user-operated device acceptance; .28 changes only native HTML scanning."
+  ]
+}

@@ -1,0 +1,155 @@
+{
+  "version": "0.1.14",
+  "versionCode": 100014,
+  "bundleName": "org.thunderbird.harmony.dev",
+  "status": "installed-and-verified",
+  "hostJavaScript": {
+    "tests": 337,
+    "pass": 337,
+    "fail": 0,
+    "skipped": 0
+  },
+  "hostPython": {
+    "tests": 9,
+    "pass": 9
+  },
+  "nativePictures": {
+    "tests": 1,
+    "passed": 1,
+    "scope": "Actual HtmlMail fitContent reader within Scroll; fresh HTTP200 PNG and200 replacement served as application/octet-stream pass NetworkKit ArrayBuffer handling, normalize to persisted image/png, and render natively; pending retry coalesces; two HTTP503 failures retain replacement bytes, timestamp, consent and visible colors. Four loopback requests only.",
+    "limits": "Synthetic main-HAP fixture and loopback only; no production accounts or external servers.",
+    "screenshots": {
+      "fresh": {
+        "originalColorPixels": [
+          27816,
+          27633,
+          27633
+        ],
+        "sha256": "a90b79833759f49bfdbab4f1b5e5b550b1a1da6db639b0bcda27b0f93febc3a0"
+      },
+      "replacement": {
+        "originalColorPixels": [
+          37149,
+          36966,
+          37149
+        ],
+        "sha256": "95e574a02c674fff8876c20b42fc9eb9cb5c92e776806fbef418de61f077727f"
+      },
+      "failed-refresh": {
+        "originalColorPixels": [
+          37149,
+          36966,
+          37149
+        ],
+        "sha256": "f9495cce9f98ac887bf9e57757830fd43805d9c47b3b3d935560fa644e487059"
+      },
+      "retried": {
+        "originalColorPixels": [
+          37149,
+          36966,
+          37149
+        ],
+        "sha256": "f9495cce9f98ac887bf9e57757830fd43805d9c47b3b3d935560fa644e487059"
+      }
+    },
+    "logSha256": "b819cc62a06d98d4e61cc7090316a1d4eca2bf102b5c071372d328e1e59e8569",
+    "durationMs": 16431
+  },
+  "nativeTransport": {
+    "tests": 1,
+    "passed": 1,
+    "scope": "Actual PictureCache on native NetworkKit:302 text/html to200 image/png with changed Content-Type case in both directions; correct PNG JPEG GIF WebP bodies persist; PNG served as image/jpeg canonicalizes to image/png; cached rereads do not request; text/plain PNG preserves current rejection policy; invalid image-labelled HTML refresh keeps good bytes and timestamp. Eleven loopback HTTP requests.",
+    "limits": "Synthetic bytes in isolated emulator app, no production accounts, external resources or physical UI.",
+    "logSha256": "d01c7e7424a898d68f4a07d9715357dbd4269cecddc028adf3ab3a4df4775359",
+    "durationMs": 5693
+  },
+  "nativeSizing": {
+    "tests": 1,
+    "passed": 1,
+    "logSha256": "a57f564149695f490dd9f6859d10e8e90bf141cca238213a3c7fee737798ef34",
+    "scope": "Actual HtmlMail comparison of failed dimension attributes, inline styles and visible images; inline-styled 1x1 failure stays tiny when authored height is respected; valid synthetic PNG remains visible.",
+    "limitations": "Height-only HTML attributes without width still show a failed-image indicator. Screenshot alone cannot establish the supplied email image dimensions."
+  },
+  "nativeInbox": [
+    {
+      "tests": 1,
+      "passed": 1,
+      "screen": "pura-main",
+      "scope": "Two held synthetic Inbox pages during native pull-to-refresh; retained80rows, no extra app spinners, stable header geometry; search hidden away and56vp at top; scrolling and cached reader open while second page remains pending, late response preserves reader/cache; tablet splitreader when wide; no body, real mail or provider requests.",
+      "visualEvidence": "pending, after, scrolled, returned, held-scrolled, held-reader and released-reader screenshots; split screenshot on tablet. Native Refresh internal spinner node count is logged where exposed.",
+      "logSha256": "fad67c4ab9eb9a6b4268f75ab73056fc542437e01870cd672d575d71a95d1e82",
+      "durationMs": 41475
+    },
+    {
+      "tests": 1,
+      "passed": 1,
+      "screen": "matepad-landscape",
+      "scope": "Two held synthetic Inbox pages during native pull-to-refresh; retained80rows, no extra app spinners, stable header geometry; search hidden away and56vp at top; scrolling and cached reader open while second page remains pending, late response preserves reader/cache; tablet splitreader when wide; no body, real mail or provider requests.",
+      "visualEvidence": "pending, after, scrolled, returned, held-scrolled, held-reader and released-reader screenshots; split screenshot on tablet. Native Refresh internal spinner node count is logged where exposed.",
+      "logSha256": "3368c72eacf942e55d3a3cf2f639cdaabf589f0a05b0c29264b89264e5c4580e",
+      "durationMs": 38708
+    }
+  ],
+  "emulator": {
+    "status": "stopped",
+    "nativeProcessAbsenceVerified": true
+  },
+  "builds": {
+    "productionX86Sha256": "8678829375f394d02794f60e2c58f4a6ab2c934a95605c5d373f859ff2783748",
+    "signedArmSha256": "45b2e48c3d4822a258eb42d6e0aa2927b2c82b03ee19632b21b8a11ef533699f",
+    "isolatedMainSha256": "769891bfd2d9a8e12fe606c84373c44a621a49182ce60d498797d2295a102daa",
+    "isolatedTestSha256": "c2de4c243303b819620041ce618d594bbfc7e48729230b527cf55dc17230dd3f"
+  },
+  "installations": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "versionCode": 100014,
+      "versionName": "0.1.14",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "45b2e48c3d4822a258eb42d6e0aa2927b2c82b03ee19632b21b8a11ef533699f"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "versionCode": 100014,
+      "versionName": "0.1.14",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "45b2e48c3d4822a258eb42d6e0aa2927b2c82b03ee19632b21b8a11ef533699f"
+    }
+  ],
+  "sourceParity": {
+    "signedArmVerified": true,
+    "fiveChangedUiAndPictureFilesMatchIsolatedAndSignedStaging": true,
+    "rendererDiagnosticsEnabled": false
+  },
+  "evidence": {
+    "hostLogSha256": "c2b2b478c7e92819aa1a506a36728ddb3082546a63ca1a51a71b90e3d53db6bf",
+    "signedBuildLogSha256": "abf9ac280b34734749f8d9fe69360e7a7d04ed6dc0d481af83847215cf4730d9"
+  },
+  "toolchain": {
+    "commandLineTools": "26.0.0.821",
+    "hvigor": "6.26.4",
+    "compileSdk": "26.0.0.105",
+    "targetApi": 22,
+    "minimumApi": 22,
+    "swiftNativeApi": 22
+  },
+  "privacy": {
+    "automatedTestsSyntheticOnly": true,
+    "mailboxAccessed": false,
+    "productionLaunched": false,
+    "realMessagesSent": false,
+    "userSuppliedScreenshotKeptPrivate": true
+  },
+  "limits": [
+    "Heat was reported but not measured or causally attributed.",
+    "The supplied screenshot does not identify the missing resource or exact cause.",
+    "Image signatures do not fully decode data; failure summaries cover transport/cache rather than every ArkWeb render failure.",
+    "Explicit non-image MIME remains blocked.",
+    "The transport and sizing gates passed before the final alias-validation and generated-origin guards; final host tests cover aliases and final native picture gate verifies generated-origin suppression.",
+    "AppGallery package was not rebuilt."
+  ]
+}

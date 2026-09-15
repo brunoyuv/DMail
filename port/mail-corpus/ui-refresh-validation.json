@@ -1,0 +1,220 @@
+{
+  "date": "2026-09-14",
+  "scope": "UI and HTML presentation refinement; design prepared before implementation",
+  "design": "docs/ui-refresh-plan.md",
+  "preview": "docs/ui-layout.html",
+  "hostTests": {
+    "command": "scripts/test",
+    "passed": 74,
+    "failed": 0,
+    "htmlHelperTests": 9,
+    "evidence": "Completed tool output, session 91729; no separate log retained."
+  },
+  "layoutTests": [
+    {
+      "screen": {
+        "width": 980,
+        "height": 980,
+        "density": 480,
+        "physicalWidth": 64,
+        "physicalHeight": 64
+      },
+      "kind": "layout",
+      "cases": 3,
+      "nativeCoreSHA256": "e4301a376a37a43e15de97821ff0ef7d9c54e17bbfed334b4d16391eac392cd0",
+      "screenshots": {
+        "compose.png": "2ab6cc467acf34e3f834deddfb6dc01c75686b284c1877a0050cfc9cffe143ea",
+        "117.png": "387969bc0828a567a8fc2ba77dfa6ae49cd5545ac51cf263ce94acfc397c9a99",
+        "compose-expanded.png": "1ed89e3c43d75154dde50f4c7472b307f8d1f93280d5ace688f63531c6964f7d",
+        "118.png": "f031d1dfe28a3a745833b2dc22cf2abc20809c975fd202283d58f3f39dcc42c1",
+        "118-body.png": "53b3b2aaad681231e1f967d25dc4368178d7b3c5d571d81e43bdc56736550067",
+        "112-body.png": "eeff10abfe71531d06da3853f912a985e7944d30682ed284d655ec14d8b88e17",
+        "112.png": "9c8c7fa07294d5b1c00a49c3b335b77054d151c67a1dea83b87df88899313aaa",
+        "117-body.png": "5e4aec4ed35a2f6874e338069e9f8fb6a685a7dbe4ee7ce7fde8d14828cd5189",
+        "inbox.png": "fa2fb49eb8b4b1d3ab681b77f4cdd00921c1f13b8f020bd436521f165b9f149b",
+        "117-end.png": "860cc601b50521bba2c0a020bfe3da524b9c4df860211f194162639372d806ef"
+      },
+      "profile": "pura-cover",
+      "passed": true,
+      "evidenceDirectory": ".tools/mail-ui/pura-cover-layout",
+      "finalHtmlRefreshAndCache": true
+    },
+    {
+      "screen": {
+        "width": 1320,
+        "height": 2120,
+        "density": 408,
+        "physicalWidth": 84,
+        "physicalHeight": 134
+      },
+      "kind": "layout",
+      "cases": 3,
+      "nativeCoreSHA256": "e4301a376a37a43e15de97821ff0ef7d9c54e17bbfed334b4d16391eac392cd0",
+      "screenshots": {
+        "compose.png": "4596a17b7418f3081ac4d3609f9b31904952a21df249a90dde327288969a655a",
+        "117.png": "7658b72f449aa1c7ce28c97c1824818cc43e5eb2bb08da23418a7c5950cc88ed",
+        "compose-expanded.png": "e22501fc7997effcb86bdfe1a956bc70276478e77c1d00d1e69d111fbbce97d4",
+        "118.png": "8c183cc24ed06f5e2744559b2bdd8f7230d06499f83a6681e39aade7f7712503",
+        "118-body.png": "8c183cc24ed06f5e2744559b2bdd8f7230d06499f83a6681e39aade7f7712503",
+        "112-body.png": "655bb22348cdf0ad7e509a797d7c7422586b4867ccf096ff79720b2cb0249d07",
+        "112.png": "655bb22348cdf0ad7e509a797d7c7422586b4867ccf096ff79720b2cb0249d07",
+        "117-body.png": "7658b72f449aa1c7ce28c97c1824818cc43e5eb2bb08da23418a7c5950cc88ed",
+        "inbox.png": "b13284e4e9b704428eb4a53808e09481c6b8a6962c2adf2a35e70d6213d2a435",
+        "117-end.png": "d063d5be4963edeb061b40baae76a0ecc113aab2500156f35f90a4d412afccb6"
+      },
+      "profile": "pura-main",
+      "passed": true,
+      "evidenceDirectory": ".tools/mail-ui/pura-main-layout",
+      "finalHtmlRefreshAndCache": false
+    },
+    {
+      "screen": {
+        "width": 1840,
+        "height": 2800,
+        "density": 360,
+        "physicalWidth": 170,
+        "physicalHeight": 259
+      },
+      "kind": "layout",
+      "cases": 3,
+      "nativeCoreSHA256": "e4301a376a37a43e15de97821ff0ef7d9c54e17bbfed334b4d16391eac392cd0",
+      "screenshots": {
+        "compose.png": "9d5c4889e3f8d104b25e62c7196cf78bee97a98dcb610a8ba36887acc13d252b",
+        "117.png": "dc3eb84dcd6844c03859890bb8a55bbe6d10b8d7bc0655bbf3dfb96d527af054",
+        "compose-expanded.png": "f858707b465d81bf5021bb6d805d8811b72c46d9604fcc4eee7714d26aad7199",
+        "118.png": "5828a92079ba0cb9750550b600f3280b263fa4e6efff2ec34a3232a4f5dec24f",
+        "118-body.png": "5828a92079ba0cb9750550b600f3280b263fa4e6efff2ec34a3232a4f5dec24f",
+        "112-body.png": "85f8d50f454080b2cc38236a054fee65ccdc6d9b57e2054bfd3cf5671d44ee2a",
+        "112.png": "85f8d50f454080b2cc38236a054fee65ccdc6d9b57e2054bfd3cf5671d44ee2a",
+        "117-body.png": "dc3eb84dcd6844c03859890bb8a55bbe6d10b8d7bc0655bbf3dfb96d527af054",
+        "inbox.png": "dcce6154e47e24270ce557e9123f3230a4d23a54febd7fc2e5457cb3e31818e2",
+        "117-end.png": "49625d6c40f6e5f2d0d1154364e723b5ede30d63280134177a4400270728ce60"
+      },
+      "profile": "matepad-portrait",
+      "passed": true,
+      "evidenceDirectory": ".tools/mail-ui/matepad-portrait-layout",
+      "finalHtmlRefreshAndCache": false
+    },
+    {
+      "screen": {
+        "width": 2800,
+        "height": 1840,
+        "density": 360,
+        "physicalWidth": 259,
+        "physicalHeight": 170
+      },
+      "kind": "layout",
+      "cases": 3,
+      "nativeCoreSHA256": "e4301a376a37a43e15de97821ff0ef7d9c54e17bbfed334b4d16391eac392cd0",
+      "screenshots": {
+        "compose.png": "1ca1ee56fd4b64297c467dde4ef4a6e81f518ea9281b6060958e0987571a65b5",
+        "117.png": "cd94c2529e183292ca5163eee1235e1f8797e62a02a26072163a97bc1ad5ead7",
+        "compose-expanded.png": "fde09faab5056f8ad781ca6f7c99a62e2da2e6c391773fed1b48042530c3161e",
+        "118.png": "bda0c167050035c9af50c5fb2ed19ffe45e3a040636628e8e8e2d1b9591a74fa",
+        "118-body.png": "bda0c167050035c9af50c5fb2ed19ffe45e3a040636628e8e8e2d1b9591a74fa",
+        "112-body.png": "abe7574312f2609232fb0a971a4947b8127d141160b3c0a585554753399d377c",
+        "112.png": "abe7574312f2609232fb0a971a4947b8127d141160b3c0a585554753399d377c",
+        "117-body.png": "cd94c2529e183292ca5163eee1235e1f8797e62a02a26072163a97bc1ad5ead7",
+        "inbox.png": "60f8e87fa0cac61ca7b16393aa521d87e45a9f0746b5c7df4a0486dd9622e267",
+        "117-end.png": "f210d14fa09146428c5faa476f37437889b0f43dad03448604c7884bd5e864dd"
+      },
+      "profile": "matepad-landscape",
+      "passed": true,
+      "evidenceDirectory": ".tools/mail-ui/matepad-landscape-layout",
+      "finalHtmlRefreshAndCache": false
+    }
+  ],
+  "layoutTestNote": "All four sizes passed with the final layout styling. Final HTML refresh/cache behavior was subsequently verified by the full interaction flow and repeated cover check. One cover retry encountered emulator Asset cryptography error 24000009 before UI setup; the next bounded run passed.",
+  "interactionTest": {
+    "command": "env EMULATOR_SCREEN=pura-main scripts/test-emulator-mail-ui",
+    "passed": true,
+    "scenarios": 1,
+    "durationMs": 71986,
+    "syntheticSmtpDeliveries": 3,
+    "consentedImageRequests": 3,
+    "forbiddenResourceRequests": 0,
+    "fixtureViolations": 0,
+    "identicalHtmlConsentResetPassed": true,
+    "allSmtpSessionsClosed": true,
+    "logSHA256": "cb36aad2bf21eb092cba775560c88f356226d9dbb4c87a613370475d66f53b26",
+    "statsSHA256": "1f7017d472e5ade5b6e6db85130f62dbe324cf98c9bc70aa2a6b82fe1295f9ec"
+  },
+  "builds": {
+    "productionX86": "passed",
+    "fixtureDefaultAndOhosTest": "passed",
+    "signedArm": "passed",
+    "signedArmVerification": {
+      "target": "aarch64-unknown-linux-ohos",
+      "hap": ".tools/device-app/entry/build/default/outputs/default/entry-default-signed.hap",
+      "hapSha256": "59ea21fa70ecc4390f53810125f2ab7b6d29ac10251f5338305c00985e031f62",
+      "signedArtifact": true,
+      "deviceExecutionVerified": false,
+      "libraries": {
+        "libBlocksRuntime.so": "3db890900a413f4d996f0b476b3eeed8caf68cfbe35004c2a754763ad8b5ae95",
+        "libFoundation.so": "df1ed03407516f0c41f3276a92bb54a9d0562f05569c14e3dbd60780a1f355da",
+        "libFoundationEssentials.so": "88beb0c95755d135eabb0a26ca87afe9a57f2ce557b565c387bb262670e44fba",
+        "libFoundationInternationalization.so": "5c31544d1945cb999bcf02c676bf8fbdd78867cb46365397b6e2fdc5dacef62e",
+        "libFoundationNetworking.so": "03b7cf0dc7a05da8cba224e7658569ffce3f9deb58c52ac2edede0fb11cf0e3d",
+        "libFoundationXML.so": "9c780d208c79f0dccea52fc0154cae4d163810bdd9edfea7f21100abf63a7c8d",
+        "libThunderbirdCore.so": "c86dbfc3a5ac286289a9c1657ab937f28a816e71431be6de8d6e4718a98cc3d1",
+        "lib_FoundationICU.so": "a7149cfe358dbea269b75d924f7acbef4445de377a8c0be624d1c5d816b2d2de",
+        "libc++_shared.so": "cf2ea887af365557f4ad258c62631a4f92f902b4b79203a2185dba10efe19e62",
+        "libcrypto.so.3": "583023538ebcbd8a04fad69dc214b6c15bacf0d431cdb879e26392250d64abbe",
+        "libcurl.so.4": "d99cbf616a79220f6f18151ae54fd630fbf58c6adfe8c3d05e54b3d61fb79931",
+        "libdispatch.so": "d7b7304ca6152b46c5ecbb746cf54da6532ea4d11fcdb5bee7ef536a3293f832",
+        "libfts.so": "b3109ef91e6119c47adf95a09ca5ddf6f54348f64f744508e852709a6ebe51da",
+        "libssl.so.3": "3b884cefcc97def6282a8e7374f8fcbc138b5faa6e9b2d5e6e9bff4d5508a531",
+        "libswiftCore.so": "cb78733db77fbc742633882f8f8d8dba585c41207dd05aced6a24ce4579374fd",
+        "libswiftDispatch.so": "53b2248f5e9e9fd14991c0fe70f418b2767701bbf48e104e05242e94803241a7",
+        "libswiftMusl.so": "d959b823a185661890e57a0bb0f2aad631631b9b16dc17825b9a149e5ee423a8",
+        "libswiftSwiftOnoneSupport.so": "422a7cf4c82a2c81d01489cd55cfa90346aeeae950bed1ff7508e94bdfcadb65",
+        "libswiftSynchronization.so": "6f503892b3014820e720930957511f02fb2af83add8644566ea86865db204682",
+        "libswift_Concurrency.so": "45d8f1dcec8b94644a376d18702fbae1d4be145cd1fb7005afa07fd8df489774",
+        "libswift_RegexParser.so": "ca398af367915111c6b0d4c44a01c594651cb2964267a9a23d50813a35996d70",
+        "libswift_StringProcessing.so": "7b60f54ac6181a3772e1b441d8293c857b9cf11dcb3deedb76f0cad18076c777",
+        "libthunderbird.so": "e7bf034a839db5d19a5780b3525671dbf3ac652faf9b7199c58cebcdd4a355a7",
+        "libxml2.so.16": "ed8f17eca668a93794659eb188aba48a68a245c39a5083cda4ccd2bb796b422c"
+      }
+    }
+  },
+  "installation": {
+    "device": "Pura X",
+    "verifiedModel": "VDE-AL00",
+    "transport": "Wi-Fi HDC",
+    "status": "installed successfully",
+    "mode": "in-place upgrade; no uninstall",
+    "productionAppLaunched": false,
+    "physicalUiExecutionVerified": false,
+    "matepad": "not connected; installation pending"
+  },
+  "privacy": {
+    "automatedRealAccountAccess": false,
+    "realMessagesSent": false,
+    "productionScreensCaptured": false,
+    "fixtureMailOnly": true
+  },
+  "emulator": {
+    "boundedSessions": true,
+    "finalStatus": "stopped",
+    "nativeProcessExited": true
+  },
+  "sourcesSHA256": {
+    "harmony/entry/src/main/ets/pages/ConnectedMail.ets": "287239b52a28e75bea2a33a3a8cc6f36d6ff5402f46e7060448d5a8304d2d01e",
+    "harmony/entry/src/main/ets/pages/ComposeMail.ets": "5fd8a0ace364a0e86123cb002e96545f899401ea65f4d338e23d61d89e40ad28",
+    "harmony/entry/src/main/ets/pages/HtmlMail.ets": "2b70ecf777fa6b5f09b529d7429ac0f2c64afa7687fcac262984952049b352ce",
+    "harmony/entry/src/main/ets/mail/html/HtmlDocument.ts": "082f95b690b3152d99d40bf81f13ea6b477396d6bbc40e98662477ebc94fd61c",
+    "harmony/entry/src/main/resources/base/element/string.json": "f6d89fa4c361efff33c743b26aec76e5a9965f9676aa8cca1173ae60fae389e5",
+    "harmony/entry/src/main/resources/zh_CN/element/string.json": "3271209d92e3024db76c3f21cbd6fcb7b35efb58f44474e48b93d1bc993e1068",
+    "port/mail-corpus/Layout.test.ets": "1fb64a6962c07343e98284327446a6d937dbfc704976dc8dfcfc2fdeae9c72fd",
+    "port/swift-smtp/HtmlConsentFixture.ets": "7a9951154ea7442fd19620d6806c1406c6a1e5b31d2b27b22debe1552326d4eb",
+    "port/swift-smtp/MailFeatures.test.ets": "43c8f9270a245b303ced6146b0db254fafb459251abd6ad3963e62cfbe8be5d7",
+    "tests/html-document.test.cjs": "94626cf8cdd1f5a84c0b77f21818d3014f0e84cf7f09fd44d6cfeb1dc5cb32db"
+  },
+  "publishedScreenshotsSHA256": {
+    "docs/screenshots/ui-refresh-cover-compose.png": "1ed89e3c43d75154dde50f4c7472b307f8d1f93280d5ace688f63531c6964f7d",
+    "docs/screenshots/ui-refresh-cover-html.png": "5e4aec4ed35a2f6874e338069e9f8fb6a685a7dbe4ee7ce7fde8d14828cd5189",
+    "docs/screenshots/ui-refresh-main-reader.png": "7658b72f449aa1c7ce28c97c1824818cc43e5eb2bb08da23418a7c5950cc88ed",
+    "docs/screenshots/ui-refresh-tablet-compose.png": "9d5c4889e3f8d104b25e62c7196cf78bee97a98dcb610a8ba36887acc13d252b",
+    "docs/screenshots/ui-refresh-tablet-reader.png": "cd94c2529e183292ca5163eee1235e1f8797e62a02a26072163a97bc1ad5ead7"
+  }
+}

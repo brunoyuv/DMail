@@ -1,0 +1,70 @@
+#!/usr/bin/env bash
+# Bounded MatePad check: isolated synthetic mail, numeric counters, CPU samples.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+: "${HDC_TARGET:?Set the authorized MatePad target}"
+: "${DMAIL_AUTHORIZED_MATEPAD_SERIAL:?Set the verified MatePad serial}"
+[[ "$HDC_TARGET" == "$DMAIL_AUTHORIZED_MATEPAD_SERIAL" ]]
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app-aarch64"
+OUT="$ROOT/.tools/matepad-on-demand-026"
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell param get const.product.model | tr -d '[:space:]')" == MRO-W00 ]]
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == aarch64 ]]
+grep -q 'DEMAND_POWER_RESULT' "$APP/entry/src/ohosTest/ets/test/InboxIdle.test.ets"
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  find "$OUT" -maxdepth 1 -type f -exec mv -t "$PREVIOUS" {} +
+fi
+SAMPLER_PID=''; PERF_PID=''; TEST_PID=''; INSTALLED=false
+cleanup() {
+  local result=$?
+  trap - EXIT
+  if [[ -n "$TEST_PID" ]]; then kill "$TEST_PID" 2>/dev/null || true; wait "$TEST_PID" 2>/dev/null || true; fi
+  # Finite native collectors exit independently even if HDC is interrupted.
+  if [[ -n "$PERF_PID" ]]; then wait "$PERF_PID" || true; fi
+  if [[ -n "$SAMPLER_PID" ]]; then wait "$SAMPLER_PID" || true; fi
+  run_hdc -t "$HDC_TARGET" file recv /data/local/tmp/dmaildemand026.csv "$OUT/counters.csv" >/dev/null 2>&1 || true
+  if [[ -n "$PERF_PID" ]]; then
+    run_hdc -t "$HDC_TARGET" shell hiperf report -i /data/local/tmp/dmaildemand026.data --sort comm,tid,dso,func --limit-percent 0.5 > "$OUT/hiperf-report.txt" 2>&1 || true
+    run_hdc -t "$HDC_TARGET" file recv /data/local/tmp/dmaildemand026.data "$OUT/hiperf.data" >/dev/null 2>&1 || true
+  fi
+  if "$INSTALLED"; then
+    run_hdc -t "$HDC_TARGET" shell aa force-stop org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+    run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-signed.hap"
+INSTALLED=true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-signed.hap"
+# Only the isolated blank page is shown before the test driver's wake/gestures.
+run_hdc -t "$HDC_TARGET" shell aa start -b org.thunderbird.harmony.imaptest -a EntryAbility
+run_hdc -t "$HDC_TARGET" shell rm -f /data/local/tmp/dmaildemand026.csv /data/local/tmp/dmaildemand026.data
+timeout --foreground --kill-after=5s 120s "$HDC" -t "$HDC_TARGET" shell SP_daemon \
+  -N 105 -PKG org.thunderbird.harmony.imaptest -c -g -t -r -f \
+  -OUT /data/local/tmp/dmaildemand026.csv > "$OUT/profiler.log" 2>&1 &
+SAMPLER_PID=$!
+timeout --foreground --kill-after=5s 105s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/InboxIdleRunner \
+  -s timeout 95000 > "$OUT/test.log" 2>&1 &
+TEST_PID=$!
+while kill -0 "$TEST_PID" 2>/dev/null; do
+  if [[ -z "$PERF_PID" ]] && grep -q '^DEMAND_POWER_PHASE scroll start ' "$OUT/test.log"; then
+    # Only the synthetic app, eight seconds and eight MiB maximum. No system-
+    # wide trace, screenshots, navigation capture or real-mail processes.
+    timeout --foreground --kill-after=3s 20s "$HDC" -t "$HDC_TARGET" shell hiperf record \
+      --app org.thunderbird.harmony.imaptest -d 8 -f 99 -s fp --callchain-useronly \
+      --data-limit 8M -o /data/local/tmp/dmaildemand026.data > "$OUT/hiperf.log" 2>&1 &
+    PERF_PID=$!
+  fi
+  sleep 1
+done
+wait "$TEST_PID"; TEST_PID=''
+cat "$OUT/test.log"
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"
+grep -q '^DEMAND_POWER_RESULT ' "$OUT/test.log"

@@ -1,0 +1,112 @@
+--- a/Sources/IMAP/SelectCommand.swift
++++ b/Sources/IMAP/SelectCommand.swift
+@@ -4,6 +4,16 @@
+ 
+ import NIOCore
+ import NIOIMAP
++
++// Preserve selection permissions alongside the existing status aggregation.
++public struct MailboxSelection: Sendable {
++    public var status = MailboxStatus()
++    public var isReadOnly = false
++    public var permanentFlags: [PermanentFlag]? = nil
++    public func mayStore(_ flag: Flag) -> Bool {
++        !isReadOnly && (permanentFlags?.contains(.flag(flag)) ?? true)
++    }
++}
+ 
+ // Select current working mailbox in read/write mode
+ struct SelectCommand: IMAPCommand {
+@@ -14,7 +24,7 @@
+     }
+ 
+     // MARK: IMAPCommand
+-    typealias Result = MailboxStatus
++    typealias Result = MailboxSelection
+     typealias Handler = SelectHandler
+ 
+     var name: String { "select \"\(mailboxName)\"" }
+@@ -29,9 +39,13 @@
+     // MARK: IMAPCommandHandler
+     typealias InboundIn = Response
+     typealias InboundOut = Response
+-    typealias Result = MailboxStatus
++    typealias Result = MailboxSelection
+ 
+-    var status: MailboxStatus = MailboxStatus()
++    var selection = MailboxSelection()
++    var status: MailboxStatus {
++        get { selection.status }
++        set { selection.status = newValue }
++    }
+     var clientBug: String? = nil
+     let promise: EventLoopPromise<Result>
+     let tag: String
+@@ -54,8 +68,10 @@
+             switch taggedResponse.state {
+             case .bad(let text), .no(let text):
+                 promise.fail(IMAPError.commandFailed(text.text))
+-            case .ok:
+-                promise.succeed(status)
++            case .ok(let text):
++                if text.code == .readOnly { selection.isReadOnly = true }
++                if text.code == .readWrite { selection.isReadOnly = false }
++                promise.succeed(selection)
+             }
+         case .untagged(let payload):
+             // Aggregate any `MailboxStatus` elements returned in mail server response
+@@ -64,6 +80,10 @@
+                 switch status {
+                 case .ok(let responseText):
+                     switch responseText.code {
++                    case .permanentFlags(let flags):
++                        selection.permanentFlags = flags
++                    case .readOnly:
++                        selection.isReadOnly = true
+                     case .uidNext(let uid):
+                         self.status.nextUID = uid
+                     case .uidValidity(let uid):
+--- a/Sources/IMAP/ExamineCommand.swift
++++ b/Sources/IMAP/ExamineCommand.swift
+@@ -13,7 +13,7 @@
+     }
+ 
+     // MARK: IMAPCommand
+-    typealias Result = MailboxStatus
++    typealias Result = MailboxSelection
+     typealias Handler = ExamineHandler
+ 
+     var name: String { "examine \"\(mailboxName)\"" }
+--- a/Sources/IMAP/IMAPClient.swift
++++ b/Sources/IMAP/IMAPClient.swift
+@@ -157,13 +157,28 @@
+     /// Select current working mailbox in read/write mode.
+     @discardableResult public func select(mailbox name: MailboxName) async throws -> Mailbox.Status {
+         logger?.info("Selecting mailbox \(name)…")
+-        return try await execute(command: SelectCommand(name))
++        return try await execute(command: SelectCommand(name)).status
++    }
++
++    /// Select without discarding READ-ONLY and PERMANENTFLAGS permissions.
++    public func selectWithPermissions(mailbox name: MailboxName) async throws -> MailboxSelection {
++        try await execute(command: SelectCommand(name))
++    }
++
++    /// Change exactly one supported flag, retaining all unrelated flags.
++    public func setFlag(uid: UID, flag: Flag, enabled: Bool) async throws {
++        guard uid.rawValue > 0, flag == .seen || flag == .flagged else {
++            throw IMAPError.unexpectedResponse("Unsupported flag update")
++        }
++        let identifiers = UIDSet(uid)
++        let flags: StoreFlags = enabled ? .add(silent: true, list: [flag]) : .remove(silent: true, list: [flag])
++        try await execute(command: UIDStoreCommand(identifiers, data: .flags(flags)))
+     }
+ 
+     /// Select a working mailbox in read-only mode.
+     public func examine(mailbox name: MailboxName) async throws -> Mailbox.Status {
+         logger?.info("Examining mailbox \(name)…")
+-        return try await execute(command: ExamineCommand(name))
++        return try await execute(command: ExamineCommand(name)).status
+     }
+ 
+     /// Fetch the current status for a mailbox.

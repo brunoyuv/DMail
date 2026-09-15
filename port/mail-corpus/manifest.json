@@ -1,0 +1,92 @@
+{
+  "repository": "https://github.com/jstedfast/MimeKit",
+  "revision": "d899a2a4cd5161117c6ebdc329152b973620474c",
+  "license": "MIT",
+  "files": {
+    "body.1.txt": {
+      "source": "https://raw.githubusercontent.com/jstedfast/MimeKit/d899a2a4cd5161117c6ebdc329152b973620474c/UnitTests/TestData/messages/body.1.txt",
+      "bytes": 244,
+      "sha256": "cdbb11afcfb58f009c2e80905a6d712a50db111538a25bba249dbf46c9d62a9b"
+    },
+    "body.2.txt": {
+      "source": "https://raw.githubusercontent.com/jstedfast/MimeKit/d899a2a4cd5161117c6ebdc329152b973620474c/UnitTests/TestData/messages/body.2.txt",
+      "bytes": 262,
+      "sha256": "315c9a06edfa040da11e087fc16644d4fa7a14861c427e778874f0d85e5a4a02"
+    },
+    "body.3.txt": {
+      "source": "https://raw.githubusercontent.com/jstedfast/MimeKit/d899a2a4cd5161117c6ebdc329152b973620474c/UnitTests/TestData/messages/body.3.txt",
+      "bytes": 437,
+      "sha256": "78e572df8238e01b3abf9bd27c4894b1e5cdb5c10eea3bcd21c6c7dd12ce5806"
+    },
+    "body.4.txt": {
+      "source": "https://raw.githubusercontent.com/jstedfast/MimeKit/d899a2a4cd5161117c6ebdc329152b973620474c/UnitTests/TestData/messages/body.4.txt",
+      "bytes": 570,
+      "sha256": "798faab85975eb0841f4fbdfb134ad4179a4f57a5fab1759ace5080b210c4e22"
+    },
+    "body.5.txt": {
+      "source": "https://raw.githubusercontent.com/jstedfast/MimeKit/d899a2a4cd5161117c6ebdc329152b973620474c/UnitTests/TestData/messages/body.5.txt",
+      "bytes": 744,
+      "sha256": "9b590a88a8e3765f3bf547f49a343586e19da8e3729b921a5275e1f5039666e2"
+    },
+    "body.6.txt": {
+      "source": "https://raw.githubusercontent.com/jstedfast/MimeKit/d899a2a4cd5161117c6ebdc329152b973620474c/UnitTests/TestData/messages/body.6.txt",
+      "bytes": 973,
+      "sha256": "38766fa53d35e0da0b316f8c666bf60b53c85d99f49f5c324d7d87a02f36750b"
+    },
+    "body.7.txt": {
+      "source": "https://raw.githubusercontent.com/jstedfast/MimeKit/d899a2a4cd5161117c6ebdc329152b973620474c/UnitTests/TestData/messages/body.7.txt",
+      "bytes": 973,
+      "sha256": "8c504630fba6338cb642951a5d4524f186e26bac0c88fe3813a285ba403cd101"
+    },
+    "body.8.txt": {
+      "source": "https://raw.githubusercontent.com/jstedfast/MimeKit/d899a2a4cd5161117c6ebdc329152b973620474c/UnitTests/TestData/messages/body.8.txt",
+      "bytes": 564,
+      "sha256": "4fe70ce667784bbbe6049f816148fbdf5350dbb71e0772c7f95300713b629127"
+    },
+    "body.9.txt": {
+      "source": "https://raw.githubusercontent.com/jstedfast/MimeKit/d899a2a4cd5161117c6ebdc329152b973620474c/UnitTests/TestData/messages/body.9.txt",
+      "bytes": 564,
+      "sha256": "da50275e478fc09d248ee4e5551494c2d8ac47fb23c96851fca296171a7ae478"
+    },
+    "japanese.txt": {
+      "source": "https://raw.githubusercontent.com/jstedfast/MimeKit/d899a2a4cd5161117c6ebdc329152b973620474c/UnitTests/TestData/messages/japanese.txt",
+      "bytes": 565,
+      "sha256": "4cf69e9eb15322bc1df5197d70d5a376a62546753ffff9b57ad782f3c05d65a8"
+    },
+    "simple-multipart.anonymized.eml": {
+      "source": "https://raw.githubusercontent.com/jstedfast/MimeKit/d899a2a4cd5161117c6ebdc329152b973620474c/UnitTests/TestData/messages/simple-multipart.anonymized.eml",
+      "bytes": 863,
+      "sha256": "9cb603aede26bbeb5f44ece48bfdc166b226fa96d17b4522bbbb7c5966d866fa"
+    },
+    "simple-embedded-message.anonymized.eml": {
+      "source": "https://raw.githubusercontent.com/jstedfast/MimeKit/d899a2a4cd5161117c6ebdc329152b973620474c/UnitTests/TestData/messages/simple-embedded-message.anonymized.eml",
+      "bytes": 823,
+      "sha256": "f54bf72d4dc0da807a3fc3afcc16bdc7c7a1a77b27a0244859123168fcf6ca09"
+    },
+    "multipart-related-mhtml.txt": {
+      "source": "https://raw.githubusercontent.com/jstedfast/MimeKit/d899a2a4cd5161117c6ebdc329152b973620474c/UnitTests/TestData/messages/multipart-related-mhtml.txt",
+      "bytes": 2639,
+      "sha256": "ced8360b4c4d53720ee1bc6345e4fca2f7699c6b1a0cba6f27ec34f6c2a6382f"
+    },
+    "rfc2060.txt": {
+      "source": "https://raw.githubusercontent.com/jstedfast/MimeKit/d899a2a4cd5161117c6ebdc329152b973620474c/UnitTests/TestData/messages/rfc2060.txt",
+      "bytes": 1262,
+      "sha256": "290896f347c16b1551e92b52f1ea8639d652da654cb59128e28c0e975e406029"
+    },
+    "empty-multipart.txt": {
+      "source": "https://raw.githubusercontent.com/jstedfast/MimeKit/d899a2a4cd5161117c6ebdc329152b973620474c/UnitTests/TestData/messages/empty-multipart.txt",
+      "bytes": 693,
+      "sha256": "075b14b04c98f9b9d81370ca6a4cc73491ecf18ae374e5a637c7dbb28c115c6f"
+    },
+    "delivery-status.anonymized.eml": {
+      "source": "https://raw.githubusercontent.com/jstedfast/MimeKit/d899a2a4cd5161117c6ebdc329152b973620474c/UnitTests/TestData/messages/delivery-status.anonymized.eml",
+      "bytes": 2391,
+      "sha256": "357efa550e354d725b8daee79309d29d827b57e28ed7b8aafafdf060f1e2d925"
+    },
+    "missing-subtype.txt": {
+      "source": "https://raw.githubusercontent.com/jstedfast/MimeKit/d899a2a4cd5161117c6ebdc329152b973620474c/UnitTests/TestData/messages/missing-subtype.txt",
+      "bytes": 256,
+      "sha256": "5226395ab60ce2f9dfeed86695d114d3219bd5054ed689b61623b5224a871929"
+    }
+  }
+}

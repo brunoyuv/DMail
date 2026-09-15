@@ -1,0 +1,29 @@
+#!/usr/bin/env python3
+"""Stage hash-verified Thunderbird discovery models and recorded adaptations."""
+from pathlib import Path
+import hashlib,json,shutil,subprocess
+root=Path(__file__).resolve().parent.parent
+up=root/'upstream/thunderbird-ios'
+manifest=json.loads((root/'port/swift-autoconfiguration/upstream-files.json').read_text())
+assert subprocess.check_output(['git','-C',str(up),'rev-parse','HEAD'],text=True).strip()==manifest['revision']
+package=root/'.tools/swift-probe/autoconfiguration/package'
+for rel,expected in manifest['files'].items():
+    source=up/rel
+    assert hashlib.sha256(source.read_bytes()).hexdigest()==expected,rel
+    dest=package/rel.removeprefix('Core/');dest.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(source,dest)
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)],input=(root/'port/swift-autoconfiguration/harmonyos.patch').read_text(),text=True,check=True)
+shutil.copy2(root/'port/swift-autoconfiguration/Package.swift',package/'Package.swift')
+shutil.copytree(root/'port/swift-autoconfiguration/CAutoconfigCrypto',package/'Sources/CAutoconfigCrypto',dirs_exist_ok=True)
+shutil.copy2(root/'port/swift-autoconfiguration/ConfigDocument.swift',package/'Sources/Autoconfiguration/ConfigDocument.swift')
+shutil.copy2(root/'port/swift-autoconfiguration/ConfigCompatibilityTests.swift',package/'Tests/AutoconfigurationTests/ConfigCompatibilityTests.swift')
+print(package)
+
+shutil.copy2(root/'port/swift-autoconfiguration/Discovery.swift',package/'Sources/Autoconfiguration/Discovery.swift')
+shutil.copy2(root/'port/swift-autoconfiguration/BrowserOAuth.swift',package/'Sources/Autoconfiguration/BrowserOAuth.swift')
+shutil.copy2(root/'port/swift-autoconfiguration/BrowserOAuthTests.swift',package/'Tests/AutoconfigurationTests/BrowserOAuthTests.swift')
+shutil.copy2(root/'port/swift-autoconfiguration/OAuthTokenTransferTests.swift',package/'Tests/AutoconfigurationTests/OAuthTokenTransferTests.swift')
+for name in ['MailOAuthProvider.swift','OAuthTokenTransfer.swift','OAuthBridge.swift','GoogleDesktopAuthentication.swift']:
+    shutil.copy2(root/'port/swift-autoconfiguration'/name,package/'Sources/Autoconfiguration'/name)
+# Host tests never load the user's registration secret.
+(package/'Sources/Autoconfiguration/LocalGoogleOAuth.swift').write_text('enum LocalGoogleOAuth { static let registration: GoogleDesktopRegistration? = nil }\n')
+shutil.copy2(root/'port/swift-autoconfiguration/GoogleDesktopAuthenticationTests.swift',package/'Tests/AutoconfigurationTests/GoogleDesktopAuthenticationTests.swift')

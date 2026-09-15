@@ -1,0 +1,9 @@
+{
+  "name": "entry",
+  "version": "0.1.0",
+  "description": "D-Mail native HarmonyOS mail client",
+  "main": "",
+  "author": "",
+  "license": "MPL-2.0",
+  "dependencies": { "libthunderbird.so": "file:./src/main/cpp/types/libthunderbird" }
+}

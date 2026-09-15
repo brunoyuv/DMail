@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Prepared synthetic OAuth validation plus account UI; never real mail login.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+if [[ "${THUNDERBIRD_EMULATOR_TEST:-}" != 1 ]]; then
+  export EMULATOR_SCREEN=pura-main EMULATOR_TEST_SECONDS=240
+  exec "$ROOT/scripts/with-test-emulator" "$0"
+fi
+scripts/test-emulator-oauth
+scripts/test-emulator-oauth-storage
+scripts/test-emulator-mail-oauth
+scripts/test-emulator-discovery pura-main

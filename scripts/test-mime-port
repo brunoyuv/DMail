@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+"$ROOT/scripts/prepare-mime-tests"
+export SWIFTPM_MODULECACHE_OVERRIDE="$ROOT/.tools/swift-probe/mime-port/cache"
+exec "$ROOT/.tools/swift/usr/bin/swift" test --package-path "$ROOT/.tools/swift-probe/mime-port/package" \
+ --cache-path "$ROOT/.tools/swift-probe/mime-port/cache" --config-path "$ROOT/.tools/swift-probe/config" \
+ --security-path "$ROOT/.tools/swift-probe/security" --disable-netrc --disable-sandbox -j 4 "$@"

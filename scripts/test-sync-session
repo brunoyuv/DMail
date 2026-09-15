@@ -1,0 +1,92 @@
+#!/usr/bin/env bash
+# Shipping Swift/NAPI; existing synthetic TLS encoding fixture, no real mail.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+[[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 && "${HDC_TARGET:-}" == 127.0.0.1:5555 ]]
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+NODE="$ROOT/.tools/runtime/node_modules/node/bin/node"
+APP="$ROOT/.tools/imap-test-app"
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" "$@"; }
+[[ "$(run_hdc -t "$HDC_TARGET" shell uname -m | tr -d '[:space:]')" == x86_64 ]]
+[[ -f "$APP/entry/src/ohosTest/ets/test/SyncSession.test.ets" ]]
+if run_hdc fport ls | grep -Eq 'tcp:976[0-5] '; then echo 'IMAP fixture ports are already forwarded.' >&2; exit 1; fi
+if curl --max-time 1 --fail --silent http://127.0.0.1:9760/health >/dev/null; then echo 'IMAP fixture is already running.' >&2; exit 1; fi
+OUT="$ROOT/.tools/emulator-sync-session"
+mkdir -p "$OUT"
+if [[ -f "$OUT/test.log" ]]; then
+  PREVIOUS="$(mktemp -d "$OUT/attempt.XXXXXX")"
+  find "$OUT" -maxdepth 1 -type f -exec mv -t "$PREVIOUS" {} +
+fi
+FIXTURE_PID=''; FORWARDS=(); INSTALLED=false
+cleanup() {
+  local result=$?
+  trap - EXIT
+  if [[ -n "$FIXTURE_PID" ]]; then
+    curl --max-time 2 --fail --silent http://127.0.0.1:9760/stats > "$OUT/final-stats.json" || true
+  fi
+  if "$INSTALLED"; then
+    run_hdc -t "$HDC_TARGET" shell aa force-stop org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+    run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  fi
+  for port in "${FORWARDS[@]}"; do run_hdc -t "$HDC_TARGET" fport rm "tcp:$port" "tcp:$port" >/dev/null 2>&1 || true; done
+  if [[ -n "$FIXTURE_PID" ]]; then kill "$FIXTURE_PID" 2>/dev/null || true; wait "$FIXTURE_PID" 2>/dev/null || true; fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+THUNDERBIRD_IMAP_OAUTH=0 THUNDERBIRD_IMAP_IDLE=0 THUNDERBIRD_MAIL_CORPUS=0 "$NODE" \
+  port/swift-imap/fixture.cjs .tools/imap-test-certs > "$OUT/fixture.log" 2>&1 & FIXTURE_PID=$!
+READY=false
+for ((attempt=0; attempt<30; attempt++)); do
+  kill -0 "$FIXTURE_PID" || { cat "$OUT/fixture.log"; exit 1; }
+  if curl --max-time 1 --fail --silent http://127.0.0.1:9760/health >/dev/null; then READY=true; break; fi
+  sleep 0.1
+done
+"$READY" || { echo 'Synthetic IMAP fixture failed to start.' >&2; exit 1; }
+for port in 9760 9761; do
+  run_hdc -t "$HDC_TARGET" rport "tcp:$port" "tcp:$port" | grep -q 'Forwardport result:OK'
+  FORWARDS+=("$port")
+done
+run_hdc -t "$HDC_TARGET" uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/default/entry-default-unsigned.hap"
+INSTALLED=true
+run_hdc -t "$HDC_TARGET" install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-unsigned.hap"
+run_hdc -t "$HDC_TARGET" shell aa start -b org.thunderbird.harmony.imaptest -a EntryAbility
+timeout --foreground --kill-after=5s 85s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/SyncSessionRunner \
+  -s timeout 75000 | tee "$OUT/test.log"
+grep -q 'Tests run: 2, Failure: 0, Error: 0, Pass: 2, Ignore: 0' "$OUT/test.log"
+grep -q '^SYNC_SESSION_RESULT: 3 ordinary bodies used 3 TLS/auth sessions;' "$OUT/test.log"
+grep -q '^SYNC_FETCH_ASSEMBLY_RESULT:' "$OUT/test.log"
+grep -q '^SYNC_EMPTY_BODY_RESULT:' "$OUT/test.log"
+grep -q '^SYNC_RECOVERY_RESULT:' "$OUT/test.log"
+grep -q '^SYNC_PENDING_REPAIR_RESULT:' "$OUT/test.log"
+curl --max-time 3 --fail --silent http://127.0.0.1:9760/stats > "$OUT/stats.json"
+"$NODE" --no-warnings - "$OUT" <<'JS'
+const fs=require('node:fs'),assert=require('node:assert/strict');
+const out=process.argv[2], stats=JSON.parse(fs.readFileSync(out+'/stats.json','utf8'));
+assert.deepEqual(stats.violations,[]);assert.equal(stats.active,0);
+assert.equal(stats.connections.server,6);assert.equal(stats.sessions.length,6);
+for(const [index,session] of stats.sessions.entries()) {
+  assert.equal(session.mode,index===5?'emptybody':'encoding');assert.equal(session.closed,true);assert.equal(session.violation,undefined);
+  assert.equal(session.commands.filter(command=>command==='LOGIN').length,1);
+  assert.ok(!session.commands.some(command=>['UID STORE','IDLE','AUTHENTICATE'].includes(command)));
+  assert.ok(session.encodingFetches.every(fetch=>fetch.uidFetch));
+}
+const fetched=session=>[...new Set(session.encodingFetches.map(fetch=>fetch.start))].sort((a,b)=>a-b);
+assert.deepEqual(stats.sessions.slice(0,3).map(fetched),[[201],[202],[203]]);
+assert.deepEqual(fetched(stats.sessions[3]),[201,202,203]);
+assert.deepEqual(fetched(stats.sessions[4]),[202]);
+assert.deepEqual(fetched(stats.sessions[5]),[301,302,303,304,305,306]);
+assert.deepEqual(stats.sessions.map(session=>session.encodingSplitResponses||0),[1,0,0,1,0,0]);
+assert.deepEqual(stats.sessions.map(session=>session.encodingUnsolicitedUpdates||0),[0,2,0,2,2,0]);
+assert.equal(stats.sessions[5].encodingFetches.filter(fetch=>fetch.start===303).length,1);
+assert.deepEqual(stats.sessions[5].encodingFetches.find(fetch=>fetch.start===303).sections,[]);
+for(const session of stats.sessions.slice(0,3))assert.equal(session.commands.filter(command=>command==='LOGOUT').length,1);
+for(const session of stats.sessions.slice(3))assert.equal(session.commands.filter(command=>command==='LOGOUT').length,0);
+fs.writeFileSync(out+'/result.json',JSON.stringify({tests:2,nativeFailedEmptyRecovery:true,nativePendingRegistrationRecovery:true,splitFetchPreserved:true,unrelatedFlagsPreserved:true,ordinaryBodies:3,ordinaryTlsSessions:3,
+ pooledBodies:3,pooledTlsSessions:1,totalTlsSessions:6,emptyBodyCases:6,emptyBodyTlsSessions:1,changedOwnerExtraSessions:0,retiredIdExtraSessions:0,
+ allConnectionsClosed:true,scope:'Actual shipping Swift core and ArkTS adapter over synthetic loopback TLS; UTF8, quoted-printable, ShiftJIS, HTML and metadata preserved. No real mail, CPU or battery claim.'},null,2)+'\n');
+console.log('PASS: native sync reuses TLS/authentication, preserves decoded mail and ownership, and distinguishes empty bodies from decoding failures.');
+JS
