@@ -77,6 +77,8 @@ export class MailContentFiles implements MailContentFileStore {
 
   private encode(content: string): Uint8Array {
     if (content.length > MAX_BYTES) { throw new Error('Mail content exceeds limit'); }
+    // Harmony's native encoder may return undefined for an empty string.
+    if (content.length === 0) { return new Uint8Array(0); }
     let length = 0;
     for (let index = 0; index < content.length; index++) {
       const code = content.charCodeAt(index);
@@ -166,7 +168,8 @@ export class MailContentFiles implements MailContentFileStore {
         const after = await fs.stat(file.fd);
         if (after.size !== opened.size || after.mtime !== opened.mtime || after.ctime !== opened.ctime) { throw new Error('Mail content changed'); }
         this.current(folder, revision);
-        const text = new util.TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decodeToString(bytes);
+        const text = bytes.length === 0 ? '' :
+          new util.TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decodeToString(bytes);
         if (text.length > maxCharacters) { throw new Error('Mail content exceeds limit'); }
         return text;
       } finally { await fs.close(file); }

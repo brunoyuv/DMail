@@ -328,7 +328,7 @@ test('Server Sent metadata moves legacy local membership into the real folder wi
 
     const actualBoxes = await f.cache.boxes('a');
     assert.deepEqual(actualBoxes.boxes.map(value => value.id), ['inbox', 'server_sent']);
-    assert.equal(actualBoxes.roleRevision, 3); assert.equal(actualBoxes.readOnly, true);
+    assert.equal(actualBoxes.roleRevision, 5); assert.equal(actualBoxes.readOnly, true);
     const moved = f.row('a', 'email', 'local_sent_one');
     assert.equal(moved.dirty, 1);
     assert.deepEqual(moved.payload, { ...localMail, mail: { ...localMail.mail, mailboxIds: ['server_sent', 'inbox'] } });
@@ -385,7 +385,7 @@ test('Local accepted mail remains available and explicitly local while the serve
       assert.match(local.name, /sent.*(device|local)/i);
       assert.deepEqual(f.row('a', 'email', body.mail.id).payload, body);
       assert.equal((await f.cache.view('a', 'local_sent', true)).emails[0].textBody, body.mail.textBody);
-      assert.equal(actual.roleRevision, 3);
+      assert.equal(actual.roleRevision, 5);
     } finally { f.sqlite.close(); }
   }
 });

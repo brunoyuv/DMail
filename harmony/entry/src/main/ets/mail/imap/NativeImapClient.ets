@@ -2,7 +2,7 @@
 // trust, mailbox identity and MIME decoding live in Thunderbird's Swift core.
 import { imapAccountRequest } from 'libthunderbird.so';
 import { JmapService, JmapCredentials, JmapSession, JmapMailbox, JmapEmail, JmapEmailPage,
-  JmapError, JmapKeyword, JmapArchiveUndo, JmapDraft, JmapCreatedDraft, MailAttachmentData } from '../jmap/JmapClient';
+  JmapError, JmapKeyword, JmapArchiveUndo, validArchiveMailbox, JmapDraft, JmapCreatedDraft, MailAttachmentData } from '../jmap/JmapClient';
 
 interface Request {
   operation: string; sessionUrl: string; authorization: string;
@@ -160,15 +160,22 @@ export class NativeImapClient implements JmapService {
     return reply.state;
   }
   async archiveEmail(accountId: string, emailId: string): Promise<JmapArchiveUndo> {
-    const reply = await this.request({ operation: 'archiveEmail', sessionUrl: this.sessionUrl,
+    return this.moveEmail(accountId, emailId, false);
+  }
+  async deleteEmail(accountId: string, emailId: string): Promise<JmapArchiveUndo> {
+    return this.moveEmail(accountId, emailId, true);
+  }
+  private async moveEmail(accountId: string, emailId: string, deleting: boolean): Promise<JmapArchiveUndo> {
+    const reply = await this.request({ operation: deleting ? 'deleteEmail' : 'archiveEmail', sessionUrl: this.sessionUrl,
       authorization: await this.credentials.authorization(), accountId, emailId });
     const undo = reply.archive;
-    if (!undo || undo.accountId !== accountId || undo.emailId !== emailId || undo.imap !== true ||
+    if (!undo || (deleting ? undo.action !== 'delete' : undo.action !== undefined && undo.action !== 'archive') || undo.accountId !== accountId || undo.emailId !== emailId || undo.imap !== true ||
       typeof undo.inboxId !== 'string' || !undo.inboxId || typeof undo.archiveId !== 'string' || !undo.archiveId ||
       !Array.isArray(undo.expectedMailboxIds) || undo.expectedMailboxIds.length !== 1 ||
       undo.expectedMailboxIds[0] !== undo.archiveId || undo.archiveId === undo.inboxId || typeof undo.canUndo !== 'boolean' ||
       (undo.movedEmailId !== undefined && (typeof undo.movedEmailId !== 'string' || !undo.movedEmailId || undo.movedEmailId === emailId)) ||
-      (undo.canUndo && !undo.movedEmailId)) {
+      (undo.canUndo && !undo.movedEmailId) ||
+      (undo.archiveMailbox !== undefined && !validArchiveMailbox(undo.archiveMailbox, undo.archiveId, deleting ? 'trash' : 'archive'))) {
       throw new JmapError('changeUnconfirmed');
     }
     return undo;
@@ -177,7 +184,8 @@ export class NativeImapClient implements JmapService {
     if (undo.imap !== true || undo.canUndo === false) { throw new JmapError('archiveUnavailable'); }
     // Snapshot ownership before the credential lookup can yield to navigation.
     const accountId = undo.accountId, emailId = undo.emailId, mailboxId = undo.inboxId;
-    const reply = await this.request({ operation: 'undoArchive', sessionUrl: this.sessionUrl,
+    const operation = undo.action === 'delete' ? 'undoDelete' : 'undoArchive';
+    const reply = await this.request({ operation, sessionUrl: this.sessionUrl,
       authorization: await this.credentials.authorization(), accountId, emailId, mailboxId });
     if (reply.state !== 'moved' || (reply.movedEmailId !== undefined &&
       (typeof reply.movedEmailId !== 'string' || !reply.movedEmailId))) { throw new JmapError('changeUnconfirmed'); }

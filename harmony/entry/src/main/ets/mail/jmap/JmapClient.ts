@@ -71,6 +71,9 @@ export interface JmapMailbox {
   totalEmails: number;
   unreadEmails: number;
   countsKnown?: boolean;
+  // A native Inbox may offer explicit first-use creation; this is not a listed folder.
+  archiveDestinationId?: string;
+  archiveDestinationName?: string;
   maySetSeen: boolean;
   maySetKeywords: boolean;
   mayAddItems: boolean;
@@ -88,16 +91,54 @@ export interface JmapArchiveUndo {
   movedEmailId?: string;
   canUndo?: boolean;
   imap?: boolean;
+  archiveMailbox?: JmapMailbox;
+  action?: string;
+}
+
+export function validArchiveDestinationHint(box: JmapMailbox): boolean {
+  if (box.archiveDestinationId === undefined && box.archiveDestinationName === undefined) { return true; }
+  return box.role === 'inbox' && typeof box.archiveDestinationId === 'string' &&
+    /^[A-Za-z0-9_-]{1,4096}$/.test(box.archiveDestinationId) && box.archiveDestinationId !== box.id &&
+    typeof box.archiveDestinationName === 'string' && box.archiveDestinationName.length > 0 &&
+    box.archiveDestinationName.length <= 1024 && !/[\x00-\x1f\x7f]/.test(box.archiveDestinationName);
+}
+export function validArchiveMailbox(box: JmapMailbox, archiveId: string, role: string = 'archive'): boolean {
+  return !!box && typeof box === 'object' && !Array.isArray(box) &&
+    box.id === archiveId && /^[A-Za-z0-9_-]{1,4096}$/.test(box.id) && box.role === role &&
+    typeof box.name === 'string' && box.name.length > 0 && box.name.length <= 1024 && !/[\x00-\x1f\x7f]/.test(box.name) &&
+    (box.parentId === null || (typeof box.parentId === 'string' && /^[A-Za-z0-9_-]{1,4096}$/.test(box.parentId))) &&
+    Number.isSafeInteger(box.sortOrder) && box.sortOrder >= 0 &&
+    Number.isSafeInteger(box.totalEmails) && box.totalEmails >= 0 &&
+    Number.isSafeInteger(box.unreadEmails) && box.unreadEmails >= 0 &&
+    (box.countsKnown === undefined || typeof box.countsKnown === 'boolean') &&
+    typeof box.maySetSeen === 'boolean' && typeof box.maySetKeywords === 'boolean' &&
+    typeof box.mayAddItems === 'boolean' && typeof box.mayRemoveItems === 'boolean' && validArchiveDestinationHint(box);
 }
 
 export function archiveTarget(mail: JmapEmail, boxes: JmapMailbox[]): JmapMailbox | null {
   if (mail.id.startsWith('local_')) { return null; }
   const inboxes = boxes.filter((box) => box.role === 'inbox');
   const archives = boxes.filter((box) => box.role === 'archive');
-  if (inboxes.length !== 1 || archives.length !== 1) { return null; }
-  const inbox = inboxes[0]; const archive = archives[0];
+  if (inboxes.length !== 1 || archives.length > 1) { return null; }
+  const inbox = inboxes[0];
+  let archive = archives[0];
+  if (!archive) {
+    if (!validArchiveDestinationHint(inbox) || !inbox.archiveDestinationId || !inbox.archiveDestinationName) { return null; }
+    archive = { ...inbox, id: inbox.archiveDestinationId, name: inbox.archiveDestinationName,
+      parentId: null, role: 'archive', sortOrder: 2, totalEmails: 0, unreadEmails: 0, countsKnown: false,
+      mayAddItems: true, archiveDestinationId: undefined, archiveDestinationName: undefined };
+  }
   return inbox.id !== archive.id && mail.mailboxIds.includes(inbox.id) && inbox.mayRemoveItems &&
     (mail.mailboxIds.includes(archive.id) || archive.mayAddItems) ? archive : null;
+}
+
+export function trashTarget(mail: JmapEmail, boxes: JmapMailbox[]): JmapMailbox | null {
+  if (mail.id.startsWith('local_')) { return null; }
+  const inboxes = boxes.filter(box => box.role === 'inbox');
+  const trash = boxes.filter(box => box.role === 'trash');
+  if (inboxes.length !== 1 || trash.length !== 1) { return null; }
+  return inboxes[0].id !== trash[0].id && mail.mailboxIds.includes(inboxes[0].id) &&
+    inboxes[0].mayRemoveItems && trash[0].mayAddItems ? trash[0] : null;
 }
 
 export type JmapKeyword = '$seen' | '$flagged';
@@ -215,6 +256,7 @@ export interface JmapService {
   createDraft(accountId: string, draft: JmapDraft): Promise<JmapCreatedDraft>;
   setKeyword(accountId: string, emailId: string, keyword: JmapKeyword, enabled: boolean): Promise<string>;
   archiveEmail(accountId: string, emailId: string): Promise<JmapArchiveUndo>;
+  deleteEmail?(accountId: string, emailId: string): Promise<JmapArchiveUndo>;
   undoArchive(undo: JmapArchiveUndo): Promise<string | void>;
 }
 

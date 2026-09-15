@@ -38,6 +38,8 @@ struct ImapMailbox: Encodable, Sendable {
     let countsKnown: Bool
     let maySetSeen = false, maySetKeywords = false
     var mayAddItems = false, mayRemoveItems = false
+    var archiveDestinationId: String? = nil
+    var archiveDestinationName: String? = nil
 }
 struct ImapAddress: Encodable, Sendable { let name: String, email: String }
 struct ImapAttachment: Encodable, Sendable { let id: String, name: String, contentType: String; let size: Int; let sizeIsEncoded: Bool }
@@ -70,6 +72,8 @@ struct ImapArchiveUndo: Encodable, Sendable {
     let expectedMailboxIds: [String]
     let movedEmailId: String?
     let canUndo: Bool
+    let archiveMailbox: ImapMailbox
+    var action: String? = nil
     let imap = true
 }
 struct ImapReply: Encodable, Sendable {

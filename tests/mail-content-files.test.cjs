@@ -59,9 +59,10 @@ async function fixture(t) {
     '@kit.CoreFileKit': { fileIo: api }, '@kit.BasicServicesKit': {},
     '@kit.ArkTS': { util: {
       generateRandomUUID: () => state.uuid || crypto.randomUUID(),
-      TextEncoder: class { encodeInto(value) { return new TextEncoder().encode(value); } },
+      // Native MatePad encodeInto('') returns undefined, unlike Node's encoder.
+      TextEncoder: class { encodeInto(value) { return value === '' ? undefined : new TextEncoder().encode(value); } },
       TextDecoder: class { constructor(encoding, options) { this.decoder = new TextDecoder(encoding, options); }
-        decodeToString(bytes) { return this.decoder.decode(bytes); } }
+        decodeToString(bytes) { assert.ok(bytes.length > 0, 'Empty files do not need the native decoder'); return this.decoder.decode(bytes); } }
     } }
   };
   const load = file => {
@@ -199,4 +200,23 @@ test('Prune removes only expired complete files and old temp files, preserves ac
   const before = f.state.lists.length; await f.store.prune();
   assert.ok(!f.state.lists.slice(before).some(call => call.name.endsWith('/busy')));
   f.state.writeGate.resolve(); await writing;
+});
+
+test('Zero-byte text and HTML stay complete across reopen while owner, missing-file and retention checks still apply', async t => {
+  const f = await fixture(t);
+  for (const kind of ['text', 'html']) {
+    const reference = await f.store.write('empty-account', kind, '');
+    assert.equal((await fsp.stat(f.absolute(reference))).size, 0);
+    const reopened = new f.exports.MailContentFiles(f.filesDir);
+    assert.equal(await reopened.read('empty-account', reference, 0), '');
+    await assert.rejects(reopened.read('other-account', reference, 0));
+    const previous = new Date(Date.now() - week - 2000);
+    await fsp.utimes(f.absolute(reference), previous, previous);
+    await assert.rejects(reopened.read('empty-account', reference, 0), /unavailable/);
+    await fsp.unlink(f.absolute(reference));
+    await assert.rejects(reopened.read('empty-account', reference, 0));
+  }
+  assert.equal(f.state.writes, 0); assert.equal(f.state.reads, 0);
+  assert.equal(f.state.fsyncs, 2); assert.equal(f.state.renames, 2);
+  assert.equal(f.handles.size, 0);
 });

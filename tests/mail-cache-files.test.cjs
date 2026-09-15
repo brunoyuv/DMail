@@ -32,6 +32,9 @@ const mail = (overrides = {}) => ({ id: 'one', threadId: 'thread', mailboxIds: [
   messageIds: [], from: [], to: [], replyTo: [], subject: 'Synthetic', preview: 'Saved preview', receivedAt: 1,
   hasAttachment: false, textBody: 'Body 中文 📬', htmlBody: '<p>Body 中文 📬</p>', hasHtmlBody: true,
   bodyTruncated: false, bodyEncodingProblem: false, ...overrides });
+const mailbox = (overrides = {}) => ({ id: 'inbox', name: 'Inbox', parentId: null, role: 'inbox',
+  sortOrder: 0, totalEmails: 23, unreadEmails: 7, countsKnown: true,
+  maySetSeen: true, maySetKeywords: true, mayAddItems: true, mayRemoveItems: true, ...overrides });
 
 // The second SQLite connection makes changes outside MailCache's operation
 // queue, like another AccountStore handle. No production accounts/files/network.
@@ -105,7 +108,7 @@ test('Large Unicode raw bodies use small DB references and hydrate byte-exactly 
   } finally { f.close(); }
 });
 
-test('Empty, absent and attachment-only bodies retain their original distinctions', async () => {
+test('Empty and absent body strings retain their original distinctions', async () => {
   const f = await fixture();
   try {
     for (const [index, bodies] of [[0,{textBody:'',htmlBody:null}], [1,{textBody:null,htmlBody:''}],
@@ -117,6 +120,97 @@ test('Empty, absent and attachment-only bodies retain their original distinction
     }
     assert.equal(f.state.writes, 4);
   } finally { f.close(); }
+});
+
+test('Attachment-only cache records survive header refresh and restart without inventing body text or losing attachment metadata', async () => {
+  const f = await fixture();
+  try {
+    const attachments = [{ id: '2', name: '报告 résumé.pdf', contentType: 'application/pdf', size: 42, sizeIsEncoded: false }];
+    const variants = [
+      { textBody: null, htmlBody: null, hasHtmlBody: false },
+      { textBody: '', htmlBody: null, hasHtmlBody: false },
+      { textBody: null, htmlBody: '', hasHtmlBody: true },
+      { textBody: null, htmlBody: undefined, hasHtmlBody: false }
+    ];
+    for (let index = 0; index < variants.length; index++) {
+      const source = mail({ id: `attachment-only-${index}`, threadId: `attachment-only-${index}`,
+        ...variants[index], hasAttachment: true, attachments });
+      await f.cache.saveEmail('a', source);
+      const before = JSON.parse(f.row(source.id).payload);
+      const header = { ...source, subject: 'Updated header', textBody: null, htmlBody: null, attachments: undefined };
+      const fileWrites = f.state.writes;
+      await f.cache.saveView('a', 'inbox', [header]);
+      await MailCache.initialize(f.db, f.files);
+      const reopened = f.reopen(), cached = await reopened.email('a', source.id);
+      assert.ok(cached); assert.equal(cached.bodySavedAt, before.bodySavedAt);
+      assert.equal(cached.mail.subject, header.subject);
+      assert.equal(cached.mail.textBody, variants[index].textBody);
+      assert.equal(cached.mail.htmlBody, variants[index].htmlBody);
+      assert.equal(cached.mail.hasHtmlBody, variants[index].hasHtmlBody);
+      assert.deepEqual(cached.mail.attachments, attachments); assert.equal(cached.mail.hasAttachment, true);
+      assert.equal(model.failedEmptyMailBody(cached.mail), false);
+      assert.equal(model.cacheReadyForReading(cached), true);
+      assert.deepEqual((await reopened.view('a', 'inbox')).emails[0].attachments, attachments);
+      assert.equal(f.state.writes, fileWrites, 'Header reads and restart never rewrite attachment-only body files');
+    }
+    assert.equal(f.state.writes, 2, 'Only the two explicitly empty strings require body files');
+  } finally { f.close(); }
+});
+
+test('The actual loader fetches an attachment-only message once, then opens the real cache offline after restart', async () => {
+  const f = await fixture();
+  const { actualLoaderFixture } = require('./reader-loader-fixture.cjs');
+  const source = mail({ id: 'only-attachment', threadId: 'only-attachment', textBody: null, htmlBody: null,
+    hasHtmlBody: false, hasAttachment: true,
+    attachments: [{ id: '2', name: '物理学.pdf', contentType: 'application/pdf', size: 1234, sizeIsEncoded: true }] });
+  const header = { ...source, attachments: undefined };
+  let offline = false;
+  const selected = actualLoaderFixture({ read: async () => {
+    assert.equal(offline, false, 'A complete attachment-only record must not be downloaded again'); return source;
+  } });
+  selected.store.mail = f.cache;
+  try {
+    const first = await selected.open(header); await selected.loader.whenIdle();
+    assert.deepEqual(first.mail.attachments, source.attachments);
+    assert.equal(first.mail.textBody, null); assert.equal(first.mail.htmlBody, null);
+    assert.equal(selected.state.reads.length, 1); assert.equal(selected.state.batches.length, 0);
+    const saved = f.row(source.id).payload;
+    await f.cache.saveView('a', 'inbox', [header]); await MailCache.initialize(f.db, f.files);
+    selected.store.mail = f.reopen(); offline = true;
+    const restarted = new selected.MailMessageLoader(selected.store);
+    for (let count = 0; count < 3; count++) {
+      const result = await restarted.open(selected.client, selected.account, header, 'Show', 'Hide', () => true);
+      assert.deepEqual(result.mail.attachments, source.attachments);
+      assert.equal(result.mail.textBody, null); assert.equal(result.mail.htmlBody, null);
+      assert.deepEqual(result.document, first.document);
+    }
+    await restarted.whenIdle();
+    assert.equal(selected.state.reads.length, 1); assert.equal(selected.state.scans, 1);
+    assert.equal(selected.state.batches.length, 0); assert.equal(selected.tracked.size, 0);
+    assert.equal(JSON.parse(f.row(source.id).payload).bodySavedAt, JSON.parse(saved).bodySavedAt);
+    assert.equal(f.state.reads, 0); assert.equal(f.state.writes, 0, 'Metadata-only mail needs no text/HTML file');
+  } finally { await selected.loader.whenIdle(); f.close(); }
+});
+
+test('Attachment metadata cannot turn a genuine failed-empty decode into a valid cached body', async () => {
+  const f = await fixture();
+  const { actualLoaderFixture } = require('./reader-loader-fixture.cjs');
+  const broken = mail({ id: 'failed-attachment-body', threadId: 'failed-attachment-body', textBody: null, htmlBody: null,
+    hasHtmlBody: false, hasAttachment: true, bodyEncodingProblem: true,
+    attachments: [{ id: '2', name: 'saved.pdf', contentType: 'application/pdf', size: 4, sizeIsEncoded: false }] });
+  const selected = actualLoaderFixture({ read: async () => broken }); selected.store.mail = f.cache;
+  try {
+    // Seed the old cache shape deliberately; successful attachment-only mail
+    // must remain distinguishable from an earlier explicit decoder failure.
+    await f.cache.saveEmail('a', broken);
+    const record = await f.reopen().email('a', broken.id);
+    assert.equal(model.failedEmptyMailBody(record.mail), true); assert.equal(model.cacheReadyForReading(record), false);
+    await assert.rejects(selected.open({ ...broken, bodyEncodingProblem: false, attachments: undefined }), error => error.code === 'invalidResponse');
+    await selected.loader.whenIdle();
+    assert.equal(selected.state.reads.length, 1); assert.equal(selected.state.scans, 0);
+    assert.equal(selected.documents.size, 0); assert.equal(selected.state.batches.length, 0);
+    assert.equal(model.failedEmptyMailBody((await f.reopen().email('a', broken.id)).mail), true);
+  } finally { await selected.loader.whenIdle(); f.close(); }
 });
 
 test('Header refresh, flags, dirty state, moves and startup reuse references with no body file I/O', async () => {
@@ -178,6 +272,144 @@ test('Archive identity migration preserves a newer destination body and pending 
     assert.equal(value.mail.textBody,'Newer');assert.deepEqual(value.mail.keywords,['$seen']);
     assert.equal(value.mail.cachedSourceId,'destination');assert.equal(f.row('destination').dirty,1);
     assert.deepEqual(value.mail.cachedAttachmentSourceIds,['destination','one']);
+  } finally { f.close(); }
+});
+
+test('Verified new Archive folder commits with the moved identity and remains available offline after restart', async () => {
+  const f = await fixture();
+  try {
+    const source = mail(), inbox = mailbox({ archiveDestinationId: 'archive', archiveDestinationName: 'Archive' });
+    const sent = mailbox({ id: 'sent', name: 'Sent items', role: 'sent', totalEmails: 41, unreadEmails: 0, sortOrder: 3 });
+    await f.cache.saveBoxes('a', [inbox, sent], false);
+    const previous = JSON.parse(f.sqlite.prepare("SELECT payload FROM mail_cache WHERE account_id='a' AND kind='boxes'").get().payload);
+    await f.cache.saveEmail('a', source); await f.cache.saveView('a', 'inbox', [source]);
+    const before = JSON.parse(f.row().payload);
+    f.state.reads = 0; f.state.writes = 0;
+    const receipt = mailbox({ id: 'archive', name: 'Archive', role: 'archive', totalEmails: 99, unreadEmails: 99, sortOrder: 9 });
+    const execute = f.db.executeSql;
+    let observedPending = 0;
+    f.db.executeSql = async (sql, args = []) => {
+      await execute(sql, args);
+      if (sql.startsWith('INSERT OR REPLACE INTO mail_cache') && args[1] === 'boxes') {
+        observedPending++;
+        assert.equal(f.other.prepare("SELECT count(*) n FROM mail_cache WHERE account_id='a' AND kind='email' AND cache_key='archived'").get().n, 0);
+        const visible = JSON.parse(f.other.prepare("SELECT payload FROM mail_cache WHERE account_id='a' AND kind='boxes'").get().payload);
+        assert.deepEqual(visible, previous, 'Another WAL reader sees neither half of the uncommitted move');
+      }
+    };
+    await f.cache.moveEmailIdentity('a', 'one', 'archived', ['archive'], receipt);
+    assert.equal(observedPending, 1); assert.equal(f.state.reads, 0); assert.equal(f.state.writes, 0);
+    await MailCache.initialize(f.db, f.files);
+    const restarted = f.reopen(), folders = await restarted.boxes('a');
+    assert.equal(folders.savedAt, previous.savedAt); assert.equal(folders.roleRevision, previous.roleRevision);
+    assert.equal(folders.readOnly, false); assert.equal(folders.boxes.length, 3);
+    assert.deepEqual(folders.boxes[0], mailbox()); assert.deepEqual(folders.boxes[1], sent);
+    assert.deepEqual(folders.boxes[2], { ...receipt, countsKnown: false, totalEmails: 0, unreadEmails: 0 });
+    assert.equal((await restarted.view('a', 'inbox')).emails.length, 0);
+    assert.equal((await restarted.view('a', 'archive')).emails[0].id, 'archived');
+    const cached = await restarted.email('a', 'archived');
+    assert.equal(cached.mail.htmlBody, source.htmlBody); assert.equal(cached.bodySavedAt, before.bodySavedAt);
+    assert.deepEqual(cached.bodyFiles, before.bodyFiles);
+    assert.equal(receipt.totalEmails, 99, 'Receipt arguments remain immutable');
+    assert.equal(inbox.archiveDestinationId, 'archive', 'Caller-owned mailbox metadata remains immutable');
+  } finally { f.close(); }
+});
+
+test('Confirmed existing Archive destination preserves counts, permissions, metadata and the folder envelope', async () => {
+  const f = await fixture();
+  try {
+    const inbox = mailbox({ archiveDestinationId: 'archive', archiveDestinationName: 'Archive' });
+    const old = mailbox({ id: 'former', role: 'archive', name: 'Old Archive', parentId: 'parent', totalEmails: 80, unreadEmails: 4 });
+    const target = mailbox({ id: 'archive', role: null, name: 'Saved custom title', parentId: 'parent', sortOrder: 31,
+      totalEmails: 17, unreadEmails: 5, countsKnown: true, maySetSeen: false, mayAddItems: false });
+    await f.cache.saveBoxes('a', [inbox, old, target], true); await f.cache.saveEmail('a', mail());
+    const before = JSON.parse(f.sqlite.prepare("SELECT payload FROM mail_cache WHERE account_id='a' AND kind='boxes'").get().payload);
+    before.roleRevision = model.MAILBOX_ROLE_REVISION - 1;
+    f.sqlite.prepare("UPDATE mail_cache SET payload=? WHERE account_id='a' AND kind='boxes'").run(JSON.stringify(before));
+    await f.cache.moveEmailIdentity('a', 'one', 'archived', ['archive'], mailbox({ id: 'archive', name: 'Protocol title', role: 'archive', countsKnown: false }));
+    const after = await f.reopen().boxes('a');
+    assert.deepEqual(after, { ...before, boxes: [mailbox(), { ...old, role: null }, { ...target, role: 'archive' }] });
+    assert.equal(after.boxes.filter(box => box.role === 'archive').length, 1);
+  } finally { f.close(); }
+});
+
+test('A folder listing started before Archive completion cannot erase the confirmed folder; a fresh listing stays authoritative', async () => {
+  const f = await fixture();
+  try {
+    const inbox = mailbox({ archiveDestinationId: 'archive', archiveDestinationName: 'Archive' });
+    await f.cache.saveBoxes('a', [inbox], false); await f.cache.saveEmail('a', mail());
+    const beforeMove = MailCache.mutationRevision();
+    await f.cache.moveEmailIdentity('a', 'one', 'archived', ['archive'], mailbox({ id: 'archive', name: 'Archive', role: 'archive' }));
+    const confirmed = await f.reopen().boxes('a');
+    f.state.reads = 0; f.state.writes = 0;
+    await f.cache.saveBoxes('a', [inbox], true, beforeMove);
+    assert.deepEqual(await f.reopen().boxes('a'), confirmed, 'Stale LIST cannot restore a creation hint or discard the confirmed target');
+    await f.cache.saveBoxes('b', [mailbox({ name: 'Other account listing' })], false, beforeMove);
+    assert.equal((await f.cache.boxes('b')).boxes[0].name, 'Other account listing', 'The gate belongs only to the moved account');
+    const fresh = [mailbox({ totalEmails: 22 }), mailbox({ id: 'archive', name: 'Server-renamed Archive', role: 'archive',
+      totalEmails: 15, unreadEmails: 3, countsKnown: true })];
+    await f.cache.saveBoxes('a', fresh, false, MailCache.mutationRevision());
+    assert.deepEqual((await f.reopen().boxes('a')).boxes, fresh);
+    assert.equal(f.state.reads, 0); assert.equal(f.state.writes, 0);
+    assert.equal((await f.reopen().email('a', 'archived')).mail.htmlBody, mail().htmlBody);
+  } finally { f.close(); }
+});
+
+test('A failed archive cache transaction rolls back the new folder, views and moved body together', async () => {
+  const f = await fixture();
+  try {
+    await f.cache.saveBoxes('a', [mailbox({ archiveDestinationId: 'archive', archiveDestinationName: 'Archive' })], false);
+    await f.cache.saveEmail('a', mail()); await f.cache.saveView('a', 'inbox', [mail()]);
+    const rows = () => f.sqlite.prepare('SELECT * FROM mail_cache ORDER BY account_id,kind,cache_key').all();
+    const before = rows(), revision = MailCache.mutationRevision();
+    f.sqlite.exec("CREATE TRIGGER abort_move BEFORE DELETE ON mail_cache WHEN OLD.account_id='a' AND OLD.kind='email' AND OLD.cache_key='one' BEGIN SELECT RAISE(ABORT,'Synthetic move commit failure'); END");
+    f.state.reads = 0; f.state.writes = 0;
+    await assert.rejects(f.cache.moveEmailIdentity('a', 'one', 'archived', ['archive'], mailbox({ id: 'archive', role: 'archive' })), /Synthetic move commit failure/);
+    assert.deepEqual(rows(), before); assert.equal(MailCache.mutationRevision(), revision);
+    assert.equal(f.state.reads, 0); assert.equal(f.state.writes, 0);
+    assert.equal((await f.reopen().boxes('a')).boxes.length, 1);
+    assert.equal((await f.reopen().email('a', 'one')).mail.textBody, mail().textBody);
+  } finally { f.close(); }
+});
+
+test('Archive receipt rejects mismatched or malformed folders without touching cache', async () => {
+  const f = await fixture();
+  try {
+    await f.cache.saveEmail('a', mail());
+    const before = f.row().payload;
+    for (const receipt of [mailbox({ id: 'other', role: 'archive' }), mailbox({ id: 'archive', role: 'sent' }),
+      mailbox({ id: 'archive', role: 'archive', countsKnown: 'false' }), mailbox({ id: '../archive', role: 'archive' })]) {
+      await assert.rejects(f.cache.moveEmailIdentity('a', 'one', 'archived', ['archive'], receipt), /Invalid archive mailbox receipt/);
+      assert.equal(f.row().payload, before); assert.equal(f.row('archived'), undefined);
+      assert.equal(await f.cache.boxes('a'), null);
+    }
+  } finally { f.close(); }
+});
+
+test('A removed or non-ready account cannot recreate an Archive folder from a late receipt', async () => {
+  for (const state of ['pending', 'deleting', 'removed']) {
+    const f = await fixture();
+    try {
+      await f.cache.saveEmail('a', mail());
+      const before = f.row().payload;
+      if (state === 'removed') f.other.prepare("DELETE FROM accounts WHERE id='a'").run();
+      else f.other.prepare("UPDATE accounts SET status=? WHERE id='a'").run(state);
+      await assert.rejects(f.cache.moveEmailIdentity('a', 'one', 'archived', ['archive'], mailbox({ id: 'archive', role: 'archive' })), /unavailable/);
+      assert.equal(f.row().payload, before); assert.equal(f.row('archived'), undefined);
+      assert.equal(f.sqlite.prepare("SELECT count(*) n FROM mail_cache WHERE kind IN ('boxes','view')").get().n, 0);
+    } finally { f.close(); }
+  }
+});
+
+test('Same-identity mailbox changes retain the existing JMAP path without installing receipt folders', async () => {
+  const f = await fixture();
+  try {
+    const inbox = mailbox({ archiveDestinationId: 'archive', archiveDestinationName: 'Archive' });
+    await f.cache.saveBoxes('a', [inbox], false); await f.cache.saveEmail('a', mail());
+    const before = await f.cache.boxes('a');
+    await f.cache.moveEmailIdentity('a', 'one', 'one', ['archive'], mailbox({ id: 'archive', role: 'archive' }));
+    assert.deepEqual(await f.cache.boxes('a'), before);
+    assert.deepEqual((await f.cache.email('a', 'one')).mail.mailboxIds, ['archive']);
   } finally { f.close(); }
 });
 
@@ -379,5 +611,30 @@ test('UUID attachments are valid only for a confirmed local Sent origin and surv
     assert.deepEqual(adopted.mail.attachments,parts);assert.equal(adopted.mail.cachedSourceId,local.id);
     assert.deepEqual(adopted.mail.cachedAttachmentSourceIds,[local.id]);
     assert.equal(adopted.mail.textBody,local.textBody);
+  } finally { f.close(); }
+});
+
+test('Confirmed Trash move preserves body files, attachment origins, Archive role and creation hint', async () => {
+  const f = await fixture();
+  try {
+    const inbox = mailbox({ archiveDestinationId: 'new_archive', archiveDestinationName: 'Archive' });
+    const archive = mailbox({ id: 'archive', role: 'archive', name: 'Archive' });
+    const trash = mailbox({ id: 'trash', role: 'trash', name: 'Trash' });
+    const source = mail({ hasAttachment: true, attachments: [{ id: '2', name: 'report.pdf', contentType: 'application/pdf', size: 10, sizeIsEncoded: true }] });
+    await f.cache.saveBoxes('a', [inbox, archive, trash], false);
+    await f.cache.saveEmail('a', source); await f.cache.saveView('a', 'inbox', [source]);
+    const before = await f.cache.email('a', 'one');
+    await f.cache.moveEmailIdentity('a', 'one', 'trashed', ['trash'], trash);
+    const after = await f.reopen().email('a', 'trashed');
+    assert.equal(after.bodySavedAt, before.bodySavedAt); assert.deepEqual(after.bodyFiles, before.bodyFiles);
+    assert.deepEqual(after.mail.attachments, source.attachments);
+    assert.equal(after.mail.cachedSourceId, 'one'); assert.equal(after.mail.textBody, source.textBody);
+    const boxes = (await f.reopen().boxes('a')).boxes;
+    assert.equal(boxes.find(box => box.id === 'archive').role, 'archive');
+    assert.equal(boxes.find(box => box.id === 'inbox').archiveDestinationId, 'new_archive');
+    assert.equal((await f.reopen().view('a', 'inbox')).emails.length, 0);
+    await f.cache.moveEmailIdentity('a', 'trashed', 'restored', ['inbox']);
+    const restored = await f.reopen().email('a', 'restored');
+    assert.deepEqual(restored.bodyFiles, before.bodyFiles); assert.equal(restored.mail.cachedSourceId, 'one');
   } finally { f.close(); }
 });

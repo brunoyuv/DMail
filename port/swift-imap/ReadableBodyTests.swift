@@ -43,10 +43,10 @@ struct ReadableBodyTests {
             fields: .init(parameters: [:], id: nil, contentDescription: nil, encoding: .init("base64"), octetCount: 100),
             extension: .init(digest: nil, dispositionAndLanguage: .init(disposition: nil,
                 language: .init(languages: [], location: .init(location: "image1", extensions: []))))))
-        let tree = BodyStructure.multipart(.init(parts: [image,
+        let tree = BodyStructure.multipart(.init(parts: [part(text, bytes: 100), image,
             part(.basic(.init(topLevel: .image, sub: .init("png"))), bytes: 50, disposition: "attachment", id: "image@example.test")], mediaSubtype: .related))
         let plan = try ReadablePlan(tree)
-        #expect(plan.parts.count == 2)
+        #expect(plan.parts.count == 3)
         #expect(plan.hasAttachments)
     }
     @Test func excessiveReadablePartsAndSizesAreExplicitlyPartial() throws {
@@ -68,6 +68,105 @@ struct ReadableBodyTests {
         #expect(value.references == ["root@example.test"])
         #expect(value.body == nil)
         #expect(value.bodySections[section] == Data("<p>Raw HTML without MIME headers</p>".utf8))
+    }
+}
+
+struct AttachmentOnlyReadableTests {
+    private func leaf(_ type: BodyStructure.Singlepart.Kind, bytes: Int = 64, id: String? = nil,
+                      disposition: String? = nil) -> BodyStructure {
+        .singlepart(.init(kind: type, fields: .init(parameters: [:], id: id, contentDescription: nil,
+            encoding: .init("base64"), octetCount: bytes),
+            extension: disposition.map { .init(digest: nil, dispositionAndLanguage: .init(
+                disposition: .init(kind: .init(rawValue: $0), parameters: [:]))) }))
+    }
+    private var pdf: BodyStructure.Singlepart.Kind { .basic(.init(topLevel: .application, sub: .init("pdf"))) }
+    private var image: BodyStructure.Singlepart.Kind { .basic(.init(topLevel: .image, sub: .init("png"))) }
+    @Test func standaloneAndMultipartPDFKeepMetadataWithoutFetchingPayload() throws {
+        for tree in [leaf(pdf, disposition: "attachment"),
+                     .multipart(.init(parts: [leaf(pdf, disposition: "attachment")], mediaSubtype: .mixed))] {
+            let plan = try ReadablePlan(tree)
+            #expect(plan.parts.isEmpty)
+            #expect(plan.hasAttachments)
+            #expect(plan.attachments.count == 1)
+            #expect(plan.attachments[0].id == "1")
+            #expect(plan.attachments[0].contentType == "application/pdf")
+            #expect(!plan.partial)
+            #expect(try plan.assemble([:]) == nil)
+        }
+    }
+    @Test func emptyTextWithPDFKeepsAValidEmptyTextSection() throws {
+        let plan = try ReadablePlan(.multipart(.init(parts: [
+            leaf(.text(.init(mediaSubtype: .init("plain"), lineCount: 0)), bytes: 0),
+            leaf(pdf, disposition: "attachment")], mediaSubtype: .mixed)))
+        #expect(plan.parts.count == 1)
+        #expect(plan.parts[0].octets == 0)
+        #expect(plan.attachments.map(\.id) == ["2"])
+        let body = try #require(try plan.assemble([plan.parts[0].section: Data("Content-Type: text/plain\r\n\r\n".utf8)]))
+        let children = try body.part.parts
+        #expect(children[0].data.isEmpty)
+        #expect(children[0].contentType.subtype == "plain")
+        #expect(!plan.partial)
+    }
+    @Test func standaloneAndMultipartCIDOnlyImagesAreOnDemandAttachments() throws {
+        for tree in [leaf(image, id: "picture@example.test"),
+                     leaf(image, id: "picture@example.test", disposition: "attachment"),
+                     leaf(image, bytes: 8 * 1024 * 1024, id: "picture@example.test"),
+                     .multipart(.init(parts: [leaf(image, id: "picture@example.test")], mediaSubtype: .mixed)),
+                     .multipart(.init(parts: [leaf(image, id: "picture@example.test")], mediaSubtype: .init("related")))] {
+            let plan = try ReadablePlan(tree)
+            #expect(plan.parts.isEmpty)
+            #expect(plan.hasAttachments)
+            #expect(plan.attachments.map(\.id) == ["1"])
+            #expect(plan.attachments.first?.contentType == "image/png")
+            #expect(!plan.partial)
+            #expect(try plan.assemble([:]) == nil)
+        }
+    }
+    @Test func oversizedTextIsNotReclassifiedAsAnAttachmentOnlyMessage() throws {
+        let plan = try ReadablePlan(.multipart(.init(parts: [
+            leaf(.text(.init(mediaSubtype: .init("html"), lineCount: 1)), bytes: 4 * 1024 * 1024 + 1),
+            leaf(image, id: "picture@example.test")], mediaSubtype: .init("related"))))
+        #expect(plan.partial)
+        #expect(plan.parts.map(\.section) == [SectionSpecifier(part: .init([2]))])
+        #expect(plan.attachments.isEmpty)
+        let body = try #require(try plan.assemble([plan.parts[0].section: Data("Content-Type: image/png\r\n\r\nbytes".utf8)]))
+        #expect(try body.part.parts[0].contentType == .application("x-dmail-omitted"))
+    }
+    @Test func zeroByteTextStubsKeepCIDImagesAvailableAsAttachments() throws {
+        for subtype in ["plain", "html"] {
+            let plan = try ReadablePlan(.multipart(.init(parts: [
+                leaf(.text(.init(mediaSubtype: .init(subtype), lineCount: 0)), bytes: 0),
+                leaf(image, bytes: 8 * 1024 * 1024, id: "picture@example.test")], mediaSubtype: .mixed)))
+            #expect(!plan.partial)
+            #expect(plan.hasAttachments)
+            #expect(plan.parts.map(\.section) == [SectionSpecifier(part: .init([1]))])
+            #expect(plan.attachments.map(\.id) == ["2"])
+            let body = try #require(try plan.assemble([plan.parts[0].section: Data("Content-Type: text/\(subtype)\r\n\r\n".utf8)]))
+            #expect(try body.part.parts[0].data.isEmpty)
+        }
+    }
+    @Test func explicitRelatedEmptyMultipartRootKeepsItsIdentityMetadata() throws {
+        let plan = try ReadablePlan(.multipart(.init(parts: [leaf(image, id: "picture@example.test"),
+            .multipart(.init(parts: [leaf(.text(.init(mediaSubtype: .init("plain"), lineCount: 0)), bytes: 0)], mediaSubtype: .alternative))],
+            mediaSubtype: .init("related"), extension: .init(parameters: ["start": "<root@example.test>"], dispositionAndLanguage: nil))))
+        let header = SectionSpecifier(part: .init([2]), kind: .MIMEHeader)
+        #expect(plan.metadataSections == [header])
+        #expect(plan.parts.map(\.section) == [SectionSpecifier(part: .init([2, 1]))])
+        #expect(plan.attachments.map(\.id) == ["1"])
+        #expect(!plan.partial)
+        let body = try #require(try plan.assemble([plan.parts[0].section: Data("Content-Type: text/plain\r\n\r\n".utf8)],
+            metadata: [header: Data("Content-Type: multipart/alternative; boundary=synthetic\r\nContent-ID: <root@example.test>\r\n\r\n".utf8)]))
+        #expect(try body.part.parts[1].contentID?.description == "<root@example.test>")
+    }
+    @Test func manyCIDAttachmentsCannotCrowdOutAnEmptyTextStubAndFailTheMessage() throws {
+        let images = (0..<25).map { leaf(image, id: "picture\($0)@example.test") }
+        let stub = leaf(.text(.init(mediaSubtype: .init("plain"), lineCount: 0)), bytes: 0)
+        let plan = try ReadablePlan(.multipart(.init(parts: images + [stub], mediaSubtype: .mixed)))
+        #expect(plan.hasAttachments)
+        #expect(plan.attachments.count == 25)
+        #expect(plan.parts.isEmpty)
+        #expect(!plan.partial)
+        #expect(try plan.assemble([:]) == nil)
     }
 }
 
@@ -155,6 +254,7 @@ import NIOSSL
 
 private enum AttachmentFetchScenario: Sendable {
     case normal, unrelatedStructureFlags, unrelatedPartFlags, missingStructureTarget, duplicateStructureTarget, missingPartHeader
+    case cidOnly, cidOnlyLarge, cidOnlyMixed, emptyTextPDF, emptyTextCID, missingTextPDF
 }
 private final class AttachmentFetchTrace: @unchecked Sendable {
     private let lock = NSLock()
@@ -187,11 +287,23 @@ private final class AttachmentFetchPeer: ChannelInboundHandler {
                 trace.fetched()
                 if line.contains("BODYSTRUCTURE") {
                     let uid = scenario == .missingStructureTarget ? 8 : 7
-                    send("* 1 FETCH (UID \(uid) BODYSTRUCTURE (\"APPLICATION\" \"PDF\" NIL NIL NIL \"BASE64\" \(payload.utf8.count) NIL (\"ATTACHMENT\" (\"FILENAME\" \"Synthetic.pdf\")) NIL NIL))\r\n", context)
+                    let pdf = "(\"APPLICATION\" \"PDF\" NIL NIL NIL \"BASE64\" \(payload.utf8.count) NIL (\"ATTACHMENT\" (\"FILENAME\" \"Synthetic.pdf\")) NIL NIL)"
+                    let image = "(\"IMAGE\" \"PNG\" NIL \"<picture@example.test>\" NIL \"BASE64\" \(scenario == .cidOnlyLarge ? 8 * 1024 * 1024 : 64) NIL NIL NIL NIL)"
+                    let structure: String
+                    switch scenario {
+                    case .cidOnly, .cidOnlyLarge: structure = image
+                    case .cidOnlyMixed: structure = "(\(image) \"MIXED\")"
+                    case .emptyTextPDF, .emptyTextCID, .missingTextPDF:
+                        structure = "((\"TEXT\" \"PLAIN\" NIL NIL NIL \"7BIT\" \(scenario == .missingTextPDF ? 40 : 0) 0 NIL NIL NIL NIL)\(scenario == .emptyTextCID ? image : pdf) \"MIXED\")"
+                    default: structure = pdf
+                    }
+                    send("* 1 FETCH (UID \(uid) BODYSTRUCTURE \(structure))\r\n", context)
                     if scenario == .unrelatedStructureFlags { send("* 2 FETCH (UID 8 FLAGS (\\Seen))\r\n* 3 FETCH (FLAGS ())\r\n", context) }
                     if scenario == .duplicateStructureTarget { send("* 2 FETCH (UID 7 FLAGS ())\r\n", context) }
                 } else {
-                    if scenario == .missingPartHeader {
+                    if scenario == .emptyTextPDF || scenario == .emptyTextCID || scenario == .missingTextPDF {
+                        send("* 1 FETCH (UID 7 BODY[1.MIME] \(literal("Content-Type: text/plain\r\n\r\n")) BODY[1] \(literal("")))\r\n", context)
+                    } else if scenario == .missingPartHeader {
                         send("* 1 FETCH (UID 7 BODY[1] \(literal(payload)))\r\n* 2 FETCH (UID 8 BODY[1.MIME] \(literal(headers)))\r\n", context)
                     } else {
                         send("* 1 FETCH (UID 7 BODY[1.MIME] \(literal(headers)))\r\n* 1 FETCH (UID 7 BODY[1] \(literal(payload)))\r\n", context)
@@ -207,6 +319,44 @@ private final class AttachmentFetchPeer: ChannelInboundHandler {
 }
 
 struct AttachmentFetchTests {
+    @Test func openingAttachmentOnlyMailFinishesWithMetadataAndNoAttachmentDownload() async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("dmail-attachment-only-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let context = try NIOSSLContext(configuration: fixtureTLSConfiguration(in: directory))
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        do {
+            for scenario in [AttachmentFetchScenario.normal, .cidOnly, .cidOnlyLarge, .cidOnlyMixed, .emptyTextPDF, .emptyTextCID, .missingTextPDF] {
+                let trace = AttachmentFetchTrace()
+                let server = try await ServerBootstrap(group: group).childChannelInitializer { channel in
+                    channel.pipeline.addHandlers([NIOSSLServerHandler(context: context), AttachmentFetchPeer(scenario, trace)])
+                }.bind(host: "127.0.0.1", port: 0).get()
+                guard let port = server.localAddress?.port else { throw IMAPError.notConnected }
+                var tls = TLSConfiguration.makeClientConfiguration(); tls.certificateVerification = .none
+                let client = IMAPClient(Server(hostname: "127.0.0.1", username: "synthetic", password: "synthetic", port: port),
+                    logger: nil, tlsConfiguration: tls, connectionTimeout: .seconds(2), commandTimeout: 2)
+                do {
+                    try await client.connect(); try await client.login()
+                    let readable = try #require(try await client.fetchReadable(uid: 7))
+                    #expect(readable.hasAttachments)
+                    #expect(readable.partial == (scenario == .missingTextPDF))
+                    #expect(readable.attachments.count == 1)
+                    let emptyText = scenario == .emptyTextPDF || scenario == .emptyTextCID || scenario == .missingTextPDF
+                    #expect(readable.attachments[0].id == (emptyText ? "2" : "1"))
+                    if emptyText {
+                        #expect(try readable.body?.part.parts[0].data.isEmpty == true)
+                        #expect(try readable.body?.part.parts[0].contentType.subtype == (scenario == .missingTextPDF ? "x-dmail-omitted" : "plain"))
+                        #expect(trace.count() == 2)
+                    } else {
+                        #expect(readable.body == nil)
+                        #expect(trace.count() == 1)
+                    }
+                    try await client.shutdown(); #expect(!client.isConnected)
+                } catch { try? await client.shutdown(); try? await server.close().get(); throw error }
+                try await server.close().get()
+            }
+            try await group.shutdownGracefully()
+        } catch { try? await group.shutdownGracefully(); throw error }
+    }
     @Test func selectedAttachmentSurvivesUnrelatedFlagsInEitherFetch() async throws {
         try await run([.normal, .unrelatedStructureFlags, .unrelatedPartFlags], success: true)
     }

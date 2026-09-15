@@ -46,7 +46,8 @@ function accountFixture() {
   sqlite.exec("CREATE TABLE accounts (id TEXT PRIMARY KEY, status TEXT NOT NULL); INSERT INTO accounts VALUES ('a', 'ready'), ('b', 'ready')");
   const source = fs.readFileSync('harmony/entry/src/main/ets/data/AccountStore.ets', 'utf8');
   sqlite.exec(source.match(/CREATE TABLE IF NOT EXISTS account_composition[^']+/)[0]);
-  const code = compile(`class Host { ${methods('harmony/entry/src/main/ets/data/AccountStore.ets', ['composition', 'saveComposition', 'prepareNewOutgoing'])} }; return Host;`);
+  sqlite.exec(source.match(/CREATE TABLE IF NOT EXISTS account_mail_actions[^"]+/)[0]);
+  const code = compile(`class Host { ${methods('harmony/entry/src/main/ets/data/AccountStore.ets', ['composition', 'saveComposition', 'prepareNewOutgoing', 'mailAction', 'saveMailAction'])} }; return Host;`);
   const Host = new Function('CompositionSettings', 'normalizeComposition', 'applyComposition', code)(CompositionSettings, normalizeComposition, applyComposition);
   const host = new Host(); host.pending = Promise.resolve();
   host.enqueue = operation => { const task = host.pending.catch(() => {}).then(operation); host.pending = task.catch(() => {}); return task; };
@@ -108,4 +109,22 @@ test('Composer initializes signatures for fresh drafts while reopening legacy/ma
   const legacy = { id: 'saved-legacy', state: 'draft', text: 'Manually written\nMy existing signature', cc: '', bcc: '' };
   const old = composeFixture(legacy); await old.host.initialize();
   assert.equal(old.host.draft, legacy); assert.equal(old.host.draft.text, legacy.text); assert.equal(old.counts().preparations, 0);
+});
+
+test('Swipe action defaults to Archive and persists independently per account', async () => {
+  const { host, sqlite } = accountFixture();
+  try {
+    assert.equal(await host.mailAction('a'), 'archive');
+    await host.saveMailAction('a', 'delete');
+    assert.equal(await host.mailAction('a'), 'delete');
+    assert.equal(await host.mailAction('b'), 'archive');
+    await host.saveComposition('a', defaults);
+    assert.equal(await host.mailAction('a'), 'delete');
+    await assert.rejects(host.saveMailAction('a', 'expunge'));
+    assert.equal(await host.mailAction('a'), 'delete');
+    sqlite.exec("UPDATE accounts SET status = 'deleting' WHERE id = 'a'; DELETE FROM account_mail_actions WHERE account_id = 'a'");
+    await host.saveMailAction('a', 'delete');
+    assert.equal(await host.mailAction('a'), 'archive');
+    assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM account_mail_actions').get().n, 0);
+  } finally { sqlite.close(); }
 });

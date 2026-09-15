@@ -12,7 +12,7 @@ function fixture(){
  const loads=[],opened=[],paths=[],cancelled=[];
  const host=Object.assign(new Host(),{active:true,openInboxOnLaunch:true,generation:0,mailboxRefreshRevision:0,inboxLoadRevision:0,
   inboxTimer:-1,inboxAnchorTimer:-1,inboxSwipes:new Set(),conversationById:new Map(),conversationRevision:0,
-  paths:{getAllPathName:()=>paths,clear:()=>{paths.length=0;}},resetInboxScroll:()=>{},clientFactory:{create:()=>({})},
+  paths:{getAllPathName:()=>paths,clear:()=>{paths.length=0;}},resetInboxScroll:()=>{},loadMailAction:()=>{},clientFactory:{create:()=>({})},
   messageLoader:{cancel:()=>cancelled.push(true)},
   accountStore:{credentials:()=>({}),rememberVisitedAccount:async()=>{}},label:n=>n,
   loadBoxes(){const gate=pending();loads.push(gate);++this.generation;this.busy=true;return gate.promise;},
@@ -40,21 +40,21 @@ test('An account load completing after teardown does not navigate or publish a s
 const roleMethods=['openAccount','loadBoxes','upgradeSentFolder'].map(name=>
  source.match(new RegExp('  private async '+name+'\\([\\s\\S]*?\\n  }'))[0]).join('\n');
 const roleCode=ts.transpileModule(`class Host {${roleMethods}};return Host;`,{compilerOptions:{target:ts.ScriptTarget.ES2021}}).outputText;
-const RoleHost=new Function('MailNotificationService','LOCAL_SENT_MAILBOX','AutomaticMailWork','MAILBOX_ROLE_REVISION',roleCode)(
- {setVisibleAccount:()=>{}},'local_sent',{cancelInactive:()=>{}},3);
+const RoleHost=new Function('MailNotificationService','LOCAL_SENT_MAILBOX','AutomaticMailWork','MAILBOX_ROLE_REVISION','MailCache',roleCode)(
+ {setVisibleAccount:()=>{}},'local_sent',{cancelInactive:()=>{}},4,{mutationRevision:()=>0});
 function roleFixture(sessionUrl){
  const upgrade=pending(),done=pending(),calls=[];
  const boxes=[{id:'inbox',role:'inbox'},{id:'server_archive',role:null,mayAddItems:false,mayRemoveItems:false}];
- let cached={roleRevision:2,readOnly:false,boxes};
+ let cached={roleRevision:3,readOnly:false,boxes};
  const account={id:'a',serverId:'default',sessionUrl};
  const client={async mailboxes(id){calls.push(['mailboxes',id]);await upgrade.promise;
    return[{id:'inbox',role:'inbox',mayRemoveItems:true},{id:'server_archive',role:'archive',mayAddItems:true}];},
    async connect(){throw Error('Cached boxes should not delay Inbox with a session request');}};
  const host=Object.assign(new RoleHost(),{active:true,openInboxOnLaunch:true,generation:0,mailboxRefreshRevision:0,inboxLoadRevision:0,
    inboxTimer:-1,inboxAnchorTimer:-1,inboxSwipes:new Set(),conversationById:new Map(),conversationRevision:0,sentFolderUpdates:new Set(),
-   paths:{getAllPathName:()=>[],clear:()=>{}},resetInboxScroll:()=>{},clientFactory:{create:()=>client},messageLoader:{cancel:()=>{}},
+   paths:{getAllPathName:()=>[],clear:()=>{}},resetInboxScroll:()=>{},loadMailAction:()=>{},clientFactory:{create:()=>client},messageLoader:{cancel:()=>{}},
    accountStore:{credentials:()=>({}),rememberVisitedAccount:async()=>{},mail:{
-     boxes:async()=>cached,saveBoxes:async(_id,values,readOnly)=>{calls.push(['saveBoxes']);cached={roleRevision:3,readOnly,boxes:values};}}},
+     boxes:async()=>cached,saveBoxes:async(_id,values,readOnly)=>{calls.push(['saveBoxes']);cached={roleRevision:4,readOnly,boxes:values};}}},
    label:n=>n,refreshUnreadStatus:()=>{},showError:error=>{throw error;},saveCache:async operation=>operation,
    async applyBoxes(values){this.boxes=values;},async openBox(box){this.mailboxId=box.id;calls.push(['openInbox']);++this.generation;},
    async loadConversationIndex(){done.resolve();}});
@@ -71,7 +71,7 @@ test('Old IMAP mailbox roles refresh once behind a cached Inbox without a local 
  await f.host.openAccount(f.account,true);
  assert.equal(f.calls.filter(call=>call[0]==='mailboxes').length,1);
  f.upgrade.resolve();await f.done.promise;
- assert.equal(f.host.boxRolesCurrent,true);assert.equal(f.cached.roleRevision,3);
+ assert.equal(f.host.boxRolesCurrent,true);assert.equal(f.cached.roleRevision,4);
  assert.equal(f.host.boxes.find(box=>box.id==='server_archive').role,'archive');
  assert.equal(f.calls.filter(call=>call[0]==='saveBoxes').length,1);
  await f.host.openAccount(f.account,true);
@@ -82,5 +82,5 @@ test('Old JMAP mailbox metadata does not enter the IMAP folder-role upgrade',asy
  const f=roleFixture('https://synthetic.example.test/session');
  await f.host.openAccount(f.account,true);
  assert.equal(f.host.mailboxId,'inbox');assert.equal(f.host.boxRolesCurrent,false);
- assert.deepEqual(f.calls,[['openInbox']]);assert.equal(f.cached.roleRevision,2);
+ assert.deepEqual(f.calls,[['openInbox']]);assert.equal(f.cached.roleRevision,3);
 });

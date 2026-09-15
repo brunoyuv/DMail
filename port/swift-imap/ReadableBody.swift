@@ -21,10 +21,28 @@ public struct ReadablePlan: Sendable {
     public var attachments: [AttachmentPart] = []
     public var hasAttachments = false
     public var partial = false
+    private var hasNonemptyTextRepresentation = false
+    private var emptyTextSections: Set<SectionSpecifier> = []
+    private var resourceAttachments: [AttachmentPart] = []
+    private var resourceFetchPartial = false
     public init(_ structure: BodyStructure) throws {
         self.structure = structure
         var remaining = 512, budget = 6 * 1024 * 1024
         try visit(structure, path: [], depth: 0, remaining: &remaining, budget: &budget)
+        if hasNonemptyTextRepresentation { partial = partial || resourceFetchPartial }
+        else {
+            // Content-ID does not turn a standalone picture into an HTML body.
+            // With no nonempty text representation, keep these files available through
+            // attachment actions instead of fetching/assembling a non-text body.
+            for item in resourceAttachments {
+                guard attachments.count < 64 else { partial = true; break }
+                attachments.append(item)
+            }
+            if !resourceAttachments.isEmpty { hasAttachments = true }
+            parts.removeAll { !emptyTextSections.contains($0.section) }
+            if parts.isEmpty { metadataSections.removeAll() }
+        }
+        resourceAttachments.removeAll()
     }
     private mutating func visit(_ structure: BodyStructure, path: [Int], depth: Int,
                                 remaining: inout Int, budget: inout Int, relatedRoot: Bool = false) throws {
@@ -87,13 +105,22 @@ public struct ReadablePlan: Sendable {
             else { referencedImage = false }
             let readable: Bool
             switch part.kind {
-            case .text(let text): readable = [Media.Subtype("plain"), Media.Subtype("html")].contains(text.mediaSubtype)
+            case .text(let text):
+                readable = [Media.Subtype("plain"), Media.Subtype("html")].contains(text.mediaSubtype)
+                // Record advertised text before size limits: an omitted or
+                // failed text representation must remain explicitly partial.
+                if readable && (!attached || relatedRoot) {
+                    if part.fields.octetCount == 0 {
+                        emptyTextSections.insert(.init(part: .init(path.isEmpty ? [1] : path)))
+                    } else { hasNonemptyTextRepresentation = true }
+                }
             case .basic: readable = referencedImage
             case .message: readable = false
             }
-            if attached || (!readable && !referencedImage) {
-                hasAttachments = true
-                guard attachments.count < 64 else { partial = true; return }
+            if attached || !readable || referencedImage {
+                let resourceOnly = referencedImage && !attached
+                if !resourceOnly { hasAttachments = true }
+                guard (resourceOnly ? resourceAttachments.count : attachments.count) < 64 else { partial = true; return }
                 let components = path.isEmpty ? [1] : path
                 let parameters = disposition?.parameters ?? [:]
                 let name = AttachmentFilename.decode(
@@ -105,13 +132,23 @@ public struct ReadablePlan: Sendable {
                 case .text(let text): type = "text/\(text.mediaSubtype.debugDescription)"
                 case .message: type = "message/rfc822"
                 }
-                attachments.append(AttachmentPart(id: components.map(String.init).joined(separator: "."),
-                    name: String(name.prefix(512)), contentType: type, section: .init(part: .init(components)), encodedSize: part.fields.octetCount))
+                let attachment = AttachmentPart(id: components.map(String.init).joined(separator: "."),
+                    name: String(name.prefix(512)), contentType: type, section: .init(part: .init(components)), encodedSize: part.fields.octetCount)
+                if resourceOnly { resourceAttachments.append(attachment) }
+                else { attachments.append(attachment) }
                 if !referencedImage && !(relatedRoot && readable) { return }
             }
             if !readable { return }
             let size = part.fields.octetCount
-            guard size >= 0, size <= 4 * 1024 * 1024, size <= budget, parts.count < 24 else { partial = true; return }
+            guard size >= 0, size <= 4 * 1024 * 1024, size <= budget, parts.count < 24 else {
+                if referencedImage || (size == 0 && emptyTextSections.contains(.init(part: .init(path.isEmpty ? [1] : path)))) {
+                    // An image-filled request budget can omit a zero-byte
+                    // stub; that omission is harmless in attachment-only mail.
+                    resourceFetchPartial = true
+                }
+                else { partial = true }
+                return
+            }
             budget -= size
             parts.append(ReadablePart(section: SectionSpecifier(part: .init(path.isEmpty ? [1] : path)), octets: size))
         }
@@ -211,6 +248,7 @@ extension IMAPClient {
             let fetched = try readableFetchTarget(values, uid: uid)
             guard let headers = fetched.bodySections[header], let content = fetched.bodySections[part.section],
                   headers.count <= 65536, content.count <= 4 * 1024 * 1024,
+                  (part.octets == 0 || !content.isEmpty),
                   totalBytes + headers.count + content.count < 7 * 1024 * 1024 else { partial = true; continue }
             var bytes = headers
             if !headers.suffix(4).elementsEqual([13, 10, 13, 10]) && !headers.suffix(2).elementsEqual([10, 10]) { bytes.append(Data("\r\n".utf8)) }

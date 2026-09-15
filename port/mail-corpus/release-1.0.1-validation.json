@@ -1,0 +1,78 @@
+{
+  "version": "1.0.1",
+  "versionCode": 1000001,
+  "javascript": {
+    "tests": 740,
+    "passed": 740,
+    "files": 66
+  },
+  "pythonTests": 32,
+  "swift": {
+    "imapSmtpAccountTests": 132,
+    "mimeAndBodyTests": 114,
+    "archiveCreationTlsScenarios": 15,
+    "attachmentOnlyTlsScenarios": 6
+  },
+  "nativeArchitecturesRebuilt": [
+    "aarch64",
+    "x86_64"
+  ],
+  "hapBuildsPassed": [
+    "signed-arm",
+    "x86"
+  ],
+  "artifacts": {
+    "hapSha256": "c6cbcb0da3535154a5e45cb754d1ad0f670a9e57906aad832cad243e51d7c41d",
+    "native": {
+      "aarch64": "1576aded86ead46c97989231f6cb9e1865d6cc4669e8883c950064b915f98090",
+      "x86_64": "364dfebced3a16fb19926bcf91ea222ad61dfb371b7cc49cdc5806cd2ff86e4c"
+    }
+  },
+  "scope": [
+    "Create missing Archive on explicit action using original Swift CREATE and UID MOVE; verify source and destination",
+    "Namespace-aware read-only folder discovery; existing Archive and Gmail All Mail reused",
+    "Atomic confirmed folder/cache identity update and rejection of stale in-flight LIST results",
+    "Attachment-only CID image handling, including empty text/HTML stubs and large images, without eager payload download",
+    "PDF-only, empty-text-plus-PDF, offline reopen and genuine decode-failure regression coverage"
+  ],
+  "preservedFrom028": {
+    "harmony/entry/src/main/ets/pages/HtmlMail.ets": "e9a31563d98a3debc36dddcbe5dbf2c3dc86fe1d562f25bbfd8846529bb0d855",
+    "harmony/entry/src/main/ets/mail/AutomaticMailWork.ts": "4f1692f6e832d53372119ded2c0a1e192c82153d0499ebfea47f6b369958aad0",
+    "harmony/entry/src/main/ets/mail/MailSyncPacing.ts": "9abcc652b0cdab09158d592727dcba4fc6e53c6763a0363bfcfae68834f620fd",
+    "harmony/entry/src/main/ets/mail/MailMessageLoader.ets": "3152b2bf6bb28f6f378aef7ce297266a19f8fe8bbb90f04b919648de5097d65d",
+    "harmony/entry/src/main/ets/mail/html/HtmlDocument.ts": "bebe7a8019c1c3fce9654e92ddabe97a66eefe60873de5a449efc9a13425334e",
+    "harmony/entry/src/main/ets/data/PictureCache.ets": "9f8ee8e30ab7f611f36f1950b7655d560fb8d4d8989c06b7c7abc1dec011d418",
+    "port/swift-accountbody/InlineImages.swift": "0cfcb6a4e2131bda53a6bc5772104bc1093d81e2307a707605faf54e0a15c06d",
+    "port/swift-mime/html-entities.patch": "16cfdeea75c3e8ad723566f2d5d3463e4168ec1b2a45bd7871a9cf2381e00223",
+    "port/swift-imap/InboxWatch.swift": "1e0c662f79d33af4cad72ac2a12a49c1476fb36261c8c7ded34797f4d805f6e4"
+  },
+  "uiTests": "No new emulator UI run; actual component methods exercised with synthetic host fixtures. The 1.0.0 tablet dropdown and split-layout checks remain applicable.",
+  "installedDevices": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "versionCode": 1000001,
+      "versionName": "1.0.1",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "c6cbcb0da3535154a5e45cb754d1ad0f670a9e57906aad832cad243e51d7c41d"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "versionCode": 1000001,
+      "versionName": "1.0.1",
+      "upgradeOnly": true,
+      "productionLaunched": false,
+      "hapSha256": "c6cbcb0da3535154a5e45cb754d1ad0f670a9e57906aad832cad243e51d7c41d"
+    }
+  ],
+  "emulatorStopped": true,
+  "limits": [
+    "Synthetic mail and servers only; no real mailbox access, production launch or real sending.",
+    "Archive requires server MOVE support and an unambiguous writable destination or safe creation plan.",
+    "Uncertain mutations are not retried automatically; offline Archive is not queued.",
+    "Existing attachment size/count limits and body-retention policy are preserved."
+  ],
+  "historyPlan": "Exactly two commits on local main, 1.0.0 then 1.0.1; original history and source snapshots retained under ignored .tools/history-cleanup-101. No remote push."
+}

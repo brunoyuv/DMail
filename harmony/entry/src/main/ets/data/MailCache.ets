@@ -21,6 +21,7 @@ export class MailCache {
   private static mutationVersions: Map<string, number> = new Map();
   private static liveMutations: Set<string> = new Set();
   private static movedIdentities: Set<string> = new Set();
+  private static mailboxMutations: Map<string, number> = new Map();
   static mutationRevision(): number { return MailCache.mutationClock; }
   endMutation(accountId: string, emailId: string): void {
     const key = `${accountId}:${emailId}`;
@@ -180,9 +181,12 @@ export class MailCache {
       [accountId, kind, key, payload, accountId]);
   }
 
-  saveBoxes(accountId: string, boxes: JmapMailbox[], readOnly?: boolean): Promise<void> {
+  saveBoxes(accountId: string, boxes: JmapMailbox[], readOnly?: boolean, revision: number = MailCache.mutationRevision()): Promise<void> {
     const value = decodeCachedBoxes(JSON.stringify({ version: 1, savedAt: Date.now(), boxes, readOnly, roleRevision: MAILBOX_ROLE_REVISION } as CachedBoxes));
     return this.queue(async () => {
+      // A LIST started before a verified CREATE/MOVE cannot erase its newly
+      // committed folder. A later explicit list remains authoritative.
+      if (revision < (MailCache.mailboxMutations.get(accountId) || 0)) { return; }
       this.db.beginTransaction();
       try {
         const reconciled = await this.reconcileSent(accountId, value);
@@ -660,10 +664,20 @@ export class MailCache {
   // UID MOVE changes the server identity. Keep the original immutable content
   // origin for prepared HTML, pictures and attachment files, without reading or
   // rewriting any body/image bytes. Only a verified protocol result calls this.
-  moveEmailIdentity(accountId: string, oldId: string, newId: string, mailboxIds: string[]): Promise<void> {
+  moveEmailIdentity(accountId: string, oldId: string, newId: string, mailboxIds: string[], archiveMailbox?: JmapMailbox): Promise<void> {
     if (oldId === newId) { return this.updateMailboxes(accountId, oldId, mailboxIds); }
     if (![oldId, newId, ...mailboxIds].every(id => /^[A-Za-z0-9_-]{1,4096}$/.test(id)) || mailboxIds.length === 0) {
       return Promise.reject(new Error('Invalid moved message identity'));
+    }
+    let confirmedArchive: JmapMailbox | undefined;
+    if (archiveMailbox !== undefined) {
+      try {
+        // Snapshot and validate the receipt before yielding. Folder creation
+        // hints alone never create a locally visible destination.
+        const receipt = decodeCachedBoxes(JSON.stringify({ version: 1, savedAt: Date.now(), boxes: [archiveMailbox] } as CachedBoxes));
+        confirmedArchive = receipt.boxes[0];
+        if (!['archive', 'trash'].includes(confirmedArchive.role || '') || !mailboxIds.includes(confirmedArchive.id)) { throw new Error('Invalid archive receipt'); }
+      } catch (_) { return Promise.reject(new Error('Invalid archive mailbox receipt')); }
     }
     return this.queue(async () => {
       this.db.beginTransaction();
@@ -699,12 +713,40 @@ export class MailCache {
           if (mailboxIds.includes(mailboxId)) { view.ids.unshift(newId); }
           views.push(view);
         }
+        let boxes: CachedBoxes | null = null;
+        let boxesDirty = false;
+        if (confirmedArchive) {
+          const storedBoxes = await this.get(accountId, 'boxes', '', true);
+          boxes = storedBoxes ? decodeCachedBoxes(storedBoxes.payload) :
+            { version: 1, savedAt: Date.now(), boxes: [], roleRevision: MAILBOX_ROLE_REVISION };
+          boxesDirty = storedBoxes?.stateDirty ?? false;
+          let found = false;
+          for (const box of boxes.boxes) {
+            if (box.id === confirmedArchive.id) { box.role = confirmedArchive.role; found = true; }
+            else if (box.role === confirmedArchive.role) { box.role = null; }
+            if (confirmedArchive.role === 'archive' && box.role === 'inbox') { box.archiveDestinationId = undefined; box.archiveDestinationName = undefined; }
+          }
+          if (!found) {
+            // MOVE proves the destination exists, but does not provide a full
+            // mailbox count. Existing target counts/permissions stay intact.
+            const added: JmapMailbox = { id: confirmedArchive.id, name: confirmedArchive.name,
+              parentId: confirmedArchive.parentId, role: confirmedArchive.role, sortOrder: confirmedArchive.sortOrder,
+              totalEmails: 0, unreadEmails: 0, countsKnown: false,
+              maySetSeen: confirmedArchive.maySetSeen, maySetKeywords: confirmedArchive.maySetKeywords,
+              mayAddItems: confirmedArchive.mayAddItems, mayRemoveItems: confirmedArchive.mayRemoveItems };
+            boxes.boxes.push(added);
+          }
+        }
         await this.badges?.messageChanged(accountId, previousMail, cached.mail);
         await this.put(accountId, 'email', newId, JSON.stringify(cached));
         if (targetPayload?.stateDirty) {
           await this.db.executeSql("UPDATE mail_cache SET dirty = 1 WHERE account_id = ? AND kind = 'email' AND cache_key = ?", [accountId, newId]);
         }
         for (const view of views) { await this.put(accountId, 'view', view.mailboxId, JSON.stringify(view)); }
+        if (boxes) {
+          await this.put(accountId, 'boxes', '', JSON.stringify(boxes));
+          if (boxesDirty) { await this.db.executeSql("UPDATE mail_cache SET dirty = 1 WHERE account_id = ? AND kind = 'boxes' AND cache_key = ''", [accountId]); }
+        }
         await this.db.executeSql("DELETE FROM mail_cache WHERE account_id = ? AND kind = 'email' AND cache_key = ?", [accountId, oldId]);
         this.db.commit();
       } catch (error) { this.db.rollBack(); throw error as Error; }
@@ -712,6 +754,7 @@ export class MailCache {
       MailCache.movedIdentities.add(oldKey);
       MailCache.mutationVersions.set(oldKey, ++MailCache.mutationClock);
       MailCache.mutationVersions.set(newKey, ++MailCache.mutationClock);
+      if (confirmedArchive) { MailCache.mailboxMutations.set(accountId, ++MailCache.mutationClock); }
     });
   }
 

@@ -3,6 +3,7 @@ import { common } from '@kit.AbilityKit';
 import { AppLanguage } from '../settings/AppLanguage';
 import { AccountStore, SavedAccount } from '../data/AccountStore';
 import { NotificationSettingsPanel } from './NotificationSettingsPanel';
+import { MailActionSettingsPanel } from './MailActionSettingsPanel';
 import { DeferredSave } from './DeferredSave';
 
 @Component
@@ -122,6 +123,9 @@ export struct Settings {
             .value(this.accounts.find(value => value.id === this.selectedAccount)?.emailAddress || this.accounts.find(value => value.id === this.selectedAccount)?.name || '')
             .onSelect(index => { if (this.accounts[index]) { this.chooseAccount(this.accounts[index].id); } }).width('100%')
           NotificationSettingsPanel({ accountId: this.selectedAccount, store: this.store })
+          if (this.accounts.find(value => value.id === this.selectedAccount)?.sessionUrl.startsWith('imaps:')) {
+            MailActionSettingsPanel({ accountId: this.selectedAccount, store: this.store })
+          }
           Text(this.label('sender_name')).fontSize(15).fontColor($r('app.color.mail_text_secondary')).width('100%')
           TextInput({ text: this.senderName, placeholder: this.label('sender_name_placeholder') })
             .id('sender-display-name').maxLength(200).enableAutoFill(false).height(48).width('100%')

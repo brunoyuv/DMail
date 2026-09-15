@@ -177,3 +177,16 @@ test('A failed body decode retains the same message preview and a usable body re
   const recovered = cacheEmail({ ...mail(), preview: '', textBody: 'Recovered body 中文' }, true, failed, 300);
   assert.equal(recovered.mail.preview, 'Recovered body 中文');
 });
+
+test('Cached Inbox creation hints round-trip without a fake mailbox and reject malformed destinations', () => {
+  const inbox = { id: 'inbox', name: 'Inbox', parentId: null, role: 'inbox', sortOrder: 0,
+    totalEmails: 4, unreadEmails: 2, maySetSeen: true, maySetKeywords: true, mayAddItems: true, mayRemoveItems: true,
+    archiveDestinationId: 'archive', archiveDestinationName: 'INBOX.Archive' };
+  const encoded = box => JSON.stringify({ version: 1, savedAt: 100, roleRevision: 4, boxes: [box] });
+  assert.deepEqual(decodeCachedBoxes(encoded(inbox)).boxes, [inbox]);
+  for (const change of [{ archiveDestinationId: 'inbox' }, { archiveDestinationId: '../archive' },
+    { archiveDestinationName: null }, { archiveDestinationName: 'Archive\r\n' }, { archiveDestinationId: undefined },
+    { role: 'sent' }]) assert.throws(() => decodeCachedBoxes(encoded({ ...inbox, ...change })), /Invalid mail cache/);
+  const legacy = { ...inbox }; delete legacy.archiveDestinationId; delete legacy.archiveDestinationName;
+  assert.deepEqual(decodeCachedBoxes(encoded(legacy)).boxes, [legacy]);
+});

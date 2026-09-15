@@ -453,3 +453,6 @@ copy('port/swift-imap/MailboxLoading.test.ets','entry/src/ohosTest/ets/test/Mail
 write('entry/src/ohosTest/ets/testrunner/MailboxLoadingRunner.ets', runner.replace('IMAPTestRunner','MailboxLoadingRunner').replace('../test/IMAP.test','../test/MailboxLoading.test'))
 copy('port/swift-imap/Encoding.test.ets','entry/src/ohosTest/ets/test/Encoding.test.ets')
 write('entry/src/ohosTest/ets/testrunner/EncodingRunner.ets', runner.replace('IMAPTestRunner','EncodingRunner').replace('../test/IMAP.test','../test/Encoding.test'))
+
+copy('port/swift-imap/EmptyBodyStorage.test.ets','entry/src/ohosTest/ets/test/EmptyBodyStorage.test.ets')
+copy('port/swift-imap/EmptyBodyStorageRunner.ets','entry/src/ohosTest/ets/testrunner/EmptyBodyStorageRunner.ets')

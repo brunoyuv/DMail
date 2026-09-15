@@ -81,7 +81,7 @@ private func email(_ message: IMAP.Message, mailbox: String, epoch: Epoch, inclu
     func addresses(_ values: [any EmailAddressProtocol]) -> [ImapAddress] {
         values.flatMap { $0.addresses }.map { ImapAddress(name: $0.label ?? "", email: $0.value) }
     }
-    var body: EmailBody?, failed = false
+    var body: EmailBody?, failed = false, unconfirmedEmpty = false
     if includeBody {
         let source = readable?.body ?? message.body
         // EmailBody's generic dataNotFound also covers a successfully fetched
@@ -93,6 +93,7 @@ private func email(_ message: IMAP.Message, mailbox: String, epoch: Epoch, inclu
                 if case .singlepart(let part) = structure { confirmedEmpty = part.fields.octetCount == 0 }
                 else { confirmedEmpty = false }
             }
+            unconfirmedEmpty = !confirmedEmpty
             if confirmedEmpty {
                 if subtype == .html { body = EmailBody(html: "") }
                 else { body = EmailBody(text: "") }
@@ -105,10 +106,14 @@ private func email(_ message: IMAP.Message, mailbox: String, epoch: Epoch, inclu
             body = EmailBody(text: "")
         }
         if body == nil {
-            do { body = try EmailBody(body: source) }
+            do {
+                if unconfirmedEmpty || (source?.part.data.isEmpty == true && readable?.partial == true) { throw MIME.MIMEError.dataNotFound }
+                body = try EmailBody(body: source)
+            }
             catch { failed = true }
         }
     }
+    if includeBody, readable?.partial == true, body?.text == nil, body?.html(.none) == nil { failed = true }
     let rendered = body?.renderedHTML()
     let html = rendered?.html
     let text = body?.text
@@ -189,7 +194,7 @@ private func samplePreviews(_ messages: IMAP.MessageSet, client: IMAPClient, mai
 }
 
 private func perform(_ input: ImapRequest) async throws -> ImapReply {
-    guard ["connect", "mailboxes", "emailPage", "readEmail", "readAttachment", "setKeyword", "archiveEmail", "undoArchive", "checkInbox", "watchInbox", "stopInboxWatch", "closeSyncSession"].contains(input.operation) else { throw ImapFailure.unsupported }
+    guard ["connect", "mailboxes", "emailPage", "readEmail", "readAttachment", "setKeyword", "archiveEmail", "undoArchive", "deleteEmail", "undoDelete", "checkInbox", "watchInbox", "stopInboxWatch", "closeSyncSession"].contains(input.operation) else { throw ImapFailure.unsupported }
     if input.operation == "closeSyncSession" {
         guard let id = input.syncSessionId, UUID(uuidString: id) != nil else { throw ImapFailure.invalidArgument }
         try await IMAP.SyncReadSessionPool.shared.close(id: id)
@@ -324,8 +329,14 @@ private func performAuthenticated(_ input: ImapRequest, connection: ImapConnecti
         let listed = try await client.list()
         guard listed.count <= 500 else { throw ImapFailure.messageTooLarge }
         let sentMailbox = IMAP.sentMailbox(in: listed.map { $0.0 })
-        let archiveMailbox = IMAP.archiveMailbox(in: listed.map { $0.0 })
+        let trashMailbox = IMAP.trashMailbox(in: listed.map { $0.0 })
         let supportsMove = client.capabilities.contains { $0.rawValue.uppercased() == "MOVE" }
+        var archivePlan: IMAP.ArchiveDestination?
+        if supportsMove {
+            do { archivePlan = try await IMAP.discoverArchiveDestination(client: client, mailboxes: listed.map { $0.0 }) }
+            catch { try Task.checkCancellation() } // Optional planning never hides LIST's folders.
+        }
+        let archiveMailbox = archivePlan?.requiresCreation == false ? archivePlan?.name : IMAP.archiveMailbox(in: listed.map { $0.0 })
         var boxes = [ImapMailbox](), ids = Set<String>()
         // Counts decorate the folder list; they must not gate inbox access.
         // Some servers reject extended STATUS attributes or individual
@@ -343,10 +354,16 @@ private func performAuthenticated(_ input: ImapRequest, connection: ImapConnecti
             let inbox = name.uppercased() == "INBOX"
             let sent = box.path.name == sentMailbox
             let archive = box.path.name == archiveMailbox
-            boxes.append(ImapMailbox(id: id, name: name, role: ImapNullable(inbox ? "inbox" : sent ? "sent" : archive ? "archive" : nil),
+            let trash = box.path.name == trashMailbox
+            var record = ImapMailbox(id: id, name: name, role: ImapNullable(inbox ? "inbox" : sent ? "sent" : archive ? "archive" : trash ? "trash" : nil),
                 sortOrder: inbox ? 0 : 1, totalEmails: known ? total! : 0,
                 unreadEmails: known ? unread! : 0, countsKnown: known,
-                mayAddItems: supportsMove && (inbox || archive), mayRemoveItems: supportsMove && (inbox || archive)))
+                mayAddItems: supportsMove && (inbox || archive || trash), mayRemoveItems: supportsMove && (inbox || archive || trash))
+            if inbox, let plan = archivePlan, plan.requiresCreation {
+                record.archiveDestinationId = try imapEncode(plan.name.description)
+                record.archiveDestinationName = plan.name.description
+            }
+            boxes.append(record)
         }
         reply = ImapReply(mailboxes: boxes)
     case "emailPage":
@@ -377,50 +394,52 @@ private func performAuthenticated(_ input: ImapRequest, connection: ImapConnecti
         }
         reply = ImapReply(page: ImapPage(queryState: state, position: position,
             nextPosition: ImapNullable(start > 1 ? position+emails.count : nil), total: epoch.count, emails: emails))
-    case "archiveEmail", "undoArchive":
+    case "archiveEmail", "undoArchive", "deleteEmail", "undoDelete":
         guard let id = input.emailId else { throw ImapFailure.invalidArgument }
         let identity = try imapDecode(ImapIdentity.self, id)
         guard identity.uid > 0, identity.uid < UInt32.max, identity.validity > 0,
               try imapMailboxName(imapEncode(identity.mailbox)) == identity.mailbox else { throw ImapFailure.invalidArgument }
-        guard client.capabilities.contains(where: { $0.rawValue.uppercased() == "MOVE" }) else { throw ImapFailure.archiveUnavailable }
-        let listed = try await client.list()
-        guard listed.count <= 500 else { throw ImapFailure.messageTooLarge }
-        guard let archive = IMAP.archiveMailbox(in: listed.map { $0.0 }),
-              listed.contains(where: { $0.0.path.name.description.uppercased() == "INBOX" && !$0.0.attributes.contains(.noSelect) })
-        else { throw ImapFailure.archiveUnavailable }
-        let isUndo = input.operation == "undoArchive"
-        let destination: IMAP.Mailbox.Name
+        let isUndo = input.operation == "undoArchive" || input.operation == "undoDelete"
+        let deleting = input.operation == "deleteEmail" || input.operation == "undoDelete"
+        let undoInbox: IMAP.Mailbox.Name?
         if isUndo {
-            guard identity.mailbox == archive.description, let target = input.mailboxId else { throw ImapFailure.invalidArgument }
-            let inboxName = try imapMailboxName(target)
-            guard inboxName.uppercased() == "INBOX" else { throw ImapFailure.invalidArgument }
-            destination = IMAP.Mailbox.Name(inboxName)
-        } else {
-            guard identity.mailbox.uppercased() == "INBOX" else { throw ImapFailure.archiveUnavailable }
-            destination = archive
+            guard let target = input.mailboxId else { throw ImapFailure.invalidArgument }
+            let name = try imapMailboxName(target)
+            guard name.uppercased() == "INBOX" else { throw ImapFailure.invalidArgument }
+            undoInbox = IMAP.Mailbox.Name(name)
+        } else { undoInbox = nil }
+        let result: IMAP.ArchiveOperationResult
+        do {
+            if deleting {
+                result = try await IMAP.deleteMessage(client: client, source: IMAP.Mailbox.Name(identity.mailbox),
+                    validity: identity.validity, uid: UID(rawValue: identity.uid), undoInbox: undoInbox)
+            } else {
+                result = try await IMAP.archiveMessage(client: client, source: IMAP.Mailbox.Name(identity.mailbox),
+                    validity: identity.validity, uid: UID(rawValue: identity.uid), undoInbox: undoInbox)
+            }
+        } catch let error as IMAP.ArchiveOperationError {
+            switch error {
+            case .unavailable: throw ImapFailure.archiveUnavailable
+            case .readOnly: throw ImapFailure.accountReadOnly
+            case .messageNotFound: throw ImapFailure.messageNotFound
+            case .identityChanged: throw ImapFailure.queryChanged
+            case .invalidResponse: throw ImapFailure.invalidResponse
+            case .forbidden: throw ImapFailure.forbidden
+            case .createUnconfirmed, .moveUnconfirmed: throw ImapFailure.changeUnconfirmed
+            }
         }
-        let source = IMAP.Mailbox.Name(identity.mailbox)
-        let selection = try await client.selectWithPermissions(mailbox: source)
-        guard let validity = IMAP.flagMutationValidity(selection.status) else { throw ImapFailure.invalidResponse }
-        guard validity == identity.validity else { throw ImapFailure.queryChanged }
-        guard !selection.isReadOnly else { throw ImapFailure.accountReadOnly }
-        let uid = UID(rawValue: identity.uid), identifiers = UIDSet(range: .init(UID(rawValue: identity.uid)...UID(rawValue: identity.uid)))
-        let before = try await client.fetch(uid: identifiers, attributes: [.uid, .flags])
-        guard !before.isEmpty else { throw ImapFailure.messageNotFound }
-        guard IMAP.flagMutationTarget(in: before, uid: uid) != nil else { throw ImapFailure.invalidResponse }
-        let moved: IMAP.ArchiveMoveResult
-        do { moved = try await client.archiveMove(uid: uid, to: destination) }
-        catch IMAP.ArchiveMoveError.rejected { throw ImapFailure.forbidden }
-        catch { throw ImapFailure.changeUnconfirmed }
+        let destination = result.destination, moved = result.move
         let movedId: String?
         if let validity = moved.validity, let uid = moved.uid {
             movedId = try imapEncode(ImapIdentity(mailbox: destination.description, validity: validity, uid: uid))
         } else { movedId = nil }
         if isUndo { reply = ImapReply(state: "moved", movedEmailId: movedId) }
         else {
-            let inboxId = try imapEncode(identity.mailbox), archiveId = try imapEncode(archive.description)
+            let inboxId = try imapEncode(identity.mailbox), archiveId = try imapEncode(destination.description)
+            let archiveBox = ImapMailbox(id: archiveId, name: destination.description, role: ImapNullable(deleting ? "trash" : "archive"),
+                sortOrder: 1, totalEmails: 0, unreadEmails: 0, countsKnown: false, mayAddItems: true, mayRemoveItems: true)
             reply = ImapReply(archive: ImapArchiveUndo(emailId: id, inboxId: inboxId, archiveId: archiveId,
-                expectedMailboxIds: [archiveId], movedEmailId: movedId, canUndo: movedId != nil))
+                expectedMailboxIds: [archiveId], movedEmailId: movedId, canUndo: movedId != nil, archiveMailbox: archiveBox, action: deleting ? "delete" : nil))
         }
     case "readEmail", "readAttachment", "setKeyword":
         guard let id = input.emailId else { throw ImapFailure.invalidArgument }

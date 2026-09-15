@@ -22,7 +22,8 @@ function model(path) {
   new Function('require', 'module', 'exports', ts.transpileModule(fs.readFileSync(path, 'utf8'),
     { compilerOptions: options }).outputText)(name => {
       if (name === './MailContentFileModel') return require('../.tools/test-output/data/MailContentFileModel.js');
-    assert.equal(name, '../mail/MessagePreview');
+      if (name === '../mail/jmap/JmapClient') return model('harmony/entry/src/main/ets/mail/jmap/JmapClient.ts');
+      assert.equal(name, '../mail/MessagePreview');
       return model('harmony/entry/src/main/ets/mail/MessagePreview.ts');
     }, module, module.exports);
   return module.exports;

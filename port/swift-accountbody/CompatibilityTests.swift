@@ -4,6 +4,30 @@ import Foundation
 import Testing
 
 struct AccountBodyCompatibilityTests {
+    @Test func emptyTextAndAttachmentOnlyMultipartAreValidBodies() throws {
+        let pdf = "Content-Type: application/pdf\r\nContent-Disposition: attachment; filename=report.pdf\r\n" +
+            "Content-Transfer-Encoding: base64\r\n\r\n" + Data("%PDF-fixture".utf8).base64EncodedString()
+        for emptyText in [false, true] {
+            let source = "Content-Type: multipart/mixed; boundary=mail\r\n\r\n" +
+                (emptyText ? "--mail\r\nContent-Type: text/plain\r\n\r\n\r\n" : "") +
+                "--mail\r\n\(pdf)\r\n--mail--\r\n"
+            let body = try EmailBody(body: MIME.Body(source))
+            #expect(body.text == (emptyText ? "" : nil))
+            #expect(body.html() == nil)
+            #expect(!body.decodingHadErrors)
+            #expect(body.attachments.count == 1)
+            #expect(body.attachments[0].data == Data("%PDF-fixture".utf8))
+        }
+    }
+    @Test func prunedAttachmentWithEmptyTextKeepsExplicitEmptyBody() throws {
+        let part = try MIME.Part(parts: [
+            MIME.Part(data: Data(), contentType: .text(.plain, .utf8)),
+            MIME.Part(data: Data(), contentType: .application("x-dmail-omitted"))], contentType: .multipart(.mixed))
+        let body = try EmailBody(body: MIME.Body(part: part))
+        #expect(body.text == "")
+        #expect(body.html() == nil)
+        #expect(!body.decodingHadErrors)
+    }
     @Test func foldedNewsletterWithEightBitUTF8AndCIDImage() throws {
         let source = """
         Subject: 日本語
@@ -194,5 +218,21 @@ struct ScopedBodyTests {
         #expect(roundTrip.contentID?.description == "<container@example.test>")
         #expect(roundTrip.contentLocation == "https://example.test/mail/")
         #expect(try roundTrip.parts.first?.contentID?.description == "<root@example.test>")
+    }
+}
+
+struct EmptyCompositionBodyTests {
+    @Test func emptyStandaloneTextAndHtmlDecodeWithoutAnError() throws {
+        for subtype in [String.plain, .html] {
+            for transfer in [ContentTransferEncoding.base64, .quotedPrintable, .data] {
+                let part = MIME.Part(data: Data(), contentTransferEncoding: transfer, contentType: .text(subtype, .utf8))
+                let body = try EmailBody(body: MIME.Body(part: part))
+                #expect(body.text == (subtype == .html ? nil : ""))
+                #expect(body.html(.none) == (subtype == .html ? "" : nil))
+                #expect(!body.decodingHadErrors)
+            }
+        }
+        #expect(throws: (any Error).self) { try EmailBody(body: nil) }
+        #expect(throws: (any Error).self) { try EmailBody(body: MIME.Body(part: MIME.Part(data: Data(), contentType: .multipart(.mixed)))) }
     }
 }

@@ -205,3 +205,29 @@ upstream files and hashes unchanged.
 and split Unicode bodies, flag updates, UID conflicts and missing sections.
 The shipping native sync fixture also returns split MIME/body responses and
 unrelated flags. See `docs/release-0.1.25.md` for completed runtime evidence.
+
+## Archive creation and attachment-only messages (1.0.1)
+
+`ArchiveCreation.swift` uses the original CREATE encoder and UID MOVE transport.
+Existing Archive/All Mail is preferred. When none exists, read-only planning
+uses one personal NAMESPACE (two-second optional deadline), or an unambiguous
+visible root/Inbox hierarchy. Only an explicit Archive operation validates the
+source UID/UIDVALIDITY and write selection, creates once, confirms the exact
+selectable folder with LIST, revalidates the source, and sends MOVE. A tagged
+ALREADYEXISTS can proceed to verification; other refusals and unconfirmed results
+never move or replay. `archive-creation.patch` registers these wrappers without
+changing upstream hashes. Namespace queries and normal refreshes never CREATE.
+
+The returned actual folder is cached atomically with the new UID identity.
+Mailbox snapshots capture a mutation revision before LIST; a response older than
+a confirmed folder mutation cannot erase it. UI publication reads that accepted
+cache and retains account/navigation ownership. The Inbox's optional prospective
+destination is an action hint, never a listed folder before server confirmation.
+
+`ReadablePlan` retains CID-only pictures as attachment metadata when no nonempty
+text/HTML representation exists. Empty text stubs remain valid, required related
+root MIME metadata stays available, and image payloads are fetched only through
+attachment actions. Body-only limits on those images cannot fail message open.
+Nonempty declared text and ordinary HTML/CID plans retain their partial/error
+handling. Synthetic tests exercise standalone/multipart PDFs and CID images,
+empty stubs, large images, offline cache reopening, and bounded request counts.

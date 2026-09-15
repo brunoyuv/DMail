@@ -74,3 +74,7 @@ shutil.copy2(root/'port/swift-imap/FetchAssemblyTests.swift',package/'Tests/IMAP
 subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/archive-move.patch').read_text(), text=True, check=True)
 shutil.copy2(root/'port/swift-imap/ArchiveMove.swift',package/'Sources/IMAP/ArchiveMove.swift')
 shutil.copy2(root/'port/swift-imap/ArchiveMoveTests.swift',package/'Tests/IMAPTests/ArchiveMoveTests.swift')
+
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/archive-creation.patch').read_text(), text=True, check=True)
+shutil.copy2(root/'port/swift-imap/ArchiveCreation.swift',package/'Sources/IMAP/ArchiveCreation.swift')
+shutil.copy2(root/'port/swift-imap/ArchiveCreationTests.swift',package/'Tests/IMAPTests/ArchiveCreationTests.swift')

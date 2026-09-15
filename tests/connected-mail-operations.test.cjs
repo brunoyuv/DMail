@@ -14,30 +14,34 @@ function method(name) {
   return found[0];
 }
 const compiled = ts.transpileModule(`export class ConnectedMailHost {
-${['showError', 'showSavedCopy', 'loadPage', 'read', 'applyReaderMetadata', 'operationsChanged', 'loadConversationIndex', 'rowAllows', 'rowArchiveAllows', 'visibleEmails',
-  'closeSwipeAction', 'rowKeyword', 'archive'].map(method).join('\n')}
+${['showError', 'showSavedCopy', 'loadPage', 'read', 'applyReaderMetadata', 'applyBoxes', 'operationsChanged', 'loadConversationIndex', 'rowAllows', 'rowArchiveAllows', 'visibleEmails',
+  'closeSwipeAction', 'rowKeyword', 'archive', 'moveTarget', 'loadMailAction', 'serverChecksTrash'].map(method).join('\n')}
 }`, { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS } }).outputText;
 const conversationModule = { exports: {} };
 const conversationCode = ts.transpileModule(fs.readFileSync('harmony/entry/src/main/ets/mail/Conversation.ts', 'utf8'),
   { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS } }).outputText;
 new Function('module', 'exports', conversationCode)(conversationModule, conversationModule.exports);
+const jmapModule = { exports: {} };
+const jmapCode = ts.transpileModule(fs.readFileSync('harmony/entry/src/main/ets/mail/jmap/JmapClient.ts', 'utf8'),
+  { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS } }).outputText;
+new Function('module', 'exports', jmapCode)(jmapModule, jmapModule.exports);
+const sentModule = { exports: {} };
+const sentCode = ts.transpileModule(fs.readFileSync('harmony/entry/src/main/ets/mail/smtp/SentMail.ts', 'utf8'),
+  { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS } }).outputText;
+new Function('module', 'exports', sentCode)(sentModule, sentModule.exports);
 const cacheModelModule = { exports: {} };
 const cacheModelCode = ts.transpileModule(fs.readFileSync('harmony/entry/src/main/ets/data/MailCacheModel.ts', 'utf8'),
   { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS } }).outputText;
 new Function('require', 'module', 'exports', cacheModelCode)(name => {
   if (name === './MailContentFileModel') return require('../.tools/test-output/data/MailContentFileModel.js');
-    assert.equal(name, '../mail/MessagePreview');
+  if (name === '../mail/jmap/JmapClient') return jmapModule.exports;
+  assert.equal(name, '../mail/MessagePreview');
   const preview = { exports: {} };
   const code = ts.transpileModule(fs.readFileSync('harmony/entry/src/main/ets/mail/MessagePreview.ts', 'utf8'),
     { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS } }).outputText;
   new Function('module', 'exports', code)(preview, preview.exports);
   return preview.exports;
 }, cacheModelModule, cacheModelModule.exports);
-const jmapModule = { exports: {} };
-const jmapCode = ts.transpileModule(fs.readFileSync('harmony/entry/src/main/ets/mail/jmap/JmapClient.ts', 'utf8'),
-  { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS } }).outputText;
-new Function('module', 'exports', jmapCode)(jmapModule, jmapModule.exports);
-
 const clone = value => JSON.parse(JSON.stringify(value));
 const deferred = () => { let resolve; const promise = new Promise(done => { resolve = done; }); return { promise, resolve }; };
 function mail(seen = false) {
@@ -51,8 +55,10 @@ function fixture() {
   const savedAt = Date.now() - 1000;
   const state = { pending: false, view: { savedAt, emails: [mail()], stateDirty: false,
     nextPosition: 50, queryState: 'synthetic-state' }, viewRead: null, bodyRead: null, summaryRead: null, indexRead: null, pageCalls: 0, loaderCalls: [],
-    overlays: new Map(), closeCallbacks: [], operationCalls: [], paths: [] };
+    overlays: new Map(), closeCallbacks: [], operationCalls: [], paths: [],
+    folderRevisions: new Map(), folders: new Map(), folderRead: null, folderReads: [], appliedBoxes: [], folderNetworkCalls: 0 };
   const operations = {
+    mailboxRevision: accountId => state.folderRevisions.get(accountId) || 0,
     currentEmailId: (_account, id) => id,
     undo: () => null, count: () => state.pending ? 1 : 0, pending: () => state.pending,
     overlay: (_account, value) => state.overlays.get(value.id) || (state.pending ? { ...value,
@@ -60,24 +66,29 @@ function fixture() {
     setKeyword: (store, client, accountId, serverId, value, keyword) => {
       state.operationCalls.push({ kind: 'keyword', store, client, accountId, serverId, mail: clone(value), keyword });
     },
-    move: (store, client, accountId, serverId, value, membership) => {
-      state.operationCalls.push({ kind: 'move', store, client, accountId, serverId, mail: clone(value), membership: membership.slice() });
+    move: (store, client, accountId, serverId, value, membership, undo, action) => {
+      state.operationCalls.push({ kind: 'move', store, client, accountId, serverId, mail: clone(value), membership: membership.slice(), undo, action });
     }
   };
   const module = { exports: {} };
-  new Function('module', 'exports', 'MailOperations', 'MailCache', 'conversationGroups', 'conversationMessages', 'cacheReadyForReading', 'archiveTarget', 'canSetKeyword', 'MailInboxUpdates', 'shallowCopyEmail', 'stableMessageKey', 'MailMessageLoadCancelled', 'AutomaticMailWork', 'AutomaticMailWorkCancelled', compiled)(module, module.exports,
+  new Function('module', 'exports', 'MailOperations', 'MailCache', 'conversationGroups', 'conversationMessages', 'cacheReadyForReading', 'archiveTarget', 'trashTarget', 'canSetKeyword', 'MailInboxUpdates', 'shallowCopyEmail', 'stableMessageKey', 'MailMessageLoadCancelled', 'AutomaticMailWork', 'AutomaticMailWorkCancelled', 'serverSentMailbox', 'LOCAL_SENT_MAILBOX', compiled)(module, module.exports,
     operations, { mutationRevision: () => 0 }, conversationModule.exports.conversationGroups, conversationModule.exports.conversationMessages,
-    cacheModelModule.exports.cacheReadyForReading, jmapModule.exports.archiveTarget, jmapModule.exports.canSetKeyword, { revision: () => 0, isForeground: () => true }, jmapModule.exports.shallowCopyEmail, conversationModule.exports.stableMessageKey, MailMessageLoadCancelled, automatic(state), AutomaticMailWorkCancelled);
+    cacheModelModule.exports.cacheReadyForReading, jmapModule.exports.archiveTarget, jmapModule.exports.trashTarget, jmapModule.exports.canSetKeyword, { revision: () => 0, isForeground: () => true }, jmapModule.exports.shallowCopyEmail, conversationModule.exports.stableMessageKey, MailMessageLoadCancelled, automatic(state), AutomaticMailWorkCancelled,
+    sentModule.exports.serverSentMailbox, sentModule.exports.LOCAL_SENT_MAILBOX);
   const ui = new module.exports.ConnectedMailHost();
   Object.assign(ui, {
     active: true, ready: true, account: { id: 'synthetic_account', serverId: 'synthetic_server', sessionUrl: 'imaps://example.test' },
-    generation: 7, mailboxRefreshRevision: 0, mailboxRefreshActive: false, refreshing: false, operationRevision: 0, busy: false, readOnly: false, selected: null, emails: [mail()],
+    mailAction: 'archive', mailActionReady: true, mailActionLoadRevision: 0, generation: 7, mailboxRefreshRevision: 0, mailboxRefreshActive: false, refreshing: false, operationRevision: 0, busy: false, readOnly: false, selected: null, emails: [mail()],
     inboxRequests: new Map(), inboxAcknowledged: new Map(), inboxCachedUpdates: new Set(), inboxFetching: new Set(),
-    inboxSwipes: new Set(), inboxLoadRevision: 0, inboxViewRevision: 0, inboxChanged() {}, refreshUnreadStatus() {},
+    inboxSwipes: new Set(), inboxLoadRevision: 0, inboxViewRevision: 0, appliedFolderRevisions: new Map(), inboxChanged() {}, refreshUnreadStatus() {},
     mailboxId: 'inbox', nextPosition: null, queryState: undefined, query: '', unreadOnly: false, refreshRequired: false, emailsDirty: false,
     savedCopyAt: 0, savedCopyFromDirty: false, error: '', cacheWarning: false, swipeClosing: false, boxes: [],
     conversation: [], conversationIndex: [], conversationById: new Map(), conversationLoadRevision: 0,
     accountStore: { documents: { read: async () => ({ attempted: false, document: null }) }, mail: {
+      boxes: async accountId => {
+        state.folderReads.push(accountId);
+        return state.folderRead ? state.folderRead(accountId) : clone(state.folders.get(accountId) || null);
+      },
       view: async () => state.viewRead ? state.viewRead() : clone(state.view),
       cachedMessages: async () => state.indexRead ? state.indexRead() : state.view.emails.map(value => ({ mail: clone(value) })),
       email: async () => { if (state.bodyRead) return state.bodyRead(); throw new Error('Unexpected body read'); },
@@ -87,12 +98,15 @@ function fixture() {
       },
       saveView: async () => { throw new Error('Unexpected downloaded page'); }
     } },
-    client: { emailPage: async () => { state.pageCalls++; const error = new Error('Synthetic offline'); error.code = 'network'; throw error; } },
+    client: { emailPage: async () => { state.pageCalls++; const error = new Error('Synthetic offline'); error.code = 'network'; throw error; },
+      mailboxes: async () => { state.folderNetworkCalls++; throw new Error('Unexpected folder download'); } },
     label: name => name,
     paths: { getAllPathName: () => state.paths.slice(), pushPathByName: name => state.paths.push(name) }, allows: () => false,
     mailScroller: { closeAllSwipeActions: options => state.closeCallbacks.push(options.onFinish) },
     refreshConversationFolder: async () => { throw new Error('Unexpected conversation download'); }
   });
+  const applyBoxes = ui.applyBoxes.bind(ui);
+  ui.applyBoxes = async (...args) => { state.appliedBoxes.push(clone(args)); return applyBoxes(...args); };
   bindReaderLoader(ui, state, conversationModule.exports.stableMessageKey);
   return { ui, state, savedAt };
 }
@@ -113,6 +127,123 @@ test('Cached navigation during a read/unread operation remains actionable after 
     assert.equal(ui.emails[0].keywords.includes('$seen'), seen);
   }
   assert.equal(state.pageCalls, 0, 'Reopening downloaded mail must not require a server request');
+});
+
+function archiveFolders(label = 'Confirmed Archive') {
+  return { savedAt: Date.now(), readOnly: false, roleRevision: cacheModelModule.exports.MAILBOX_ROLE_REVISION, boxes: [
+    { id: 'inbox', name: 'Inbox', role: 'inbox', parentId: null, sortOrder: 0, totalEmails: 8, unreadEmails: 2,
+      countsKnown: true, maySetSeen: true, maySetKeywords: true, mayAddItems: true, mayRemoveItems: true },
+    { id: 'archive', name: label, role: 'archive', parentId: null, sortOrder: 1, totalEmails: 0, unreadEmails: 0,
+      countsKnown: false, maySetSeen: true, maySetKeywords: true, mayAddItems: true, mayRemoveItems: true }
+  ] };
+}
+
+test('Confirmed Archive folder publication reads local cache once per revision without requesting the server', async () => {
+  const { ui, state } = fixture(), accountId = ui.account.id;
+  const folders = archiveFolders(); state.folders.set(accountId, folders); state.folderRevisions.set(accountId, 1);
+  await ui.operationsChanged();
+  assert.deepEqual(ui.boxes, folders.boxes); assert.deepEqual(state.folderReads, [accountId]);
+  assert.equal(ui.appliedFolderRevisions.get(accountId), 1); assert.equal(state.appliedBoxes.length, 1);
+  for (let count = 0; count < 5; count++) { ui.operationRevision++; await ui.operationsChanged(); }
+  assert.deepEqual(state.folderReads, [accountId]); assert.equal(state.appliedBoxes.length, 1);
+  state.folders.set(accountId, archiveFolders('A later confirmed folder')); state.folderRevisions.set(accountId, 2);
+  ui.operationRevision++; await ui.operationsChanged();
+  assert.equal(ui.boxes[1].name, 'A later confirmed folder'); assert.equal(ui.appliedFolderRevisions.get(accountId), 2);
+  assert.deepEqual(state.folderReads, [accountId, accountId]); assert.equal(state.appliedBoxes.length, 2);
+  assert.equal(state.folderNetworkCalls, 0); assert.equal(state.pageCalls, 0);
+});
+
+test('A receipt for another account does not read or publish its folders in the current account', async () => {
+  const { ui, state } = fixture();
+  const current = archiveFolders('Current account folder').boxes; ui.boxes = current;
+  state.folderRevisions.set('other_account', 9); state.folders.set('other_account', archiveFolders('Other account folder'));
+  ui.operationRevision++; await ui.operationsChanged();
+  assert.strictEqual(ui.boxes, current); assert.deepEqual(state.folderReads, []);
+  assert.equal(ui.appliedFolderRevisions.size, 0); assert.equal(state.pageCalls, 0); assert.equal(state.folderNetworkCalls, 0);
+});
+
+test('A delayed folder read cannot repaint a switched account or consume its unapplied revision', async () => {
+  const { ui, state } = fixture(), firstAccount = ui.account, oldRead = deferred(), oldStarted = deferred();
+  state.folderRevisions.set(firstAccount.id, 1); state.folders.set(firstAccount.id, archiveFolders('First account Archive'));
+  state.folderRevisions.set('other_account', 1); state.folders.set('other_account', archiveFolders('Second account Archive'));
+  let held = false;
+  state.folderRead = accountId => {
+    if (accountId === firstAccount.id && !held) { held = true; oldStarted.resolve(); return oldRead.promise; }
+    return clone(state.folders.get(accountId));
+  };
+  const pending = ui.operationsChanged(); await oldStarted.promise;
+  ui.account = { id: 'other_account', serverId: 'other_server' }; ui.generation++; ui.operationRevision++;
+  await ui.operationsChanged();
+  assert.equal(ui.boxes[1].name, 'Second account Archive'); assert.equal(ui.appliedFolderRevisions.get('other_account'), 1);
+  oldRead.resolve(clone(state.folders.get(firstAccount.id))); await pending;
+  assert.equal(ui.boxes[1].name, 'Second account Archive'); assert.equal(ui.appliedFolderRevisions.has(firstAccount.id), false);
+  ui.account = firstAccount; ui.generation++; ui.operationRevision++; await ui.operationsChanged();
+  assert.equal(ui.boxes[1].name, 'First account Archive'); assert.equal(ui.appliedFolderRevisions.get(firstAccount.id), 1);
+  assert.deepEqual(state.folderReads, [firstAccount.id, 'other_account', firstAccount.id]);
+  assert.deepEqual(state.appliedBoxes.map(args => args[1]), ['other_account', firstAccount.id]);
+  assert.equal(state.pageCalls, 0); assert.equal(state.folderNetworkCalls, 0);
+});
+
+test('A newer keyword acknowledgement still publishes an unapplied Archive receipt and retains newer flags', async () => {
+  const { ui, state } = fixture(), accountId = ui.account.id, oldRead = deferred(), oldStarted = deferred();
+  state.folderRevisions.set(accountId, 1); state.folders.set(accountId, archiveFolders());
+  let reads = 0;
+  state.folderRead = () => {
+    if (++reads === 1) { oldStarted.resolve(); return oldRead.promise; }
+    return clone(state.folders.get(accountId));
+  };
+  ui.operationRevision = 1; const older = ui.operationsChanged(); await oldStarted.promise;
+  state.view.emails = [mail(true)]; ui.operationRevision = 2; await ui.operationsChanged();
+  assert.equal(ui.boxes[1].role, 'archive'); assert.deepEqual(ui.emails[0].keywords, ['$seen']);
+  assert.equal(ui.appliedFolderRevisions.get(accountId), 1);
+  oldRead.resolve(archiveFolders('Obsolete cache snapshot')); await older;
+  assert.equal(ui.boxes[1].name, 'Confirmed Archive'); assert.deepEqual(ui.emails[0].keywords, ['$seen']);
+  assert.equal(state.appliedBoxes.length, 1, 'Only the current acknowledgement publishes the confirmed folder revision');
+  ui.operationRevision++; await ui.operationsChanged();
+  assert.equal(state.folderReads.length, 2, 'Settled revision must not start another folder read');
+  assert.equal(state.pageCalls, 0); assert.equal(state.folderNetworkCalls, 0);
+});
+
+test('An older receipt callback cannot roll back a newer folder revision', async () => {
+  const { ui, state } = fixture(), accountId = ui.account.id, oldRead = deferred(), oldStarted = deferred();
+  state.folderRevisions.set(accountId, 1); let reads = 0;
+  state.folderRead = () => {
+    if (++reads === 1) { oldStarted.resolve(); return oldRead.promise; }
+    return archiveFolders('Revision two Archive');
+  };
+  ui.operationRevision = 1; const older = ui.operationsChanged(); await oldStarted.promise;
+  state.folderRevisions.set(accountId, 2); ui.operationRevision = 2; await ui.operationsChanged();
+  oldRead.resolve(archiveFolders('Revision one Archive')); await older;
+  assert.equal(ui.appliedFolderRevisions.get(accountId), 2); assert.equal(ui.boxes[1].name, 'Revision two Archive');
+  assert.equal(state.appliedBoxes.length, 1); assert.equal(state.folderNetworkCalls, 0);
+});
+
+test('Missing or failed cached folders leave the revision available to a later local acknowledgement', async () => {
+  for (const unavailable of ['missing', 'error']) {
+    const { ui, state } = fixture(), accountId = ui.account.id;
+    state.folderRevisions.set(accountId, 1); let ready = false;
+    state.folderRead = () => {
+      if (ready) return archiveFolders();
+      if (unavailable === 'error') throw new Error('Synthetic cache temporarily unavailable');
+      return null;
+    };
+    await ui.operationsChanged(); assert.equal(ui.appliedFolderRevisions.has(accountId), false);
+    assert.deepEqual(state.appliedBoxes, []);
+    ready = true; ui.operationRevision++; await ui.operationsChanged();
+    assert.equal(ui.appliedFolderRevisions.get(accountId), 1); assert.equal(ui.boxes[1].role, 'archive');
+    assert.equal(state.appliedBoxes.length, 1); assert.equal(state.folderNetworkCalls, 0); assert.equal(state.pageCalls, 0);
+  }
+});
+
+test('Teardown retires a pending folder publication without consuming its revision', async () => {
+  const { ui, state } = fixture(), accountId = ui.account.id, reading = deferred(), started = deferred();
+  state.folderRevisions.set(accountId, 1); state.folderRead = () => { started.resolve(); return reading.promise; };
+  const pending = ui.operationsChanged(); await started.promise;
+  ui.active = false; reading.resolve(archiveFolders()); await pending;
+  assert.deepEqual(ui.boxes, []); assert.equal(ui.appliedFolderRevisions.has(accountId), false);
+  assert.deepEqual(state.appliedBoxes, []);
+  await ui.operationsChanged(); assert.equal(state.folderReads.length, 1);
+  assert.equal(state.pageCalls, 0); assert.equal(state.folderNetworkCalls, 0);
 });
 
 test('Read and star swipe actions dispatch while header refresh waits, with pending and permission guards intact', async () => {
@@ -421,4 +552,46 @@ test('Swipe Archive closes first and preserves the current membership and origin
   assert.equal(call.accountId, original.accountId); assert.equal(call.serverId, original.serverId);
   assert.equal(call.client, original.client); assert.equal(call.store, original.store);
   assert.deepEqual(ui.emails, []);
+});
+
+test('Swipe Delete captures its account choice before a closing swipe can outlive navigation', async () => {
+  const { ui, state } = fixture();
+  ui.mailAction = 'delete';
+  ui.boxes = [{ id: 'inbox', role: 'inbox', mayRemoveItems: true }, { id: 'trash', role: 'trash', mayAddItems: true }];
+  assert.equal(ui.rowArchiveAllows(ui.emails[0]), true);
+  await ui.archive(ui.emails[0]);
+  ui.mailAction = 'archive'; ui.account = { id: 'other', serverId: 'other' };
+  state.closeCallbacks[0](); state.closeCallbacks[0]();
+  assert.equal(state.operationCalls.length, 1);
+  assert.equal(state.operationCalls[0].action, 'delete');
+  assert.equal(state.operationCalls[0].accountId, 'synthetic_account');
+  assert.deepEqual(state.operationCalls[0].membership, ['trash']);
+});
+
+test('Account action reads ignore stale A to B to A results and tolerate folder navigation', async () => {
+  const { ui } = fixture(), first = deferred(), last = deferred();
+  ui.accountStore.mailAction = () => first.promise;
+  const old = ui.loadMailAction();
+  assert.equal(ui.mailActionReady, false);
+  ui.account = { ...ui.account, id: 'other' }; ui.accountStore.mailAction = async () => 'archive';
+  await ui.loadMailAction();
+  ui.account = { ...ui.account, id: 'synthetic_account' }; ui.accountStore.mailAction = () => last.promise;
+  const current = ui.loadMailAction(); ui.generation++;
+  last.resolve('delete'); await current;
+  first.resolve('archive'); await old;
+  assert.equal(ui.mailAction, 'delete'); assert.equal(ui.mailActionReady, true);
+});
+
+test('Explicit IMAP Delete reaches server discovery when cached Trash permissions or role are stale', async () => {
+  for (const trash of [[], [{ id: 'trash', name: 'Trash', role: null, mayAddItems: false }]]) {
+    const { ui, state } = fixture(); ui.mailAction = 'delete';
+    ui.boxes = [{ id: 'inbox', role: 'inbox', mayRemoveItems: false }, ...trash];
+    assert.equal(ui.rowArchiveAllows(ui.emails[0]), true);
+    await ui.archive(ui.emails[0]);
+    assert.equal(state.closeCallbacks.length, 1);
+    state.closeCallbacks[0]();
+    assert.equal(state.operationCalls.length, 1);
+    assert.equal(state.operationCalls[0].action, 'delete');
+    assert.deepEqual(state.operationCalls[0].membership, ['inbox']);
+  }
 });

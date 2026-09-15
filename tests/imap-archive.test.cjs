@@ -143,3 +143,130 @@ test('Confirmed reader identity bookkeeping stays bounded and never crosses acco
   assert.equal(f.ops.currentEmailId('local-account','source_139'),'mapped_139');
   assert.equal(f.ops.currentEmailId('other-account','source_139'),'source_139');
 });
+
+function archiveBox(overrides = {}) {
+  return { id: 'archive', name: 'Archive', parentId: null, role: 'archive', sortOrder: 2,
+    totalEmails: 0, unreadEmails: 0, countsKnown: false, maySetSeen: true, maySetKeywords: true,
+    mayAddItems: true, mayRemoveItems: true, ...overrides };
+}
+test('Missing Archive is an explicit creation target, never a phantom listed folder', () => {
+  const inbox = archiveBox({ id: 'inbox', name: 'Inbox', role: 'inbox',
+    archiveDestinationId: 'prospective', archiveDestinationName: 'INBOX.Archive' });
+  const boxes = [inbox], mail = { id: 'inbox_uid', mailboxIds: ['inbox'] };
+  assert.equal(jmap.archiveTarget(mail, boxes).id, 'prospective');
+  assert.deepEqual(boxes, [inbox]);
+  assert.equal(jmap.archiveTarget(mail, [{ ...inbox, mayRemoveItems: false }]), null);
+  assert.equal(jmap.archiveTarget(mail, [{ ...inbox, archiveDestinationId: undefined }]), null);
+  assert.equal(jmap.archiveTarget(mail, [archiveBox({ id: 'inbox', role: 'inbox' })]), null);
+  assert.equal(jmap.archiveTarget({ ...mail, id: 'local_archive_saved' }, boxes), null);
+  assert.equal(jmap.archiveTarget(mail, [...boxes, archiveBox()]).id, 'archive');
+  assert.equal(jmap.archiveTarget(mail, [...boxes, archiveBox(), archiveBox({ id: 'other' })]), null);
+});
+test('Only a complete safe Inbox hint enables first-use Archive', () => {
+  const valid = archiveBox({ id: 'inbox', role: 'inbox', archiveDestinationId: 'prospective', archiveDestinationName: 'Archive' });
+  for (const changes of [{ archiveDestinationId: 'inbox' }, { archiveDestinationId: '../archive' },
+    { archiveDestinationName: '' }, { archiveDestinationName: 'Archive\nINBOX' }, { archiveDestinationName: 'x'.repeat(1025) },
+    { role: 'sent' }, { archiveDestinationName: undefined }]) {
+    assert.equal(jmap.validArchiveDestinationHint({ ...valid, ...changes }), false);
+  }
+  assert.equal(jmap.validArchiveDestinationHint(valid), true);
+  assert.equal(jmap.validArchiveDestinationHint(archiveBox()), true);
+});
+test('Native Archive validates the confirmed folder descriptor before cache publication', async () => {
+  const actual = { ...receipt(), archiveMailbox: archiveBox() };
+  assert.deepEqual(await imap(async () => ({ archive: actual })).client.archiveEmail('default', 'inbox_uid'), actual);
+  for (const box of [null, [], archiveBox({ id: 'wrong' }), archiveBox({ role: 'inbox' }),
+    archiveBox({ name: '\n' }), archiveBox({ totalEmails: -1 }), archiveBox({ mayAddItems: 'true' }),
+    archiveBox({ archiveDestinationId: 'elsewhere', archiveDestinationName: 'Archive' })]) {
+    const f = imap(async () => ({ archive: { ...receipt(), archiveMailbox: box } }));
+    await assert.rejects(f.client.archiveEmail('default', 'inbox_uid'), { code: 'changeUnconfirmed' });
+    assert.equal(f.calls.length, 1);
+  }
+});
+test('Confirmed actual Archive replaces a stale creation hint and publishes one local folder revision', async () => {
+  const actual = archiveBox({ id: 'actual' });
+  const f = operations(async () => ({ ...receipt(), archiveId: 'actual', expectedMailboxIds: ['actual'], archiveMailbox: actual }));
+  f.ops.move(f.store, f.client, 'local-account', 'default', f.mail, ['prospective']);
+  assert.equal(f.ops.mailboxRevision('local-account'), 0);
+  await f.ops.whenIdle();
+  assert.deepEqual(f.records.moved, [['local-account', 'inbox_uid', 'archive_uid', ['actual'], actual]]);
+  assert.equal(f.ops.mailboxRevision('local-account'), 1);
+  assert.equal(f.ops.mailboxRevision('other-account'), 0);
+  assert.equal(f.records.network.length, 1);
+});
+test('Refused CREATE and failed cache commit never publish a folder revision or Undo', async () => {
+  for (const failCache of [false, true]) {
+    const f = operations(async () => {
+      if (!failCache) throw new jmap.JmapError('forbidden');
+      return { ...receipt(), archiveMailbox: archiveBox() };
+    });
+    if (failCache) f.store.mail.moveEmailIdentity = async () => { throw Error('Synthetic transaction failure'); };
+    f.ops.move(f.store, f.client, 'local-account', 'default', f.mail, ['prospective']);
+    await f.ops.whenIdle();
+    assert.equal(f.ops.mailboxRevision('local-account'), 0);
+    assert.equal(f.ops.undo('local-account'), null);
+    assert.equal(f.records.network.length, 1);
+    if (!failCache) assert.deepEqual(f.records.membership, [['local-account', 'inbox_uid', ['inbox']]]);
+  }
+});
+
+test('Delete dispatches its explicit native operation and Undo keeps its action', async () => {
+  const deletion = { ...receipt(), action: 'delete', archiveId: 'trash', expectedMailboxIds: ['trash'], movedEmailId: 'trash_uid' };
+  const f = imap(request => request.operation === 'undoDelete' ? { state: 'moved', movedEmailId: 'restored_uid' } : { archive: deletion });
+  const undo = await f.client.deleteEmail('default', 'inbox_uid');
+  assert.equal(f.calls[0].operation, 'deleteEmail'); assert.equal(undo.action, 'delete');
+  assert.equal(await f.client.undoArchive({ ...undo, emailId: 'trash_uid' }), 'restored_uid');
+  assert.equal(f.calls[1].operation, 'undoDelete');
+  await assert.rejects(imap(() => ({ archive: receipt() })).client.deleteEmail('default', 'inbox_uid'), /changeUnconfirmed/);
+});
+
+test('Delete preserves confirmed cache identity and offers Undo without invoking Archive', async () => {
+  const f = operations(async () => 'restored_uid');
+  f.client.deleteEmail = async () => ({ ...receipt(), action: 'delete', archiveId: 'trash', expectedMailboxIds: ['trash'], movedEmailId: 'trash_uid' });
+  f.ops.move(f.store, f.client, 'local-account', 'default', f.mail, ['trash'], undefined, 'delete');
+  await f.ops.whenIdle();
+  assert.equal(f.records.network.length, 0);
+  assert.deepEqual(f.records.moved[0], ['local-account', 'inbox_uid', 'trash_uid', ['trash']]);
+  const undo = f.ops.undo('local-account');
+  assert.equal(undo.action, 'delete'); assert.equal(f.ops.notice('local-account'), 'message_deleted');
+  f.ops.move(f.store, f.client, 'local-account', 'default', { ...f.mail, id: 'trash_uid' }, ['inbox'], undo);
+  await f.ops.whenIdle();
+  assert.equal(f.ops.notice('local-account'), 'delete_undone');
+  assert.equal(f.ops.currentEmailId('local-account', 'inbox_uid'), 'restored_uid');
+});
+
+test('Delete needs an existing unambiguous Trash, independently of Archive creation', () => {
+  const inbox = { id: 'inbox', role: 'inbox', mayRemoveItems: true, archiveDestinationId: 'new_archive', archiveDestinationName: 'Archive' };
+  const trash = { id: 'trash', role: 'trash', mayAddItems: true };
+  const mail = { id: 'server_uid', mailboxIds: ['inbox'] };
+  assert.equal(jmap.trashTarget(mail, [inbox]), null);
+  assert.equal(jmap.trashTarget(mail, [inbox, trash]), trash);
+  assert.equal(jmap.trashTarget(mail, [inbox, trash, { ...trash, id: 'other' }]), null);
+  assert.equal(jmap.trashTarget(mail, [inbox, { ...trash, mayAddItems: false }]), null);
+  assert.equal(jmap.trashTarget({ ...mail, id: 'local_sent_copy' }, [inbox, trash]), null);
+});
+
+test('Delete discovers its destination from the native receipt when no writable Trash was cached', async () => {
+  const f = operations(async () => { throw new Error('Archive must not be invoked'); });
+  let calls = 0;
+  f.client.deleteEmail = async () => { calls++; return { ...receipt(), action: 'delete', archiveId: 'trash',
+    expectedMailboxIds: ['trash'], movedEmailId: 'trash_uid', archiveMailbox: archiveBox({ id: 'trash', name: 'Trash', role: 'trash' }) }; };
+  f.ops.move(f.store, f.client, 'local-account', 'default', f.mail, ['inbox'], undefined, 'delete');
+  await f.ops.whenIdle();
+  assert.equal(calls, 1);
+  assert.deepEqual(f.records.moved[0].slice(0, 4), ['local-account', 'inbox_uid', 'trash_uid', ['trash']]);
+  assert.equal(f.records.moved[0][4].role, 'trash');
+  assert.equal(f.ops.notice('local-account'), 'message_deleted');
+});
+
+test('Unavailable Trash reports a specific failure and retains Inbox membership without retry', async () => {
+  const f = operations(async () => { throw new Error('Archive must not be invoked'); });
+  let calls = 0;
+  f.client.deleteEmail = async () => { calls++; throw new jmap.JmapError('archiveUnavailable'); };
+  f.ops.move(f.store, f.client, 'local-account', 'default', f.mail, ['inbox'], undefined, 'delete');
+  await f.ops.whenIdle();
+  assert.equal(calls, 1); assert.deepEqual(f.records.moved, []);
+  assert.deepEqual(f.records.membership, [['local-account', 'inbox_uid', ['inbox']]]);
+  assert.equal(f.ops.notice('local-account'), 'trash_unavailable');
+  assert.equal(f.ops.pending('local-account', 'inbox_uid'), false);
+});

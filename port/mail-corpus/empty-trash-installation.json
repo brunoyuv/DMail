@@ -1,0 +1,49 @@
+{
+  "installedAt": "2026-09-15T11:52:17.156014+00:00",
+  "devices": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "bundleName": "org.thunderbird.harmony.dev",
+      "versionName": "1.0.1",
+      "versionCode": 1000001,
+      "upgradeOnly": true,
+      "storageIdentityPreserved": true,
+      "productionLaunched": false,
+      "installedHashVerified": false,
+      "artifactHashVerified": true,
+      "installedPackageHashReadDenied": true,
+      "hapSha256": "5878b1edd6256d992ee88cc9b8da8a2d4d650ae63da2bcbb1265d4c9d8296517"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "bundleName": "org.thunderbird.harmony.dev",
+      "versionName": "1.0.1",
+      "versionCode": 1000001,
+      "upgradeOnly": true,
+      "storageIdentityPreserved": true,
+      "productionLaunched": false,
+      "installedHashVerified": false,
+      "artifactHashVerified": true,
+      "installedPackageHashReadDenied": true,
+      "hapSha256": "5878b1edd6256d992ee88cc9b8da8a2d4d650ae63da2bcbb1265d4c9d8296517"
+    }
+  ],
+  "productionLaunched": false,
+  "realMailAccessed": false,
+  "emulatorStarted": false,
+  "nativeSyntheticStorageTests": {
+    "device": "MatePad MRO-W00",
+    "beforeFix": {
+      "tests": 2,
+      "errors": 2
+    },
+    "afterFix": {
+      "tests": 2,
+      "passed": 2
+    },
+    "isolatedAppRemoved": true
+  },
+  "verificationNote": "Signed input HAP hash, installer success, bundle/version, original UID, app ID, first-install time and account-storage identities verified. The OS denies reading the installed HAP; its device-side hash is not verified."
+}

@@ -91,3 +91,20 @@ test('Only an uncertain attempted delivery requires manual reconciliation; prefl
   assert.equal(sendFailureLabel('draft', 'authenticationRequired'), 'smtp_auth_error');
   assert.equal(sendFailureLabel('draft', 'invalidMessage'), 'send_invalid');
 });
+
+test('An accepted empty-text attachment message is downloaded and readable in Sent', () => {
+  const attachment = { id: '00000000-0000-0000-0000-000000000002', name: 'report.pdf', contentType: 'application/pdf', size: 12 };
+  const mail = sentMessage('sender@example.test', { ...draft, attachments: [attachment] },
+    { ...submitted, textBody: null, htmlBody: null }, 'sent_box');
+  const saved = cacheEmail(mail, true, null, Date.now());
+  assert.equal(mail.textBody, ''); assert.equal(mail.bodyEncodingProblem, false);
+  assert.equal(mail.attachments[0].name, 'report.pdf');
+  assert.equal(cacheReadyForReading(saved), true);
+  const { cachedEmailSummary } = require('../.tools/test-output/data/MailCacheModel.js');
+  assert.equal(cachedEmailSummary(saved).mail.cachedBodyAvailable, true);
+  // Previously saved attachment-only Sent messages remain readable locally.
+  saved.mail.textBody = null;
+  assert.equal(cachedEmailSummary(saved).mail.cachedBodyAvailable, true);
+  saved.mail.bodyEncodingProblem = true;
+  assert.equal(cachedEmailSummary(saved).mail.cachedBodyAvailable, false);
+});

@@ -816,7 +816,7 @@
     },
     {
       "name": "composition_settings",
-      "value": "Composing"
+      "value": "Account settings"
     },
     {
       "name": "sender_name",
@@ -913,6 +913,14 @@
     {
       "name": "picture_error_blocked",
       "value": "Picture address or permission blocked"
-    }
+    },
+    {"name": "mail_action_save_error", "value": "The swipe action could not be loaded or saved. Try again."},
+    {"name": "empty_mail_body", "value": "No message text."},
+    {"name": "mail_swipe_action", "value": "Inbox swipe action"},
+    {"name": "mail_swipe_action_help", "value": "Delete moves messages to the existing Trash folder. Archive remains the default."},
+    {"name": "message_deleted", "value": "Moved to Trash"},
+    {"name": "delete_undone", "value": "Moved back to Inbox"},
+    {"name": "delete", "value": "Delete"},
+    {"name": "trash_unavailable", "value": "Could not move to Trash. Check that the server has a writable Trash folder and supports moving messages."}
   ]
 }

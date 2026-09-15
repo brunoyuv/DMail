@@ -1,0 +1,37 @@
+{
+  "installedAt": "2026-09-15T11:39:02.570617+00:00",
+  "devices": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "bundleName": "org.thunderbird.harmony.dev",
+      "versionName": "1.0.1",
+      "versionCode": 1000001,
+      "upgradeOnly": true,
+      "storageIdentityPreserved": true,
+      "productionLaunched": false,
+      "installedHashVerified": false,
+      "artifactHashVerified": true,
+      "installedPackageHashReadDenied": true,
+      "hapSha256": "868ce903141069034961aa3164c3dc8b0e70d8809298b1dafa36e26678e107bb"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "bundleName": "org.thunderbird.harmony.dev",
+      "versionName": "1.0.1",
+      "versionCode": 1000001,
+      "upgradeOnly": true,
+      "storageIdentityPreserved": true,
+      "productionLaunched": false,
+      "installedHashVerified": false,
+      "artifactHashVerified": true,
+      "installedPackageHashReadDenied": true,
+      "hapSha256": "868ce903141069034961aa3164c3dc8b0e70d8809298b1dafa36e26678e107bb"
+    }
+  ],
+  "productionLaunched": false,
+  "realMailAccessed": false,
+  "emulatorStarted": false,
+  "verificationNote": "Signed input HAP hash, installer success, bundle identity/version, original UID, app ID, first-install time and account-storage identities verified. The OS denies direct reading of the installed HAP; its device-side hash is not verified."
+}

@@ -213,3 +213,23 @@ test('An inactive selection starts no transport or picture work', async () => {
   const f = fixture(); await assert.rejects(f.open(mail(), () => false), error => error instanceof f.MailMessageLoadCancelled);
   assert.equal(f.state.reads.length, 0); assert.equal(f.state.scans, 0); assert.equal(f.state.batches.length, 0);
 });
+
+test('Attachment-only messages finish loading and reopen offline without downloading the attachment', async () => {
+  const attachment = { id: '2', name: '报告.pdf', contentType: 'application/pdf', size: 4096, sizeIsEncoded: true };
+  for (const textBody of [null, '']) {
+    const full = mail('one', { textBody, htmlBody: null, hasHtmlBody: false,
+      hasAttachment: true, attachments: [attachment], bodyEncodingProblem: false });
+    const f = fixture({ read: async () => full });
+    const header = { ...full, attachments: undefined };
+    const first = await f.open(header);
+    assert.deepEqual(first.mail.attachments, [attachment]);
+    assert.equal(first.mail.textBody, textBody); assert.equal(first.mail.bodyEncodingProblem, false);
+    assert.equal(f.state.reads.length, 1); assert.equal(f.state.saves.length, 1);
+    const saved = copy(f.bodies.get('a:one')), scans = f.state.scans;
+    f.client.readEmail = async () => assert.fail('Offline reopen must not fetch any body or attachment');
+    const reopened = await f.open(header);
+    assert.deepEqual(reopened.mail.attachments, [attachment]);
+    assert.deepEqual(f.bodies.get('a:one'), saved); assert.equal(f.state.scans, scans);
+    assert.equal(f.state.batches.length, 0); await f.loader.whenIdle();
+  }
+});

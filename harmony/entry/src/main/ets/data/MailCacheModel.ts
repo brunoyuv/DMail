@@ -1,6 +1,6 @@
 // This Source Code Form is subject to the terms of the Mozilla Public
 // License, v. 2.0. https://mozilla.org/MPL/2.0/
-import { JmapEmail, JmapMailbox } from '../mail/jmap/JmapClient';
+import { JmapEmail, JmapMailbox, validArchiveDestinationHint } from '../mail/jmap/JmapClient';
 import { messagePreview } from '../mail/MessagePreview';
 import { mailContentReference } from './MailContentFileModel';
 
@@ -30,7 +30,7 @@ function validTextBody(value: unknown): boolean {
 function validHtmlBody(value: unknown): boolean { return value === undefined || validTextBody(value); }
 export const MAIL_RETENTION_MS = 7 * 24 * 60 * 60 * 1000;
 export const BODY_DECODER_REVISION = 1;
-export const MAILBOX_ROLE_REVISION = 3;
+export const MAILBOX_ROLE_REVISION = 5;
 // A decoder failure with no body is not a completed download. Empty strings
 // are valid decoded bodies; readable partial mail and attachments stay usable.
 export function failedEmptyMailBody(mail: JmapEmail): boolean {
@@ -56,7 +56,8 @@ export function cachedEmailSummary(cached: CachedEmail, now: number = Date.now()
   const retained = retainedEmail(cached, now);
   const available = cacheIsFresh(retained.bodySavedAt, now) && (retained.mail.cachedBodyAvailable === true ||
     retained.bodyFiles?.text !== undefined || retained.bodyFiles?.html !== undefined ||
-    typeof retained.mail.textBody === 'string' || typeof retained.mail.htmlBody === 'string');
+    typeof retained.mail.textBody === 'string' || typeof retained.mail.htmlBody === 'string' ||
+    (!failedEmptyMailBody(retained.mail) && (retained.mail.attachments?.length ?? 0) > 0));
   return { ...retained, summaryOnly: true, mail: { ...retained.mail, textBody: null, htmlBody: null,
     attachments: undefined, cachedBodyAvailable: available } };
 }
@@ -169,7 +170,7 @@ export function decodeCachedBoxes(text: string): CachedBoxes {
     (raw.readOnly !== undefined && typeof raw.readOnly !== 'boolean')) { throw new Error('Invalid mail cache'); }
   for (const value of raw.boxes) {
     const box = obj(value);
-    if (typeof box.name !== 'string' || (box.parentId !== null && !ids([box.parentId])) ||
+    if (!validArchiveDestinationHint(box as unknown as JmapMailbox) || typeof box.name !== 'string' || (box.parentId !== null && !ids([box.parentId])) ||
       (box.role !== null && typeof box.role !== 'string') ||
       ['sortOrder', 'totalEmails', 'unreadEmails'].some(k => !Number.isSafeInteger(box[k]) || (box[k] as number) < 0) ||
       (box.countsKnown !== undefined && typeof box.countsKnown !== 'boolean') ||

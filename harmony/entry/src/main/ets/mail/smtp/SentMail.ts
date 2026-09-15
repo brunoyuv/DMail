@@ -42,7 +42,7 @@ export function sentMessage(from: string, draft: SentDraft, submission: Submitte
     hasAttachment: (draft.attachments?.length ?? 0) > 0,
     attachments: (draft.attachments ?? []).map((attachment: OutgoingAttachment): MailAttachment => ({ id: attachment.id, name: attachment.name,
       contentType: attachment.contentType, size: attachment.size, sizeIsEncoded: false })),
-    textBody: submission.textBody, htmlBody: submission.htmlBody,
+    textBody: submission.textBody ?? (submission.htmlBody === null ? '' : null), htmlBody: submission.htmlBody,
     bodyTruncated: false, bodyEncodingProblem: false, hasHtmlBody: submission.htmlBody !== null,
     maySetSeen: false, maySetKeywords: false };
 }

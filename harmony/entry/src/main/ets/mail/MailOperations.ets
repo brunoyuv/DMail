@@ -1,12 +1,12 @@
 // MPL-2.0: https://mozilla.org/MPL/2.0/
 import { util } from '@kit.ArkTS';
 import { AccountStore } from '../data/AccountStore';
-import { JmapEmail, JmapKeyword, JmapService, JmapError, JmapArchiveUndo, shallowCopyEmail } from './jmap/JmapClient';
+import { JmapEmail, JmapKeyword, JmapService, JmapError, JmapArchiveUndo, JmapMailbox, shallowCopyEmail } from './jmap/JmapClient';
 
 interface PendingKeyword {
   accountId: string; mail: JmapEmail; keyword: JmapKeyword; enabled: boolean;
 }
-interface PendingMove { accountId: string; mail: JmapEmail; mailboxIds: string[]; undo?: JmapArchiveUndo; }
+interface PendingMove { accountId: string; mail: JmapEmail; mailboxIds: string[]; undo?: JmapArchiveUndo; action?: string; }
 interface CompletedMove { accountId: string; undo: JmapArchiveUndo; }
 interface OperationNotice { accountId: string; emailId: string; label: string; }
 
@@ -18,6 +18,8 @@ export class MailOperations {
   private static notices: OperationNotice[] = [];
   private static moves: Map<string, PendingMove> = new Map();
   private static undoRecords: CompletedMove[] = [];
+  private static folderRevisions: Map<string, number> = new Map();
+  static mailboxRevision(accountId: string): number { return MailOperations.folderRevisions.get(accountId) || 0; }
   private static confirmedIdentities: Map<string, string> = new Map();
   static currentEmailId(accountId: string, emailId: string): string {
     return MailOperations.confirmedIdentities.get(MailOperations.key(accountId, emailId)) || emailId;
@@ -79,9 +81,9 @@ export class MailOperations {
   }
   static undo(accountId: string): JmapArchiveUndo | null { return MailOperations.undoRecords.find(record => record.accountId === accountId)?.undo || null; }
   static move(store: AccountStore, client: JmapService, accountId: string, serverId: string,
-    mail: JmapEmail, mailboxIds: string[], undo?: JmapArchiveUndo): void {
+    mail: JmapEmail, mailboxIds: string[], undo?: JmapArchiveUndo, action: string = 'archive'): void {
     if (MailOperations.pending(accountId, mail.id)) { return; }
-    const job: PendingMove = { accountId, mail, mailboxIds, undo };
+    const job: PendingMove = { accountId, mail, mailboxIds, undo, action: undo?.action || action };
     MailOperations.moves.set(MailOperations.key(accountId, mail.id), job);
     MailOperations.undoRecords = MailOperations.undoRecords.filter(record => record.accountId !== accountId);
     MailOperations.notices = MailOperations.notices.filter(notice => notice.accountId !== accountId || notice.emailId !== mail.id);
@@ -94,31 +96,37 @@ export class MailOperations {
       requested = true;
       let destinationId = job.mail.id;
       let undoRecord: JmapArchiveUndo | null = null;
+      let archiveMailbox: JmapMailbox | undefined = undefined;
       if (job.undo) {
         const movedId = await client.undoArchive(job.undo);
         if (job.undo.imap === true) { destinationId = movedId || `local_archive_${util.generateRandomUUID()}`; }
       } else {
-        const undo = await client.archiveEmail(serverId, job.mail.id);
+        if (job.action === 'delete' && !client.deleteEmail) { throw new JmapError('archiveUnavailable'); }
+        const undo = job.action === 'delete' ? await client.deleteEmail!(serverId, job.mail.id) : await client.archiveEmail(serverId, job.mail.id);
         job.mailboxIds = undo.expectedMailboxIds.slice();
+        archiveMailbox = undo.imap === true ? undo.archiveMailbox : undefined;
         if (undo.imap === true) { destinationId = undo.movedEmailId || `local_archive_${util.generateRandomUUID()}`; }
         if (undo.canUndo !== false) {
           undoRecord = { accountId: undo.accountId, emailId: destinationId, inboxId: undo.inboxId,
             archiveId: undo.archiveId, addedArchive: undo.addedArchive, expectedMailboxIds: undo.expectedMailboxIds.slice(),
-            canUndo: undo.canUndo, imap: undo.imap };
+            canUndo: undo.canUndo, imap: undo.imap, action: job.action };
         }
       }
       if (destinationId !== job.mail.id) {
-        await store.mail.moveEmailIdentity(job.accountId, job.mail.id, destinationId, job.mailboxIds);
+        if (archiveMailbox) {
+          await store.mail.moveEmailIdentity(job.accountId, job.mail.id, destinationId, job.mailboxIds, archiveMailbox);
+          MailOperations.folderRevisions.set(job.accountId, MailOperations.mailboxRevision(job.accountId) + 1);
+        } else { await store.mail.moveEmailIdentity(job.accountId, job.mail.id, destinationId, job.mailboxIds); }
         MailOperations.rememberIdentity(job.accountId, job.mail.id, destinationId);
       } else { await store.mail.updateMailboxes(job.accountId, job.mail.id, job.mailboxIds); }
       if (undoRecord) { MailOperations.undoRecords.push({ accountId: job.accountId, undo: undoRecord }); }
-      MailOperations.notices.push({ accountId: job.accountId, emailId: destinationId, label: job.undo ? 'archive_undone' : 'message_archived' });
+      MailOperations.notices.push({ accountId: job.accountId, emailId: destinationId, label: job.action === 'delete' ? (job.undo ? 'delete_undone' : 'message_deleted') : (job.undo ? 'archive_undone' : 'message_archived') });
     } catch (error) {
       const code = (error as JmapError).code;
       const refused = ['forbidden', 'accountReadOnly', 'archiveUnavailable'].includes(code);
       if (refused) { await store.mail.updateMailboxes(job.accountId, job.mail.id, job.mail.mailboxIds).catch(() => {}); }
       MailOperations.notices.push({ accountId: job.accountId, emailId: job.mail.id, label: !requested ? (code === 'changeUnconfirmed' ? 'change_unconfirmed' : 'cache_save_error') :
-        code === 'stateMismatch' ? 'move_conflict' : refused ? 'change_forbidden' : 'change_unconfirmed' });
+        code === 'stateMismatch' ? 'move_conflict' : code === 'archiveUnavailable' && job.action === 'delete' ? 'trash_unavailable' : refused ? 'change_forbidden' : 'change_unconfirmed' });
     } finally {
       store.mail.endMutation(job.accountId, job.mail.id);
       MailOperations.moves.delete(MailOperations.key(job.accountId, job.mail.id)); MailOperations.changed();

@@ -185,6 +185,7 @@ export class AccountStore {
       await PreparedDocumentStore.initialize(this.db);
       await MailSyncStore.initialize(this.db);
       await RecipientStore.initialize(this.db);
+      await this.db.executeSql("CREATE TABLE IF NOT EXISTS account_mail_actions (account_id TEXT PRIMARY KEY, action TEXT NOT NULL)");
       await this.db.executeSql('CREATE TABLE IF NOT EXISTS account_composition (account_id TEXT PRIMARY KEY, sender_name TEXT NOT NULL, signature TEXT NOT NULL)');
       await this.db.executeSql('CREATE TABLE IF NOT EXISTS outgoing_drafts (account_id TEXT PRIMARY KEY, payload TEXT NOT NULL)');
       // Additive UI metadata remains compatible with the version-five account
@@ -623,6 +624,22 @@ export class AccountStore {
     return history.list(accountId);
   }
 
+  async mailAction(accountId: string): Promise<string> {
+    let action = 'archive';
+    await this.enqueue(async () => {
+      const rows = await this.database().querySql("SELECT c.action FROM account_mail_actions c JOIN accounts a ON a.id = c.account_id WHERE c.account_id = ? AND a.status = 'ready'", [accountId]);
+      try { if (rows.goToFirstRow() && rows.getString(0) === 'delete') { action = 'delete'; } }
+      finally { rows.close(); }
+    });
+    return action;
+  }
+  saveMailAction(accountId: string, action: string): Promise<void> {
+    if (action !== 'archive' && action !== 'delete') { return Promise.reject(new Error('Invalid mail action')); }
+    return this.enqueue(async () => {
+      await this.database().executeSql("INSERT OR REPLACE INTO account_mail_actions (account_id, action) SELECT ?, ? WHERE EXISTS (SELECT 1 FROM accounts WHERE id = ? AND status = 'ready')", [accountId, action, accountId]);
+    });
+  }
+
   async composition(accountId: string): Promise<CompositionSettings> {
     let settings = new CompositionSettings();
     await this.enqueue(async () => {
@@ -776,6 +793,7 @@ export class AccountStore {
       catch (error) { if ((error as BusinessError).code !== asset.ErrorCode.NOT_FOUND) { throw new Error('Outgoing credentials could not be updated'); } }
       await this.database().executeSql('DELETE FROM outgoing_drafts WHERE account_id = ?', [id]);
       await this.database().executeSql('DELETE FROM recipient_history WHERE account_id = ?', [id]);
+      await this.database().executeSql('DELETE FROM account_mail_actions WHERE account_id = ?', [id]);
       await this.database().executeSql('DELETE FROM account_composition WHERE account_id = ?', [id]);
       await this.database().executeSql('DELETE FROM mail_cache WHERE account_id = ?', [id]);
       await this.database().executeSql('DELETE FROM picture_cache WHERE account_id = ?', [id]);

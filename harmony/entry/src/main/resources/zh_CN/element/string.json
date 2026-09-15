@@ -816,7 +816,7 @@
     },
     {
       "name": "composition_settings",
-      "value": "撰写邮件"
+      "value": "账户设置"
     },
     {
       "name": "sender_name",
@@ -913,6 +913,14 @@
     {
       "name": "picture_error_blocked",
       "value": "图片地址或权限受限"
-    }
+    },
+    {"name": "mail_action_save_error", "value": "无法读取或保存滑动操作设置。请重试。"},
+    {"name": "empty_mail_body", "value": "此邮件没有正文。"},
+    {"name": "mail_swipe_action", "value": "收件箱滑动操作"},
+    {"name": "mail_swipe_action_help", "value": "删除会将邮件移至现有的废纸篓文件夹。默认操作为归档。"},
+    {"name": "message_deleted", "value": "已移至废纸篓"},
+    {"name": "delete_undone", "value": "已移回收件箱"},
+    {"name": "delete", "value": "删除"},
+    {"name": "trash_unavailable", "value": "无法移至 Trash（废纸篓）。请确认服务器有可写的 Trash 文件夹并支持移动邮件。"}
   ]
 }

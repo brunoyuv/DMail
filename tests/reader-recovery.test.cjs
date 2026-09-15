@@ -11,6 +11,7 @@ function model(file) {
   const module = { exports: {} };
   new Function('require', 'module', 'exports', compile(fs.readFileSync(file, 'utf8')))(name => {
     if (name === './MailContentFileModel') return require('../.tools/test-output/data/MailContentFileModel.js');
+    if (name === '../mail/jmap/JmapClient') return model('harmony/entry/src/main/ets/mail/jmap/JmapClient.ts');
     assert.equal(name, '../mail/MessagePreview');
     return model('harmony/entry/src/main/ets/mail/MessagePreview.ts');
   }, module, module.exports); return module.exports;

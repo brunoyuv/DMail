@@ -9,7 +9,8 @@ upgrade compatibility. See docs/publishing.md and docs/upstream-reuse.md.
 Exception: the explicit `scripts/build-release --appgallery` variant uses the
 owner's registered `some.DMail.hamorny` bundle ID from packaging/appgallery.json
 only in generated staging. Preserve its exact case/spelling. It is a separate
-app identity; release signing is pending and must not use device debug signing.
+app identity. Use the existing matching AppGallery release key/profile under
+ignored .tools/signing/appgallery/; never use device debug signing for it.
 
 ## Current package and publication scope
 
@@ -24,6 +25,60 @@ Keep signing, OAuth secrets, toolchains, logs and device serials under ignored
 .tools/. Public historical records redact serials; the local pre-publication
 snapshot is at .tools/pre-d-mail-publication/. Physical MatePad runners require
 DMAIL_AUTHORIZED_MATEPAD_SERIAL in addition to a verified HDC_TARGET.
+
+## Attachment-only and Delete setting follow-up
+
+The local follow-up after 1.0.1 fixes empty composed MIME bodies, the false
+null-body reader error, and attachment-only downloaded indicators, including
+previously saved Sent records. Preserve actual partial/failed text errors.
+Per-account IMAP Settings now offers Inbox swipe action: Archive (default) or
+Delete. Delete uses original Swift UID MOVE to one existing verified Trash
+folder; never create Trash, fall back from Archive automatically, replay an
+uncertain move, or use mailbox-wide EXPUNGE. Preserve Undo, file/cache origins,
+retention, account-bound action snapshots and separate Archive folder metadata.
+Host tests and both native builds pass. The user subsequently requested
+installation: the same signed package is installed in place on Pura X and
+MatePad, retaining 1.0.1 (1000001), with app/storage identities preserved and no
+production launch. Signed input hash and installer success are verified; the OS
+denies direct reading of the installed HAP. The user subsequently authorized
+consolidating all fixes into the 1.0.1 commit and preparing a signed APP. Preserve
+exactly 1.0.0 and 1.0.1 on main, with 1.0.0 unchanged and a recovery bundle plus
+working-source snapshot under .tools/history-cleanup-101/. No push is authorized.
+The subsequent user report reproduced a native MatePad storage defect:
+TextEncoder.encodeInto('') returns undefined. MailContentFiles now handles
+zero-byte text/HTML explicitly while retaining all file/owner/expiry checks;
+empty and Unicode file reopen tests pass in the isolated native app. Explicit
+Inbox Delete must reach fresh Swift Trash discovery even when cached role or
+move-permission metadata is stale. Keep it pending until the receipt, preserve
+server MOVE/source checks and show a Trash-specific failure on refusal.
+The corrected HAP is installed in place on both devices, still 1.0.1, with
+storage identities preserved and no production launch.
+See docs/attachment-delete-follow-up.md.
+
+## Version 1.0.1 missing-Archive follow-up
+
+Version 1.0.1 (1000001) is installed in place on both Pura X and MatePad, with
+identity/version/hash verified and no production launch. All synthetic host
+and native build gates passed; the emulator remained stopped.
+
+The user requested first-use Archive for servers without an Archive folder and
+exactly two local history commits, 1.0.0 and 1.0.1. This authorizes local history
+consolidation, not a remote push. Preserve the pre-rewrite Git bundle and exact
+1.0.0 source snapshot under ignored .tools/history-cleanup-101/.
+
+Create a server Archive folder only during an explicit Archive action, after
+source verification. Use the original Swift CREATE and UID MOVE, confirm LIST,
+and preserve namespace/ambiguity checks. Folder discovery is read-only. Commit
+the confirmed folder with the cache identity move, reject older in-flight folder
+snapshots, and keep cached bodies, pictures and attachment origins. Do not replay
+uncertain moves or use mailbox-wide EXPUNGE. Preserve tablet split view, the
+320 vp account menu, HTML behavior and existing automatic/background pacing.
+The user also requested attachment-only loading checks. CID-only images must be
+available as on-demand attachments without creating a non-text MIME body; keep
+images inline when a text/HTML representation exists. Preserve genuine partial
+text errors and attachment size limits.
+Use synthetic mail tests and in-place installation without a production launch.
+See docs/release-1.0.1.md and its validation record for completed gates.
 
 ## Version 1.0.0 attachment and archive round
 

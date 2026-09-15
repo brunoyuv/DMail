@@ -1,0 +1,38 @@
+--- a/Sources/IMAP/IMAPClient.swift
++++ b/Sources/IMAP/IMAPClient.swift
+@@ -122,9 +122,9 @@
+     }
+ 
+     /// Fetch namespaces available to authenticated user.`
+-    public func namespace() async throws -> [Namespace] {
++    public func namespace(timeout: Int64? = nil) async throws -> [Namespace] {
+         logger?.info("Fetching namespace…")
+-        let namespace: [Namespace] = try await execute(command: NamespaceCommand())
++        let namespace: [Namespace] = try await execute(command: NamespaceCommand(timeout: timeout))
+         logger?.info("Namespaces: \(namespace)")
+         return namespace
+     }
+@@ -306,6 +306,12 @@
+     public func archiveMove(uid: UID, to mailbox: Mailbox.Name) async throws -> ArchiveMoveResult {
+         guard capabilities.contains(where: { $0.rawValue.uppercased() == "MOVE" }) else { throw ArchiveMoveError.unavailable }
+         return try await execute(command: ArchiveMoveCommand(uid: uid, mailbox: mailbox))
++    }
++
++    /// One CREATE using the original encoder; explicit ALREADYEXISTS permits
++    /// a same-connection LIST verification, never a blind move or retry.
++    public func archiveCreate(mailbox: Mailbox.Name) async throws -> ArchiveCreateResult {
++        try await execute(command: ArchiveCreateCommand(mailbox: mailbox))
+     }
+ 
+     // Run IMAP command through NIO `IMAPClientHandler` in channel and handle results
+--- a/Sources/IMAP/NamespaceCommand.swift
++++ b/Sources/IMAP/NamespaceCommand.swift
+@@ -7,6 +7,8 @@
+ 
+ // Fetch namespaces available to authenticated user
+ struct NamespaceCommand: IMAPCommand {
++    let timeout: Int64
++    init(timeout: Int64? = nil) { self.timeout = timeout ?? .timeout }
+ 
+     // MARK: IMAPCommand
+     typealias Result = [Namespace]

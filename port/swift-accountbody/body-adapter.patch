@@ -43,7 +43,7 @@
      }
  
      /// Plain text excerpt or summary of body contents, currently limited to server-provided values, described in [RFC 8970](https://www.rfc-editor.org/info/rfc8970)
-@@ -42,129 +57,243 @@
+@@ -42,129 +57,251 @@
          _preview
      }
  
@@ -68,12 +68,20 @@
  extension EmailBody {
 -    init(body: MIME.Body?) throws {
 +    public init(body: MIME.Body?) throws {
-         guard let body, !body.isEmpty else {
+-        guard let body, !body.isEmpty else {
++        guard let body else {
 -            throw AccountError.mime(.dataNotFound)
 -        }
 -        let components: MIME.Part.Components = try body.part.components()
 -        let html: String? = !components.html.isEmpty ? components.html.joined() : nil
 +            throw MIMEError.dataNotFound
++        }
++        if body.isEmpty {
++            guard case .text(let subtype, _) = body.contentType else { throw MIMEError.dataNotFound }
++            self.attachments = []; self.decodingHadErrors = false; self._preview = nil
++            self.text = subtype == .html ? nil : ""; self._html = subtype == .html ? "" : nil
++            self._fragments = subtype == .html ? [ScopedHTML(source: "", attachments: [], baseLocation: nil)] : []
++            return
 +        }
 +        var remaining = 512, hadErrors = false
 +        let components = try body.part.components(remaining: &remaining, hadErrors: &hadErrors)
@@ -298,6 +306,7 @@
 +    // Decode transfer bytes completely before converting the text's charset.
 +    // Multibyte/stateful charsets can span escaped and literal QP bytes.
      init(_ transferEncoding: ContentTransferEncoding?, data: Data, encoding: Encoding = .utf8) throws {
++        if data.isEmpty { self = ""; return }
 +        let decoded: Data
          switch transferEncoding {
          case .base64:
@@ -407,7 +416,7 @@
              if let url: URL = try? URL(contentID: contentID) {
 --- a/Sources/ImapAccountCore/String.swift
 +++ b/Sources/ImapAccountCore/String.swift
-@@ -33,8 +33,26 @@
+@@ -33,7 +33,25 @@
      }
  
      func htmlTagsStripped() -> Self {

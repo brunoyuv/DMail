@@ -6,7 +6,7 @@ import { LengthMetrics, SymbolGlyphModifier } from '@kit.ArkUI';
 import { util } from '@kit.ArkTS';
 import { AccountStore, SavedAccount } from '../data/AccountStore';
 import { JmapService, JmapClientFactory, JmapCredentials, JmapAccount, JmapMailbox, JmapEmail, JmapError,
-  JmapKeyword, canSetKeyword, archiveTarget, JmapArchiveUndo, MailAttachment, MailAttachmentData, JmapAddress, shallowCopyEmail } from '../mail/jmap/JmapClient';
+  JmapKeyword, canSetKeyword, archiveTarget, trashTarget, JmapArchiveUndo, MailAttachment, MailAttachmentData, JmapAddress, shallowCopyEmail } from '../mail/jmap/JmapClient';
 import { AttachmentFiles } from '../mail/attachments/AttachmentFiles';
 import { OutgoingAttachmentFiles } from '../mail/attachments/OutgoingAttachmentFiles';
 import { OutgoingAttachment, outgoingAttachmentReference, outgoingUUIDValid } from '../mail/attachments/OutgoingAttachmentModel';
@@ -84,6 +84,7 @@ export struct ConnectedMail {
   private openingNotification: boolean = false;
   private active: boolean = true;
   private boxRolesCurrent: boolean = false;
+  private appliedFolderRevisions: Map<string, number> = new Map();
   private sentFolderUpdates: Set<string> = new Set();
   private conversationById: Map<string, JmapEmail[]> = new Map();
   private conversationLoadRevision: number = 0;
@@ -135,6 +136,10 @@ export struct ConnectedMail {
   @State @Watch('inboxChanged') private swipeClosing: boolean = false;
   private pendingSwipeAction: (() => void) | null = null;
   @State private refreshRequired: boolean = false;
+  @StorageLink('mailActionSettingsRevision') @Watch('loadMailAction') private mailActionRevision: number = 0;
+  @State private mailAction: string = 'archive';
+  @State private mailActionReady: boolean = false;
+  private mailActionLoadRevision: number = 0;
   @State private archiveUndo: JmapArchiveUndo | null = null;
   @State private moveNotice: string = '';
   @State private savedCopyAt: number = 0;
@@ -535,6 +540,7 @@ export struct ConnectedMail {
     ++this.generation; ++this.mailboxRefreshRevision; this.busy = false; this.mailboxRefreshActive = false; this.refreshing = false; this.boxRolesCurrent = false;
     this.resetInboxScroll();
     this.token = ''; this.candidates = []; this.account = account;
+    this.mailAction = 'archive'; this.mailActionReady = false; this.loadMailAction();
     if (this.inboxTimer !== -1) { clearTimeout(this.inboxTimer); this.inboxTimer = -1; }
     if (this.inboxAnchorTimer !== -1) { clearTimeout(this.inboxAnchorTimer); this.inboxAnchorTimer = -1; }
     ++this.inboxLoadRevision; this.inboxSwipes.clear(); this.inboxScrollActive = false;
@@ -581,9 +587,10 @@ export struct ConnectedMail {
     try {
       // One mailbox-role metadata upgrade runs behind the cached inbox. No
       // message bodies are fetched and no submitted message is sent again.
+      const boxRevision = MailCache.mutationRevision();
       const boxes = await client.mailboxes(account.serverId);
       const cached = await this.accountStore.mail.boxes(account.id);
-      await this.accountStore.mail.saveBoxes(account.id, boxes, cached?.readOnly);
+      await this.accountStore.mail.saveBoxes(account.id, boxes, cached?.readOnly, boxRevision);
       const updated = await this.accountStore.mail.boxes(account.id);
       if (!this.active || this.account.id !== account.id || !updated) { return; }
       const generation = this.generation;
@@ -629,9 +636,10 @@ export struct ConnectedMail {
       }
       const session = await client.connect();
       if (generation !== this.generation) { return; }
+      const boxRevision = MailCache.mutationRevision();
       const boxes = await client.mailboxes(account.serverId);
       const readOnly = session.accounts.find((value) => value.id === account.serverId)?.isReadOnly !== false;
-      await this.saveCache(this.accountStore.mail.saveBoxes(account.id, boxes, readOnly), generation);
+      await this.saveCache(this.accountStore.mail.saveBoxes(account.id, boxes, readOnly, boxRevision), generation);
       const stored = await this.accountStore.mail.boxes(account.id).catch(() => null);
       if (generation === this.generation) {
         this.readOnly = readOnly;
@@ -1085,10 +1093,21 @@ export struct ConnectedMail {
     if (!this.active || !this.ready || !this.account.id) { return; }
     const accountId = this.account.id, generation = this.generation, revision = this.operationRevision, viewRevision = this.inboxViewRevision;
     this.archiveUndo = MailOperations.undo(accountId);
-    this.moveNotice = this.archiveUndo ? this.label('message_archived') : '';
+    this.moveNotice = this.archiveUndo ? this.label(this.archiveUndo.action === 'delete' ? 'message_deleted' : 'message_archived') : '';
     this.emails = this.emails.map(mail => MailOperations.overlay(accountId, mail));
     if (this.selected) { this.applyReaderMetadata(MailOperations.overlay(accountId, this.selected)); }
     try {
+      const folderRevision = MailOperations.mailboxRevision(accountId);
+      if (folderRevision > (this.appliedFolderRevisions.get(accountId) || 0)) {
+        const folders = await this.accountStore.mail.boxes(accountId);
+        if (!this.active || accountId !== this.account.id || generation !== this.generation ||
+          revision !== this.operationRevision || viewRevision !== this.inboxViewRevision) { return; }
+        if (folders) {
+          await this.applyBoxes(folders.boxes, accountId, generation);
+          this.appliedFolderRevisions.set(accountId, folderRevision);
+        }
+        if (!this.active || generation !== this.generation || revision !== this.operationRevision || viewRevision !== this.inboxViewRevision) { return; }
+      }
       const cached = await this.accountStore.mail.view(accountId, this.mailboxId, true, false);
       if (!this.active || generation !== this.generation || revision !== this.operationRevision || viewRevision !== this.inboxViewRevision) { return; }
       let confirmed = cached !== null && cached.stateDirty !== true;
@@ -1221,18 +1240,39 @@ export struct ConnectedMail {
     }
   }
 
+  private async loadMailAction(): Promise<void> {
+    const accountId = this.account.id, revision = ++this.mailActionLoadRevision;
+    this.mailActionReady = false;
+    try {
+      const action = await this.accountStore.mailAction(accountId);
+      if (!this.active || accountId !== this.account.id || revision !== this.mailActionLoadRevision) { return; }
+      this.mailAction = this.account.sessionUrl.startsWith('imaps:') ? action : 'archive'; this.mailActionReady = true;
+    } catch (_) { /* Keep the action disabled until its saved choice is known. */ }
+  }
+  private moveTarget(mail: JmapEmail): JmapMailbox | null {
+    return this.mailAction === 'delete' ? trashTarget(mail, this.boxes) : archiveTarget(mail, this.boxes);
+  }
+  private serverChecksTrash(mail: JmapEmail): boolean {
+    // Cached LIST records are display hints, not a current permission check.
+    // The native operation resolves the existing Trash and verifies source
+    // identity/permissions after this explicit press. Never create Trash.
+    return this.mailAction === 'delete' && this.account.sessionUrl.startsWith('imaps:') &&
+      !mail.id.startsWith('local_') && this.boxes.some(box => box.role === 'inbox' && mail.mailboxIds.includes(box.id));
+  }
   private async archive(mail: JmapEmail): Promise<void> {
     const current = this.emails.find(item => item.id === mail.id);
     if (!current) { return; }
-    const client = this.client, target = archiveTarget(current, this.boxes);
-    if (!client || !target || this.swipeClosing || (this.busy && !this.mailboxRefreshActive) || this.savedCopyAt !== 0 || MailOperations.pending(this.account.id, mail.id)) { return; }
+    const client = this.client, target = this.moveTarget(current);
+    if (!client || !this.rowArchiveAllows(current)) { return; }
     const inbox = this.boxes.find(box => box.role === 'inbox');
     if (!inbox) { return; }
-    const membership = current.mailboxIds.filter(id => id !== inbox.id);
-    if (!membership.includes(target.id)) { membership.push(target.id); }
-    const account = this.account, store = this.accountStore, generation = this.generation;
+    // Without a confirmed cached target, keep the row pending in place until
+    // the native receipt supplies the destination. Failure keeps its membership.
+    const membership = target ? current.mailboxIds.filter(id => id !== inbox.id) : current.mailboxIds.slice();
+    if (target && !membership.includes(target.id)) { membership.push(target.id); }
+    const account = this.account, store = this.accountStore, generation = this.generation, action = this.mailAction;
     this.closeSwipeAction(() => {
-      MailOperations.move(store, client, account.id, account.serverId, current, membership);
+      MailOperations.move(store, client, account.id, account.serverId, current, membership, undefined, action);
       if (this.active && generation === this.generation && account.id === this.account.id) {
         this.emails = this.emails.map(item => MailOperations.overlay(account.id, item));
       }
@@ -1433,7 +1473,7 @@ export struct ConnectedMail {
             Text(this.label('partial_body')).fontSize(14).fontColor($r('app.color.mail_text_secondary'))
           }
           if (this.bodyLoaded && !this.selected.htmlBody && this.selected.textBody === null) {
-            Text(this.label('no_plain_body')).fontSize(16)
+            Text(this.label(this.selected.bodyEncodingProblem || this.selected.bodyTruncated ? 'no_plain_body' : 'empty_mail_body')).fontSize(16)
           }
         }
       }.alignItems(HorizontalAlign.Start).width('100%').padding({ bottom: 8 })
@@ -1654,7 +1694,7 @@ export struct ConnectedMail {
   private rowArchiveAllows(mail: JmapEmail): boolean {
     this.operationRevision;
     return (!this.busy || this.mailboxRefreshActive) && !this.swipeClosing && !MailOperations.pending(this.account.id, mail.id) &&
-      this.savedCopyAt === 0 && archiveTarget(mail, this.boxes) !== null;
+      this.mailActionReady && !this.readOnly && !this.refreshRequired && this.savedCopyAt === 0 && (this.serverChecksTrash(mail) || this.moveTarget(mail) !== null);
   }
 
   private async rowKeyword(mail: JmapEmail, keyword: JmapKeyword): Promise<void> {
@@ -1719,12 +1759,12 @@ export struct ConnectedMail {
         .enabled(this.rowAllows(mail, '$flagged')).onClick(() => this.rowKeyword(mail, '$flagged'))
       Button({ type: ButtonType.Normal }) {
         Column({ space: 6 }) {
-          SymbolGlyph($r('sys.symbol.folder')).fontSize(24).fontColor([Color.White])
-          Text(this.label('archive')).fontSize(13).fontColor(Color.White).maxLines(2)
+          SymbolGlyph(this.mailAction === 'delete' ? $r('sys.symbol.trash') : $r('sys.symbol.folder')).fontSize(24).fontColor([Color.White])
+          Text(this.label(this.mailAction)).fontSize(13).fontColor(Color.White).maxLines(2)
         }.width('100%').height('100%').justifyContent(FlexAlign.Center).padding(8)
       }.id(`swipe-archive-${mail.id}`).width(76)
         .height(Math.max(44, this.rowContentHeights.get(`${this.account.id}:${mail.id}`) || 0))
-        .padding(0).borderRadius(0).backgroundColor('#46656A')
+        .padding(0).borderRadius(0).backgroundColor(this.mailAction === 'delete' ? '#B3261E' : '#46656A')
         .responseRegion({ x: 0, y: 0, width: '100%', height: '100%' })
         .enabled(this.rowArchiveAllows(mail))
         .onClick(() => this.archive(mail))
