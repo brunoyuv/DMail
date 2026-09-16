@@ -6,7 +6,7 @@ import { prepareMailHtml } from '../html/HtmlDocument';
 export interface MathImage { source: string; original: string; svg: string; display: boolean; marker: string; }
 export interface MathPlan { html: string; images: MathImage[]; renderer: string; styles: string; }
 export const MATH_RENDER_REVISION = 'math2';
-const MAX_INPUT = 262144, MAX_EQUATIONS = 32, MAX_OUTPUT = 4 * 1024 * 1024;
+const MAX_INPUT = 262144, MAX_OUTPUT = 4 * 1024 * 1024;
 function escape(value: string): string { return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function decodeMailHtmlEntities(value: string): string {
   return value.replace(/&(#x[0-9a-f]{1,6}|#[0-9]{1,7}|[a-z][a-z0-9]{1,31});/gi, (match: string, entity: string): string => {
@@ -52,7 +52,6 @@ function prefix(source: string): string {
   return 'DMAILMATH' + serial + 'TOKEN';
 }
 function appendMath(images: MathImage[], token: string, tex: string, display: boolean, original: string, renderer: string): string {
-  if (images.length >= MAX_EQUATIONS) { throw new Error('Too many equations'); }
   let svg: string;
   try { svg = typesetEquation(tex, display, renderer); } catch (_) { return original; }
   const marker = token + images.length + 'END';

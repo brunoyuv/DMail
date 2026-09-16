@@ -313,11 +313,26 @@ test('MathML font upgrade replaces only its old rendered cache; CommonHTML remai
   const hybridD = 'math5:mathml:' + suffix;
   f.documents.set('a:' + hybridD, { document: { ...original, messageKey: hybridD, html: 'Previous D with native letters' }, attempted: true, failure: '' });
   const upgraded = await f.open(value);
-  assert.match(upgraded.document.messageKey, /^math6:mathml:/);
+  assert.match(upgraded.document.messageKey, /^math7:mathml:/);
   assert.equal(f.state.mathRenders, 1);
   assert.equal((await f.open(value)).document.savedAt, upgraded.document.savedAt);
   options.renderer = 'commonhtml';
   assert.equal((await f.open(value)).document.html, 'Previous commonhtml');
   assert.equal(f.state.mathRenders, 1);
   assert.equal(f.state.reads.length, 0);
+});
+
+test('Removing the equation cap retries old failed renders locally once in both modes', async () => {
+  for (const renderer of ['mathml', 'commonhtml']) {
+    const options = { readMath: true, renderer }, f = fixture(options), value = mail();
+    const original = f.seed('a', value);
+    const identity = renderer + ':' + JSON.stringify([value.id, original.bodySavedAt, original.savedAt]);
+    const previous = (renderer === 'mathml' ? 'math6:' : 'math2:') + identity;
+    f.documents.set('a:' + previous, { document: null, attempted: true, failure: 'failed' });
+    const opened = await f.open(value);
+    assert.equal(opened.document.messageKey, (renderer === 'mathml' ? 'math7:' : 'math3:') + identity);
+    assert.equal((await f.open(value)).document.savedAt, opened.document.savedAt);
+    assert.equal(f.state.mathRenders, 1);
+    assert.equal(f.state.reads.length, 0);
+  }
 });

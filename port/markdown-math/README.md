@@ -101,6 +101,7 @@ The trusted typesetter runs in app code, never inside an email document.
 
 `MarkdownPreview.ets` generates local preview HTML. The composer and stored drafts
 retain their original source; there is no Markdown-to-HTML sending path.
-Received rendering keeps C’s `math2:commonhtml:` cache identity. D now uses
-`math6:mathml:` so previous native/TeX-font documents are regenerated locally from
-cached source without refetching mail or changing C’s cached documents.
+Received rendering uses `math7:mathml:` and `math3:commonhtml:` for new attempts
+after removing the equation-count cap. Successful documents at the preceding
+`math6:mathml:` and `math2:commonhtml:` keys remain reusable; old failures can
+retry locally once. Input, per-expression and output-size limits remain.

@@ -36,7 +36,9 @@ C remains unchanged; sending remains original Markdown/TeX source only.
 Preserve MIT, Apache-2.0 and OFL-1.1 component licenses and font source hashes.
 The native reader permits bundled OTF/WOFF2 data fonts only in generated math
 documents, within the existing 256 KiB per-font URL limit. Keep source/cache
-separation and D's math6 cache revision. 1.0.2 is installed in place on Pura X;
+separation. The subsequent user-requested count-cap removal uses math7 for D
+and math3 for C, reuses successful prior math6/math2 documents and retries old
+failed renders locally once. Keep input, per-expression and output-size limits. 1.0.2 is installed in place on Pura X;
 app/storage identities are preserved, signed input hash and installer success
 verified, and production was not launched. MatePad remains unchanged. All 779
 JavaScript and 40 Python tests pass; device Fira visual rendering is not yet

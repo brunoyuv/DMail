@@ -23,7 +23,7 @@ Fira Math 0.3.4 OTF for letters, numbers and operators, with its original MATH
 metrics. The corrected TeX font remains a local fallback for missing glyphs,
 including several big set operators. C's font bytes, markup and CSS are unchanged.
 
-D's `math6:mathml:` cache revision regenerates previous rendered documents
+The font update's `math6:mathml:` cache revision regenerated previous rendered documents
 locally on the next open, preserving saved mail and avoiding a refetch. Fira's
 OFL-1.1 license is retained separately in repository and app notices. This change
 is now installed on Pura X following the user’s explicit request. See [Fira validation](mathml-fira-validation.json).
@@ -96,8 +96,9 @@ Per-account Settings → Markdown and math offers:
 
 Use `$...$` for inline math and `$$...$$` on a separate line for display math.
 The renderer also accepts `\(...\)` and `\[...\]`. Code spans/fences remain
-literal. Unsupported expressions retain their source. Rendering is bounded to
-32 equations, 4,096 characters per equation and 262,144 input characters.
+literal. Unsupported expressions retain their source. There is no equation-count cap. Rendering retains size limits of 4,096
+characters per equation, 262,144 input characters, 4 MiB generated output and
+1 MiB composer preview output.
 
 Reading preserves downloaded source and the original prepared document.
 Rendered documents use separate revision/renderer cache keys. Reopening old
@@ -110,8 +111,8 @@ CommonHTML uses embedded WOFF2 fonts, with a narrowly enabled data-font policy
 for generated documents. JavaScript, external fonts and network access remain
 blocked. D uses native MathML layout with bundled Fira Math glyphs and its
 OpenType MATH table, plus the corrected local TeX fallback. C’s fonts, markup, CSS and cached documents remain unchanged. D's
-`math6:mathml:` cache revision replaces earlier rendered variants locally on the
-next open, using the saved source without a mail fetch.
+new cache revisions retry old failed renders locally on the next open, using
+the saved source without a mail fetch; successful prior documents stay reusable.
 
 ## Renderer provenance
 
@@ -158,3 +159,23 @@ storage identities were preserved; production was not launched. The signed
 input hash was verified. The OS denied reading the installed HAP hash directly.
 MatePad was not updated. Both renderer previews passed the isolated emulator
 checks; emulator shutdown was independently verified. All 136 Swift tests passed.
+
+## Equation-count limit removal
+
+The user supplied a 17,941-byte document with 46 supported equations. Both
+renderers previously aborted at the 32-equation cap. The count cap is removed;
+the unchanged document renders all 46 equations in C and D within existing
+size limits. A synthetic 96-equation test covers Markdown and HTML in both
+modes. The user’s document and its rendered content stay in ignored local
+evidence and are not included in the repository.
+
+New rendering attempts use `math7:mathml:` / `math3:commonhtml:`. Successful
+`math6:mathml:` / `math2:commonhtml:` documents remain reusable. Old failed
+attempts can render once under the new revision without fetching mail; failures
+under the new revision are still remembered. Font selection and C layout stay
+unchanged.
+
+This follow-up is installed in place on Pura X, still version 1.0.2 / 1000002,
+with app/storage identities preserved and without launching production. The
+signed build and installer success were verified; actual device appearance is
+user-tested. See [limit-removal validation](markdown-equation-limit-validation.json).

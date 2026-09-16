@@ -53,9 +53,8 @@ test('HTML preserves attributes, styles, scripts, code and inline pictures; only
   assert.match(html, /aria-label="a &lt; b"/); assert.match(html, /<text>\$x\$<\/text>/);
   assert.equal(math.renderHtmlMath(html), html);
 });
-test('Malformed input, count limits and macro isolation preserve source or fail before sending', () => {
+test('Malformed input, size limits and macro isolation preserve source or fail before sending', () => {
   assert.throws(() => math.markdownMathPlan('a'.repeat(262145)));
-  assert.throws(() => math.markdownMathPlan(Array(33).fill('$x$').join(' ')));
   assert.match(math.renderMathPlan(math.markdownMathPlan('$\\unsupportedcmd{x}$')), /unsupportedcmd/);
   assert.throws(() => engine.equation('\\def\\localmacro{a}\\localmacro', false));
   assert.throws(() => engine.equation('\\localmacro', false));
@@ -63,6 +62,21 @@ test('Malformed input, count limits and macro isolation preserve source or fail 
   assert.equal(math.markdownMathPlan('\\('.repeat(60000)).images.length, 0);
   assert.equal(math.markdownMathPlan('\\'.repeat(100000)).images.length, 0);
   assert.ok(performance.now() - start < 2000);
+});
+
+test('Long notes render every equation beyond the former count cap in both mail formats and renderers', () => {
+  const equations = Array.from({ length: 96 }, (_, i) => `$x_{${i}}^2$`);
+  for (const renderer of ['mathml', 'commonhtml']) {
+    const plan = math.markdownMathPlan('# Notes\n\n' + equations.join('\n\n'), '', '', renderer);
+    assert.equal(plan.images.length, equations.length);
+    const markdown = math.renderMathPlan(plan);
+    const html = math.renderHtmlMath(equations.map(s => `<p>${s}</p>`).join(''), renderer);
+    for (const result of [markdown, html]) {
+      assert.equal((result.match(/role="math"/g) || []).length, equations.length);
+      assert.match(result, /aria-label="x_\{95\}\^2"/);
+      assert.doesNotMatch(result, /DMAILMATH/);
+    }
+  }
 });
 
 test('CommonHTML and MathML render inline and display equations without equation images', () => {
