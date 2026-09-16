@@ -1,0 +1,19 @@
+{
+  "device": "pura",
+  "model": "VDE-AL00",
+  "bundleName": "org.thunderbird.harmony.dev",
+  "versionName": "1.0.1",
+  "versionCode": 1000001,
+  "upgradeOnly": true,
+  "storageIdentityPreserved": true,
+  "productionLaunched": false,
+  "installedHashVerified": false,
+  "artifactHashVerified": true,
+  "installedPackageHashReadDenied": true,
+  "hapSha256": "07bdc4b78323fc430128cc833611b14c7380da28008a947a4a9ce309381b2742",
+  "date": "2026-09-16",
+  "change": "D native text font with corrected operator glyphs and layout; C unchanged",
+  "cacheRevision": "math5:mathml:",
+  "matepadProductionUpdated": false,
+  "rendererValidation": "mathml-native-font-validation.json"
+}

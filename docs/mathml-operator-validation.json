@@ -1,0 +1,306 @@
+{
+  "date": "2026-09-16",
+  "scope": "D native MathML operator layout; C unchanged; production installation paused",
+  "deviceModel": "MRO-W00",
+  "syntheticOnly": true,
+  "hostTests": {
+    "javascript": 778,
+    "python": 36,
+    "passed": true
+  },
+  "nativeTests": {
+    "standardUI": 1,
+    "operatorUI": 1,
+    "core": 1,
+    "markupReferences": 22,
+    "passed": true
+  },
+  "visualChecks": {
+    "inlineSumSideScripts": true,
+    "displaySumSizeAndLimitGaps": true,
+    "explicitLimitsAndNolimits": true,
+    "productAndUnion": true,
+    "integralScriptClearance": true,
+    "nestedDisplayAndCompactSumsInD": true,
+    "ordinaryGlyphOutlinesPreserved": true,
+    "commonhtmlChangedPixels": 0,
+    "commonhtmlPixelsCompared": 1066000,
+    "commonhtmlHostMarkupAndCSSComparisons": 18,
+    "displaySumPixelSizes": {
+      "commonhtml": [
+        [
+          47,
+          50
+        ],
+        [
+          48,
+          50
+        ]
+      ],
+      "mathml": [
+        [
+          47,
+          50
+        ],
+        [
+          48,
+          50
+        ]
+      ]
+    }
+  },
+  "font": {
+    "source": "@mathjax/mathjax-tex-font/chtml/woff2/mjx-tex-n.woff2",
+    "sourceSha256": "fad3b88ec7aac4959e3de19044931682bd4d1500c72a85d2d113b73b694c4133",
+    "sha256": "41b7d4f3e06330eb6bc0faabd860d72bf75c1a844da4fff236e26f6270059b29",
+    "fontToolsVersion": "4.60.1",
+    "largeOperatorSource": "@mathjax/mathjax-tex-font/chtml/woff2/mjx-tex-lo.woff2",
+    "largeOperatorSourceSha256": "98b20475232f47749126ae098177b5c71d3b6512e068efedb3a912c2c8f6ed0f",
+    "change": "D-only MATH operator metrics and 16 display variants; rule thickness 60; original glyphs preserved",
+    "mathConstants": {
+      "ScriptPercentScaleDown": 71,
+      "ScriptScriptPercentScaleDown": 50,
+      "DisplayOperatorMinHeight": 1300,
+      "AxisHeight": 250,
+      "UpperLimitGapMin": 111,
+      "UpperLimitBaselineRiseMin": 200,
+      "LowerLimitGapMin": 167,
+      "LowerLimitBaselineDropMin": 600,
+      "AccentBaseHeight": 431,
+      "SubscriptShiftDown": 150,
+      "SubscriptBaselineDropMin": 35.5,
+      "SubscriptTopMax": 353.6,
+      "SuperscriptShiftUp": 363,
+      "SuperscriptShiftUpCramped": 289,
+      "SuperscriptBaselineDropMax": 274.06,
+      "SuperscriptBottomMin": 110.5,
+      "SubSuperscriptGapMin": 180,
+      "SuperscriptBottomMaxWithSubscript": 353.6,
+      "SpaceAfterScript": 50,
+      "StackGapMin": 180,
+      "StackDisplayStyleGapMin": 420,
+      "FractionNumeratorGapMin": 60,
+      "FractionNumDisplayStyleGapMin": 180,
+      "FractionRuleThickness": 60,
+      "FractionDenominatorGapMin": 60,
+      "FractionDenomDisplayStyleGapMin": 180,
+      "OverbarVerticalGap": 180,
+      "OverbarRuleThickness": 60,
+      "OverbarExtraAscender": 60,
+      "UnderbarVerticalGap": 180,
+      "UnderbarRuleThickness": 60,
+      "UnderbarExtraDescender": 60,
+      "RadicalVerticalGap": 75,
+      "RadicalDisplayStyleVerticalGap": 167.75,
+      "RadicalRuleThickness": 60,
+      "RadicalExtraAscender": 60,
+      "RadicalKernBeforeDegree": 277.77777777777777,
+      "RadicalKernAfterDegree": -555.5555555555555,
+      "RadicalDegreeBottomRaisePercent": 60
+    },
+    "displayVariants": {
+      "product": [
+        [
+          "product",
+          1000
+        ],
+        [
+          "product.display",
+          1400
+        ]
+      ],
+      "uni2210": [
+        [
+          "uni2210",
+          1000
+        ],
+        [
+          "uni2210.display",
+          1400
+        ]
+      ],
+      "summation": [
+        [
+          "summation",
+          1000
+        ],
+        [
+          "summation.display",
+          1400
+        ]
+      ],
+      "integral": [
+        [
+          "integral",
+          932
+        ],
+        [
+          "integral.display",
+          2222
+        ]
+      ],
+      "uni222C": [
+        [
+          "uni222C",
+          1111
+        ],
+        [
+          "uni222C.display",
+          2222
+        ]
+      ],
+      "uni222D": [
+        [
+          "uni222D",
+          1111
+        ],
+        [
+          "uni222D.display",
+          2222
+        ]
+      ],
+      "uni222E": [
+        [
+          "uni222E",
+          1111
+        ],
+        [
+          "uni222E.display",
+          2222
+        ]
+      ],
+      "uni22C0": [
+        [
+          "uni22C0",
+          999
+        ],
+        [
+          "uni22C0.display",
+          1400
+        ]
+      ],
+      "uni22C1": [
+        [
+          "uni22C1",
+          999
+        ],
+        [
+          "uni22C1.display",
+          1400
+        ]
+      ],
+      "uni22C2": [
+        [
+          "uni22C2",
+          999
+        ],
+        [
+          "uni22C2.display",
+          1399
+        ]
+      ],
+      "uni22C3": [
+        [
+          "uni22C3",
+          999
+        ],
+        [
+          "uni22C3.display",
+          1399
+        ]
+      ],
+      "uni2A00": [
+        [
+          "uni2A00",
+          1000
+        ],
+        [
+          "uni2A00.display",
+          1398
+        ]
+      ],
+      "uni2A01": [
+        [
+          "uni2A01",
+          1000
+        ],
+        [
+          "uni2A01.display",
+          1398
+        ]
+      ],
+      "uni2A02": [
+        [
+          "uni2A02",
+          1000
+        ],
+        [
+          "uni2A02.display",
+          1398
+        ]
+      ],
+      "uni2A04": [
+        [
+          "uni2A04",
+          999
+        ],
+        [
+          "uni2A04.display",
+          1399
+        ]
+      ],
+      "uni2A06": [
+        [
+          "uni2A06",
+          999
+        ],
+        [
+          "uni2A06.display",
+          1400
+        ]
+      ]
+    },
+    "displayAdvanceCorrections": {
+      "integral.display": 388,
+      "uni222C.display": 388,
+      "uni222D.display": 388,
+      "uni222E.display": 388
+    },
+    "adapterSha256": "062d9e2a86cfc772f90073d30bdb90de52230469a4331188376a1e10a08c7007",
+    "originalGlyphsAndAdvancesUnchanged": true,
+    "displayGlyphsMatchCommonHTML": true,
+    "license": "Apache-2.0"
+  },
+  "cache": {
+    "mathml": "math4:mathml:",
+    "commonhtml": "math2:commonhtml:",
+    "usesCachedSourceWithoutRefetch": true
+  },
+  "builds": {
+    "architecture": "aarch64",
+    "mainTestHapSha256": "53a5b4812a685196af4aefaee7c2589a955ec1d9c40c66dddb6ad6f1d2c59bf8",
+    "testHapSha256": "65a233ab32f4bf7dbfde9cb8605ccf4cc25a9abc8a4169f7f656e7ed58329971",
+    "productionHapRebuilt": false
+  },
+  "screenshots": {
+    "commonhtml.png": "523e7e15806006eef27aa4b091600807f00fa81b81d16b410ffbd106f55e7521",
+    "operators-commonhtml.png": "b640beeb54e5f782ff3a9c3a74084906059d8a82071648be8ea6b9e9d95e8f02",
+    "operators-mathml.png": "3ec3668b189e407ec50b9278e7ba20d983cb1096c342402938bce15e886bb3fa",
+    "mathml.png": "d8d4d5bef197c08a9e30ea2b1898ba8f2830a4313dc649f4ae75593c747b2419"
+  },
+  "harnessCorrections": [
+    "Run verified synthetic blank-page/unlock before Asset setup",
+    "Use a dedicated saved-draft runner for operator cases; multiline UI replacement only affected visible text",
+    "Require fresh local screenshots; HDC can report a missing remote file with exit code zero"
+  ],
+  "limitations": [
+    "Native MathML retains its own paragraph and general equation layout; this is not pixel parity with C for all formulas",
+    "System font used by the installed baseline remains unidentified",
+    "No new production installation or launch"
+  ],
+  "isolatedAppRemoved": true,
+  "testProcessAbsent": true,
+  "emulatorStopped": true,
+  "productionAppsUpdated": false,
+  "productionAppsLaunched": false
+}

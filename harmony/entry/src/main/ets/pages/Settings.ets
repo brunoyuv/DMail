@@ -4,6 +4,7 @@ import { AppLanguage } from '../settings/AppLanguage';
 import { AccountStore, SavedAccount } from '../data/AccountStore';
 import { NotificationSettingsPanel } from './NotificationSettingsPanel';
 import { MailActionSettingsPanel } from './MailActionSettingsPanel';
+import { MathSettingsPanel } from './MathSettingsPanel';
 import { DeferredSave } from './DeferredSave';
 
 @Component
@@ -126,6 +127,7 @@ export struct Settings {
           if (this.accounts.find(value => value.id === this.selectedAccount)?.sessionUrl.startsWith('imaps:')) {
             MailActionSettingsPanel({ accountId: this.selectedAccount, store: this.store })
           }
+          MathSettingsPanel({ accountId: this.selectedAccount, store: this.store })
           Text(this.label('sender_name')).fontSize(15).fontColor($r('app.color.mail_text_secondary')).width('100%')
           TextInput({ text: this.senderName, placeholder: this.label('sender_name_placeholder') })
             .id('sender-display-name').maxLength(200).enableAutoFill(false).height(48).width('100%')

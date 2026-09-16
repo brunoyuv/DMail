@@ -6,6 +6,9 @@ const ts = require('../.tools/test/node_modules/typescript');
 const compile = source => ts.transpileModule(source, { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS } }).outputText;
 const moduleModel = { exports: {} };
 new Function('module', 'exports', compile(fs.readFileSync('harmony/entry/src/main/ets/data/CompositionSettings.ts', 'utf8')))(moduleModel, moduleModel.exports);
+const mathModule = { exports: {} };
+new Function('module', 'exports', compile(fs.readFileSync('harmony/entry/src/main/ets/data/MathSettings.ts', 'utf8')))(mathModule, mathModule.exports);
+const { MathSettings, normalizeMathSettings } = mathModule.exports;
 const { CompositionSettings, normalizeComposition, applyComposition } = moduleModel.exports;
 function methods(file, names) {
   const source = fs.readFileSync(file, 'utf8');
@@ -45,15 +48,17 @@ function accountFixture() {
   const sqlite = new DatabaseSync(':memory:');
   sqlite.exec("CREATE TABLE accounts (id TEXT PRIMARY KEY, status TEXT NOT NULL); INSERT INTO accounts VALUES ('a', 'ready'), ('b', 'ready')");
   const source = fs.readFileSync('harmony/entry/src/main/ets/data/AccountStore.ets', 'utf8');
+  sqlite.exec(source.match(/CREATE TABLE IF NOT EXISTS account_math[^']+/)[0]);
+  sqlite.exec(source.match(/ALTER TABLE account_math[^\"]+/)[0]);
   sqlite.exec(source.match(/CREATE TABLE IF NOT EXISTS account_composition[^']+/)[0]);
   sqlite.exec(source.match(/CREATE TABLE IF NOT EXISTS account_mail_actions[^"]+/)[0]);
-  const code = compile(`class Host { ${methods('harmony/entry/src/main/ets/data/AccountStore.ets', ['composition', 'saveComposition', 'prepareNewOutgoing', 'mailAction', 'saveMailAction'])} }; return Host;`);
-  const Host = new Function('CompositionSettings', 'normalizeComposition', 'applyComposition', code)(CompositionSettings, normalizeComposition, applyComposition);
+  const code = compile(`class Host { ${methods('harmony/entry/src/main/ets/data/AccountStore.ets', ['composition', 'saveComposition', 'prepareNewOutgoing', 'mailAction', 'saveMailAction', 'mathSettings', 'saveMathSettings'])} }; return Host;`);
+  const Host = new Function('CompositionSettings', 'normalizeComposition', 'applyComposition', 'MathSettings', 'normalizeMathSettings', code)(CompositionSettings, normalizeComposition, applyComposition, MathSettings, normalizeMathSettings);
   const host = new Host(); host.pending = Promise.resolve();
   host.enqueue = operation => { const task = host.pending.catch(() => {}).then(operation); host.pending = task.catch(() => {}); return task; };
   host.database = () => ({ executeSql: async (sql, args = []) => { sqlite.prepare(sql).run(...args); },
     querySql: async (sql, args = []) => { const statement = sqlite.prepare(sql); statement.setReturnArrays(true); const rows = statement.all(...args);
-      return { goToFirstRow: () => rows.length > 0, getString: col => rows[0][col], close() {} }; } });
+      return { goToFirstRow: () => rows.length > 0, getString: col => rows[0][col], getLong: col => rows[0][col], close() {} }; } });
   return { host, sqlite };
 }
 
@@ -126,5 +131,53 @@ test('Swipe action defaults to Archive and persists independently per account', 
     await host.saveMailAction('a', 'delete');
     assert.equal(await host.mailAction('a'), 'archive');
     assert.equal(sqlite.prepare('SELECT COUNT(*) AS n FROM account_mail_actions').get().n, 0);
+  } finally { sqlite.close(); }
+});
+
+test('Math settings keep reading independent of source-only sending under the owning account', async () => {
+  const { host, sqlite } = accountFixture();
+  try {
+    assert.deepEqual(await host.mathSettings('a'), new MathSettings());
+    const settings = { renderWhileReading: true, sendFormat: 'formatted' };
+    const pending = host.saveMathSettings('a', settings); settings.sendFormat = 'source'; await pending;
+    assert.equal((await host.mathSettings('a')).sendFormat, 'source');
+    const value = draft('Original $x^2$'); await host.prepareNewOutgoing('a', value);
+    assert.equal(value.sendFormat, undefined); assert.equal(value.text, 'Original $x^2$');
+    await host.saveMathSettings('a', { renderWhileReading: false, sendFormat: 'source' });
+    await host.prepareNewOutgoing('a', value); assert.equal(value.sendFormat, undefined);
+    const another = draft(); await host.prepareNewOutgoing('b', another); assert.equal(another.sendFormat, undefined);
+    sqlite.exec("UPDATE accounts SET status = 'deleting' WHERE id = 'a'; DELETE FROM account_math WHERE account_id = 'a'");
+    await host.saveMathSettings('a', { renderWhileReading: true, sendFormat: 'formatted' });
+    assert.equal(sqlite.prepare('SELECT count(*) n FROM account_math').get().n, 0);
+  } finally { sqlite.close(); }
+});
+
+test('Renderer choice persists per account and rejects unknown renderers', async () => {
+  const { host, sqlite } = accountFixture();
+  try {
+    assert.equal((await host.mathSettings('a')).renderer, 'mathml');
+    await host.saveMathSettings('a', { renderWhileReading: true, sendFormat: 'formatted', renderer: 'mathml' });
+    assert.equal((await host.mathSettings('a')).renderer, 'mathml');
+    assert.equal((await host.mathSettings('b')).renderer, 'mathml');
+    assert.throws(() => normalizeMathSettings({ renderWhileReading: true, sendFormat: 'formatted', renderer: 'png' }));
+  } finally { sqlite.close(); }
+});
+
+test('Renderer schema upgrade preserves saved reading/send preferences and is repeatable', async () => {
+  const sqlite = new DatabaseSync(':memory:');
+  try {
+    sqlite.exec("CREATE TABLE account_math(account_id TEXT PRIMARY KEY,render_reading INTEGER NOT NULL,send_format TEXT NOT NULL); INSERT INTO account_math VALUES('a',1,'formatted')");
+    const source = fs.readFileSync('harmony/entry/src/main/ets/data/AccountStore.ets', 'utf8');
+    const start = source.indexOf('      const mathColumns =');
+    const end = source.indexOf('\n', source.indexOf('      if (!hasMathRenderer)', start));
+    const run = new Function(compile('return async function() { ' + source.slice(start, end) + ' };'))();
+    const db = { executeSql: async sql => sqlite.exec(sql), querySql: async sql => {
+      const rows = sqlite.prepare(sql).all(); let at = -1;
+      return { goToFirstRow: () => { at = 0; return rows.length > 0; }, goToNextRow: () => ++at < rows.length,
+        getString: column => { assert.equal(column, 1); return rows[at].name; }, close() {} };
+    } };
+    await run.call({ db }); await run.call({ db });
+    assert.deepEqual({ ...sqlite.prepare('SELECT * FROM account_math').get() },
+      { account_id: 'a', render_reading: 1, send_format: 'formatted', renderer: 'mathml' });
   } finally { sqlite.close(); }
 });

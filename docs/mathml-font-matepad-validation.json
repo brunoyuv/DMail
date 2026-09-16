@@ -1,0 +1,69 @@
+{
+  "date": "2026-09-16",
+  "deviceModel": "MRO-W00",
+  "systemBuild": "OpenHarmony-6.1.1.120",
+  "syntheticOnly": true,
+  "productionInstallationPaused": true,
+  "productionAppsUpdated": false,
+  "productionAppsLaunched": false,
+  "baseline": "Current Pura X D font configuration reproduced in the isolated test app: native MathML with system fonts; unchanged C reference.",
+  "candidate": "D loads CommonHTML primary glyphs; D-only font copy corrects post.underlineThickness from 0 to 60. C unchanged.",
+  "tests": {
+    "baselineUI": 1,
+    "candidateCore": 1,
+    "candidateUI": 1,
+    "nativeMarkupReferences": 22,
+    "passed": true,
+    "hostRenderer": 12,
+    "hostReader": 19
+  },
+  "findings": {
+    "baselineSigmaAndSumLookNearlyIdentical": true,
+    "candidateSigmaAndSumVisuallyDistinct": true,
+    "parserOutputs": {
+      "Sigma": "mi / U+03A3",
+      "sum": "mo / U+2211"
+    },
+    "fractionAndRadicalRulesVisible": true,
+    "systemMathFontListed": true,
+    "specificSystemFontFileReadDenied": true,
+    "commonhtmlPixelComparison": {
+      "imageSize": [
+        2800,
+        1840
+      ],
+      "previewComparisonBounds": [
+        1980,
+        535,
+        2800,
+        1835
+      ],
+      "commonhtmlChangedPixels": 0,
+      "pixelsCompared": 1066000
+    }
+  },
+  "font": {
+    "source": "@mathjax/mathjax-tex-font/chtml/woff2/mjx-tex-n.woff2",
+    "sourceSha256": "fad3b88ec7aac4959e3de19044931682bd4d1500c72a85d2d113b73b694c4133",
+    "sha256": "19e19908f0b2e333040a66e1a9e401fe9ddf9ce907ce15efd6b5819c5f43b003",
+    "fontToolsVersion": "4.60.1",
+    "change": "post.underlineThickness: 0 -> 60 (0.06em); checksum updated",
+    "adapterSha256": "d6341c59a627fb4bbbd13a1a02bb7be798031c1c81922a9fbfef325acab620a9",
+    "glyphOutlinesAndOtherTablesUnchanged": true,
+    "license": "Apache-2.0"
+  },
+  "isolatedAppRemoved": true,
+  "testProcessAbsent": true,
+  "emulatorStopped": true,
+  "screenshots": {
+    "baseline": {
+      "commonhtml": "51aead2c7a74fd7d06f6b9167273320ef5165789fb27589d1d57f094728300b4",
+      "mathml": "f0870762a57fd7b4b5ae2e4c73aca608578163fb3bd52e2b0fd1d16464744544"
+    },
+    "candidate": {
+      "commonhtml": "2d69fd5f637d9efb19f1e287f05537ca67ecd0b7bec9824a8e137982c332157d",
+      "mathml": "3f8e167495038fba9069818bd60b8fb55546758bb3051d29b187e3117a4366a3"
+    }
+  },
+  "signedCandidateSha256": "f1bffe7c85bd91921220eee051658b32032aa108a2b3b1552dd1f0194a7ef76c"
+}

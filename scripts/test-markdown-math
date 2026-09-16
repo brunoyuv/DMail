@@ -1,0 +1,40 @@
+#!/usr/bin/env bash
+# Prepared isolated emulator test; never targets a saved device/account.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+[[ "${THUNDERBIRD_EMULATOR_TEST:-}" == 1 && "${HDC_TARGET:-}" == 127.0.0.1:5555 ]]
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app/entry/build/default/outputs"
+OUT="$ROOT/.tools/math-render/emulator"
+mkdir -p "$OUT"
+run_hdc() { timeout --foreground --kill-after=3s 20s "$HDC" -t "$HDC_TARGET" "$@"; }
+cleanup() {
+  local result=$?
+  trap - EXIT
+  run_hdc file recv /data/local/tmp/math-preview-commonhtml.png "$OUT/preview-commonhtml.png" >/dev/null 2>&1 || true
+  run_hdc file recv /data/local/tmp/math-preview-mathml.png "$OUT/preview-mathml.png" >/dev/null 2>&1 || true
+  run_hdc file recv /data/local/tmp/math-preview.png "$OUT/preview.png" >/dev/null 2>&1 || true
+  run_hdc uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+[[ "$(run_hdc shell uname -m | tr -d '[:space:]')" == x86_64 ]]
+run_hdc uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+run_hdc install "$APP/default/entry-default-unsigned.hap"
+run_hdc install "$APP/ohosTest/entry-ohosTest-unsigned.hap"
+timeout --foreground --kill-after=5s 100s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/MarkdownMathRunner \
+  -s timeout 90000 > "$OUT/test.log" 2>&1
+# Keep synthetic preview screenshots in ignored evidence.
+grep -E 'Tests run:|MATH_.*PASS|MATH_GLYPH_DIFF|FAIL' "$OUT/test.log" || true
+core_pass=0
+if grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/test.log"; then core_pass=1; fi
+
+run_hdc shell aa force-stop org.thunderbird.harmony.imaptest
+timeout --foreground --kill-after=5s 75s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/MarkdownMathUIRunner \
+  -s timeout 65000 > "$OUT/ui.log" 2>&1
+grep -E 'MATH_UI_|Tests run:|Error|FAIL' "$OUT/ui.log" || true
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/ui.log"
+[[ "$core_pass" == 1 ]]

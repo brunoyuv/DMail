@@ -1,6 +1,20 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
-const { hasRemotePictures, htmlContentInset, mailDocument, foldMailQuotes, plainTextMailHtml } = require('../.tools/test-output/mail/html/HtmlDocument.js');
+const { hasRemotePictures, htmlContentInset, mailDocument, foldMailQuotes, plainTextMailHtml, isEmbeddedMathFontRequest } = require('../.tools/test-output/mail/html/HtmlDocument.js');
+
+test('Generated mail permits bundled Fira OTF and TeX WOFF2 fonts within the reader limit', () => {
+  const engine = require('../harmony/entry/src/main/ets/mail/math/vendor/engine.js');
+  const urls = [...engine.mathStyles('mathml').matchAll(/url\("([^"]+)"\)/g)].map(m => m[1]);
+  assert.equal(urls.length, 2);
+  for (const url of urls) {
+    assert.equal(isEmbeddedMathFontRequest(true, url), true);
+    assert.equal(isEmbeddedMathFontRequest(false, url), false);
+  }
+  for (const url of ['https://example.invalid/font.otf', 'data:text/html;base64,AAAA',
+    'data:font/otf;base64,AAAA<script>', 'data:font/otf;base64,' + 'A'.repeat(256 * 1024)]) {
+    assert.equal(isEmbeddedMathFontRequest(true, url), false);
+  }
+});
 
 test('Non-content remote pixels and explicitly hidden images do not request pictures or keep retry outstanding', () => {
   const images = [

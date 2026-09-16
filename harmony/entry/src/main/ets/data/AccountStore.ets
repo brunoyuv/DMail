@@ -19,6 +19,7 @@ import { MailSyncStore } from './MailSyncStore';
 import { RecipientStore } from './RecipientStore';
 import { RecipientRecord, RecipientFields, sentRecipients, cachedSentRecipients, knownRecipientNames } from './RecipientHistory';
 import { CompositionSettings, normalizeComposition, applyComposition } from './CompositionSettings';
+import { MathSettings, normalizeMathSettings } from './MathSettings';
 import { NotificationStore } from './NotificationStore';
 import { UnreadBadgeStore } from './UnreadBadgeStore';
 import { NotificationAccountState } from '../mail/notifications/NotificationModel';
@@ -187,6 +188,15 @@ export class AccountStore {
       await RecipientStore.initialize(this.db);
       await this.db.executeSql("CREATE TABLE IF NOT EXISTS account_mail_actions (account_id TEXT PRIMARY KEY, action TEXT NOT NULL)");
       await this.db.executeSql('CREATE TABLE IF NOT EXISTS account_composition (account_id TEXT PRIMARY KEY, sender_name TEXT NOT NULL, signature TEXT NOT NULL)');
+      await this.db.executeSql('CREATE TABLE IF NOT EXISTS account_math (account_id TEXT PRIMARY KEY, render_reading INTEGER NOT NULL, send_format TEXT NOT NULL)');
+      const mathColumns = await this.db.querySql('PRAGMA table_info(account_math)');
+      let hasMathRenderer = false;
+      try {
+        if (mathColumns.goToFirstRow()) {
+          do { if (mathColumns.getString(1) === 'renderer') { hasMathRenderer = true; } } while (mathColumns.goToNextRow());
+        }
+      } finally { mathColumns.close(); }
+      if (!hasMathRenderer) { await this.db.executeSql("ALTER TABLE account_math ADD COLUMN renderer TEXT NOT NULL DEFAULT 'mathml'"); }
       await this.db.executeSql('CREATE TABLE IF NOT EXISTS outgoing_drafts (account_id TEXT PRIMARY KEY, payload TEXT NOT NULL)');
       // Additive UI metadata remains compatible with the version-five account
       // schema. Keep the selection inside this encrypted, per-store database.
@@ -663,6 +673,25 @@ export class AccountStore {
     if (!draft.compositionApplied) { applyComposition(draft, await this.composition(accountId)); }
   }
 
+  async mathSettings(accountId: string): Promise<MathSettings> {
+    let settings = new MathSettings();
+    await this.enqueue(async () => {
+      const rows = await this.database().querySql("SELECT c.render_reading, c.send_format, c.renderer FROM account_math c JOIN accounts a ON a.id = c.account_id WHERE c.account_id = ? AND a.status = 'ready'", [accountId]);
+      try {
+        if (rows.goToFirstRow()) { settings = normalizeMathSettings({ renderWhileReading: rows.getLong(0) === 1, sendFormat: rows.getString(1), renderer: rows.getString(2) }); }
+      } finally { rows.close(); }
+    });
+    return settings;
+  }
+
+  saveMathSettings(accountId: string, settings: MathSettings): Promise<void> {
+    const value = normalizeMathSettings(settings);
+    return this.enqueue(async () => {
+      await this.database().executeSql("INSERT OR REPLACE INTO account_math (account_id, render_reading, send_format, renderer) SELECT ?, ?, ?, ? WHERE EXISTS (SELECT 1 FROM accounts WHERE id = ? AND status = 'ready')",
+        [accountId, value.renderWhileReading ? 1 : 0, value.sendFormat, value.renderer!, accountId]);
+    });
+  }
+
   async rememberRecipients(accountId: string, fields: RecipientFields, when: number): Promise<void> {
     const history = this.recipientStore;
     if (!history) { return; }
@@ -795,6 +824,7 @@ export class AccountStore {
       await this.database().executeSql('DELETE FROM recipient_history WHERE account_id = ?', [id]);
       await this.database().executeSql('DELETE FROM account_mail_actions WHERE account_id = ?', [id]);
       await this.database().executeSql('DELETE FROM account_composition WHERE account_id = ?', [id]);
+      await this.database().executeSql('DELETE FROM account_math WHERE account_id = ?', [id]);
       await this.database().executeSql('DELETE FROM mail_cache WHERE account_id = ?', [id]);
       await this.database().executeSql('DELETE FROM picture_cache WHERE account_id = ?', [id]);
       await this.database().executeSql('DELETE FROM picture_snapshot WHERE account_id = ?', [id]);

@@ -24,6 +24,7 @@ function loadLoaderModule(overrides = {}) {
     '../data/MailCacheModel': model,
     '../data/PictureSnapshot': { loadPictureSnapshot: overrides.loadPictureSnapshot || (async () => { throw new Error('Unexpected picture batch'); }) },
     './jmap/JmapClient': { JmapError }, './Conversation': { stableMessageKey }, './html/HtmlDocument': html,
+    './math/MarkdownMath': overrides.mathRenderer,
     './html/HtmlPicturePlan': { prepareStaticMailHtml: overrides.prepareStaticMailHtml || plan.prepareStaticMailHtml }
   };
   const source = ts.transpileModule(fs.readFileSync('harmony/entry/src/main/ets/mail/MailMessageLoader.ets', 'utf8'), {
@@ -41,6 +42,7 @@ function fixture(options = {}) {
     failCache: false, failDocument: false, failSave: false, failAttempt: false };
   const key = (a, id) => a + ':' + id;
   const store = {
+    mathSettings: async () => ({ renderWhileReading: options.readMath === true, sendFormat: 'source', renderer: options.renderer }),
     trackMailSync: task => { tracked.add(task); task.finally(() => tracked.delete(task)); },
     get sync() { assert.fail('The selected-message loader must not consult the durable mailbox backlog'); },
     get mailSyncAvailable() { assert.fail('Bulk worker availability must not gate selected mail'); },
@@ -65,7 +67,10 @@ function fixture(options = {}) {
       cancelPending: (a, k) => state.cancels.push([a, k])
     }
   };
-  const types = loadLoaderModule({ prepareStaticMailHtml: (...args) => { state.scans++;
+  const types = loadLoaderModule({ mathRenderer: {
+    mathFontDocument: value => value,
+    renderHtmlMath: value => { state.mathRenders = (state.mathRenders || 0) + 1; if (options.failMath) throw Error('local render failure'); return value + '<span>Rendered math</span>'; }
+  }, prepareStaticMailHtml: (...args) => { state.scans++;
     if (options.failPreparation) throw new Error('private authored HTML'); return plan.prepareStaticMailHtml(...args); },
     loadPictureSnapshot: async (cache, a, k, urls, retry, scope) => {
       state.batches.push({ a, k, urls, retry, scope }); assert.equal(cache, store.pictures); assert.equal(retry, false);
@@ -232,4 +237,87 @@ test('Attachment-only messages finish loading and reopen offline without downloa
     assert.deepEqual(f.bodies.get('a:one'), saved); assert.equal(f.state.scans, scans);
     assert.equal(f.state.batches.length, 0); await f.loader.whenIdle();
   }
+});
+
+test('A rejected fetch releases the shared body queue for another account and a later explicit retry', async () => {
+  let fail = true;
+  const f = fixture({ read: async (_server, id) => {
+    if (fail) { fail = false; throw new JmapError('network'); }
+    return mail(id);
+  } });
+  await assert.rejects(f.open(mail('first')), { code: 'network' });
+  const other = new f.MailMessageLoader(f.store);
+  const account = { id: 'b', serverId: 'server-b' };
+  assert.equal((await other.open(f.client, account, mail('second'), 'Show', 'Hide', () => true)).mail.id, 'second');
+  assert.equal((await f.open(mail('first'))).mail.id, 'first');
+  assert.deepEqual(f.state.reads, [['server-a', 'first'], ['server-b', 'second'], ['server-a', 'first']]);
+  await Promise.all([f.loader.whenIdle(), other.whenIdle()]);
+  assert.equal(f.tracked.size, 0);
+});
+
+test('An unresolved fetch survives the UI deadline and blocks other missing bodies until it drains; cached mail still opens', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const gate = deferred();
+  const f = fixture({ read: async (_server, id) => { if (id === 'held') await gate.promise; return mail(id); } });
+  const first = f.open(mail('held')).catch(error => error);
+  await tick(); t.mock.timers.tick(45000);
+  assert.equal((await first).code, 'network');
+  const other = new f.MailMessageLoader(f.store);
+  const account = { id: 'b', serverId: 'server-b' };
+  const second = other.open(f.client, account, mail('waiting'), 'Show', 'Hide', () => true).catch(error => error);
+  await tick();
+  assert.deepEqual(f.state.reads, [['server-a', 'held']], 'No overlapping fetch is started behind the held operation');
+  t.mock.timers.tick(45000); assert.equal((await second).code, 'network');
+  assert.equal(f.tracked.size, 2);
+  const cached = mail('cached'); f.seed('b', cached);
+  assert.equal((await other.open(f.client, account, cached, 'Show', 'Hide', () => true)).mail.id, 'cached');
+  assert.equal(f.state.reads.length, 1);
+  gate.resolve(); await Promise.all([f.loader.whenIdle(), other.whenIdle()]);
+  assert.equal(f.tracked.size, 0);
+  assert.equal((await other.open(f.client, account, mail('waiting'), 'Show', 'Hide', () => true)).mail.id, 'waiting');
+  assert.deepEqual(f.state.reads, [['server-a', 'held'], ['server-b', 'waiting']]);
+  assert.equal(f.state.saves.filter(row => row[1] === 'held').length, 1);
+});
+
+
+test('Optional math keeps original body and picture identities, caches its variant, and obeys off on next open', async () => {
+  const options = { readMath: true }, f = fixture(options), value = mail();
+  const original = f.seed('a', value);
+  const first = await f.open(value), second = await f.open(value);
+  assert.equal(first.mail.htmlBody, value.htmlBody);
+  assert.equal(first.document.html, original.html + '<span>Rendered math</span>');
+  assert.deepEqual(first.document.pictures, original.pictures);
+  assert.equal(second.document.savedAt, first.document.savedAt); assert.equal(f.state.mathRenders, 1);
+  assert.equal(f.state.reads.length, 0);
+  options.readMath = false; assert.equal((await f.open(value)).document.html, original.html);
+});
+test('A failed optional math render preserves usable HTML and is remembered on reopen', async () => {
+  const f = fixture({ readMath: true, failMath: true }), value = mail(); const original = f.seed('a', value);
+  assert.equal((await f.open(value)).document.html, original.html);
+  assert.equal((await f.open(value)).document.html, original.html);
+  assert.equal(f.state.mathRenders, 1); assert.equal(f.state.reads.length, 0);
+});
+
+test('MathML font upgrade replaces only its old rendered cache; CommonHTML remains cached', async () => {
+  const options = { readMath: true, renderer: 'mathml' }, f = fixture(options), value = mail();
+  const original = f.seed('a', value);
+  const suffix = JSON.stringify([value.id, original.bodySavedAt, original.savedAt]);
+  for (const mode of ['mathml', 'commonhtml']) {
+    const key = 'math2:' + mode + ':' + suffix;
+    f.documents.set('a:' + key, { document: { ...original, messageKey: key, html: 'Previous ' + mode }, attempted: true, failure: '' });
+  }
+  const previousD = 'math3:mathml:' + suffix;
+  f.documents.set('a:' + previousD, { document: { ...original, messageKey: previousD, html: 'Previous D without operator metrics' }, attempted: true, failure: '' });
+  const texD = 'math4:mathml:' + suffix;
+  f.documents.set('a:' + texD, { document: { ...original, messageKey: texD, html: 'Previous D with TeX letters' }, attempted: true, failure: '' });
+  const hybridD = 'math5:mathml:' + suffix;
+  f.documents.set('a:' + hybridD, { document: { ...original, messageKey: hybridD, html: 'Previous D with native letters' }, attempted: true, failure: '' });
+  const upgraded = await f.open(value);
+  assert.match(upgraded.document.messageKey, /^math6:mathml:/);
+  assert.equal(f.state.mathRenders, 1);
+  assert.equal((await f.open(value)).document.savedAt, upgraded.document.savedAt);
+  options.renderer = 'commonhtml';
+  assert.equal((await f.open(value)).document.html, 'Previous commonhtml');
+  assert.equal(f.state.mathRenders, 1);
+  assert.equal(f.state.reads.length, 0);
 });

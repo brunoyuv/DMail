@@ -1,0 +1,45 @@
+{
+  "device": "pura",
+  "model": "VDE-AL00",
+  "bundleName": "org.thunderbird.harmony.dev",
+  "versionName": "1.0.1",
+  "versionCode": 1000001,
+  "upgradeOnly": true,
+  "storageIdentityPreserved": true,
+  "productionLaunched": false,
+  "installedHashVerified": false,
+  "artifactHashVerified": true,
+  "installedPackageHashReadDenied": true,
+  "hapSha256": "9ca1e0f0140c6a1cf76443fb99f758cd9fcd4fc46ff2a65b13c9421f2f4d5b5b",
+  "date": "2026-09-16",
+  "rendererDefault": "mathml",
+  "rendererOptions": [
+    "mathml",
+    "commonhtml"
+  ],
+  "outgoingMarkdown": "original source only",
+  "hostFullSuite": {
+    "javascript": 773,
+    "python": 32,
+    "passed": true
+  },
+  "finalFocusedTests": {
+    "rendererAndSourceSending": 10,
+    "settings": 9,
+    "reader": 18,
+    "passed": true
+  },
+  "swiftTests": {
+    "count": 136,
+    "passed": true
+  },
+  "syntheticEmulator": {
+    "tests": 2,
+    "nativeMarkupReferences": 18,
+    "passed": true,
+    "commonhtmlAndMathmlScreenshotsVisuallyChecked": true,
+    "shutdownIndependentlyVerified": true
+  },
+  "licensesInSignedArtifact": "Marked MIT and MathJax Apache-2.0 original texts verified byte-for-byte",
+  "matepadUpdated": false
+}

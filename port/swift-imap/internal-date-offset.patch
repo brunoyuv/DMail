@@ -1,0 +1,36 @@
+--- a/Sources/IMAP/ServerMessageDateFormatter.swift
++++ b/Sources/IMAP/ServerMessageDateFormatter.swift
+@@ -17,10 +17,23 @@
+     func date(from string: String) throws -> Date {
+         let string: String =
+             string
+-            .components(separatedBy: "+")[0]
+             .replacingOccurrences(of: "\"", with: "")
+             .trimmingCharacters(in: .whitespacesAndNewlines)
+-        guard let date: Date = formatter.date(from: string) else {
++        // Keep a server's numeric offset. Treating local clock fields as GMT
++        // shifted +0900 mail by nine hours when the UI localized it again.
++        guard string.range(of: #"^[0-9]{1,2}-[A-Za-z]{3}-[0-9]{4} [0-9]{2}:[0-9]{2}:[0-9]{2}( [+-][0-9]{4})?$"#,
++              options: .regularExpression) != nil else { throw MIMEError.dateNotDecoded(string) }
++        let parser = DateFormatter()
++        parser.locale = Locale(identifier: "en_US_POSIX")
++        parser.timeZone = .gmt
++        parser.isLenient = false
++        if let zone = string.range(of: #"[+-][0-9]{4}$"#, options: .regularExpression) {
++            let offset = String(string[zone].dropFirst())
++            guard let hours = Int(offset.prefix(2)), let minutes = Int(offset.suffix(2)),
++                  hours < 24, minutes < 60 else { throw MIMEError.dateNotDecoded(string) }
++            parser.dateFormat = String.serverMessageDate.format + " Z"
++        } else { parser.dateFormat = String.serverMessageDate.format }
++        guard let date: Date = parser.date(from: string) else {
+             throw MIMEError.dateNotDecoded(string)
+         }
+         return date
+@@ -28,6 +41,7 @@
+ 
+     init() {
+         formatter = DateFormatter()
++        formatter.locale = Locale(identifier: "en_US_POSIX")
+         formatter.dateFormat = .serverMessageDate.format
+         formatter.timeZone = .gmt
+     }

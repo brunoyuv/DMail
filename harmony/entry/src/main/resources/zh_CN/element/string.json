@@ -921,6 +921,20 @@
     {"name": "message_deleted", "value": "已移至废纸篓"},
     {"name": "delete_undone", "value": "已移回收件箱"},
     {"name": "delete", "value": "删除"},
-    {"name": "trash_unavailable", "value": "无法移至 Trash（废纸篓）。请确认服务器有可写的 Trash 文件夹并支持移动邮件。"}
+    {"name": "trash_unavailable", "value": "无法移至 Trash（废纸篓）。请确认服务器有可写的 Trash 文件夹并支持移动邮件。"},
+    {"name": "math_renderer", "value": "公式渲染方式"},
+    {"name": "math_commonhtml", "value": "CommonHTML（HTML 和字体）"},
+    {"name": "math_mathml", "value": "MathML（浏览器原生公式）"},
+    {"name": "math_preview_help", "value": "渲染预览。发送时保留原始 Markdown 和 TeX 文本。"},
+    {"name": "math_settings", "value": "Markdown 和数学公式"},
+    {"name": "math_reading", "value": "阅读时渲染 Markdown 和数学公式"},
+    {"name": "math_send_format", "value": "新邮件格式"},
+    {"name": "math_source", "value": "原始文本"},
+    {"name": "math_formatted", "value": "格式化 HTML"},
+    {"name": "math_settings_help", "value": "更换渲染器后，重新打开邮件或预览草稿即可生效。发送时保留原始文本。行内公式使用 $x^2$，独立公式使用单独一行的 $$x^2$$，无需声明。"},
+    {"name": "math_settings_error", "value": "无法保存 Markdown 和数学公式设置。"},
+    {"name": "math_preview", "value": "预览邮件"},
+    {"name": "math_edit", "value": "返回编辑器"},
+    {"name": "math_render_error", "value": "无法格式化此邮件。原始文本未更改。请缩短邮件或减少公式数量后重试。"}
   ]
 }

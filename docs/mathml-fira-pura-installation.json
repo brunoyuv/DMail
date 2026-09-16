@@ -1,0 +1,16 @@
+{
+  "device": "pura",
+  "model": "VDE-AL00",
+  "bundleName": "org.thunderbird.harmony.dev",
+  "versionName": "1.0.1",
+  "versionCode": 1000001,
+  "upgradeOnly": true,
+  "storageIdentityPreserved": true,
+  "productionLaunched": false,
+  "installedHashVerified": false,
+  "artifactHashVerified": true,
+  "installedPackageHashReadDenied": true,
+  "hapSha256": "5e5c84f809f6e4a02765b15330228a09148a1e5f6920c9ea2534de59db26ad8b",
+  "date": "2026-09-16",
+  "fontChoice": "Fira Math throughout D; C unchanged"
+}

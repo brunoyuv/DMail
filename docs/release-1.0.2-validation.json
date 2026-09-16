@@ -1,0 +1,34 @@
+{
+  "date": "2026-09-16",
+  "versionName": "1.0.2",
+  "versionCode": 1000002,
+  "tests": {
+    "javascriptPassed": 779,
+    "pythonPassed": 40,
+    "commonhtmlMarkupAndCSSComparisonsUnchanged": 22
+  },
+  "signedArmBuildPassed": true,
+  "sourceParityVerified": true,
+  "signedHapSha256": "92bd33aa63c2296dc0d0c51d9eeab591407c88e326eb290a60a0415d43713457",
+  "puraInstallation": {
+    "device": "pura",
+    "model": "VDE-AL00",
+    "bundleName": "org.thunderbird.harmony.dev",
+    "versionName": "1.0.2",
+    "versionCode": 1000002,
+    "upgradeOnly": true,
+    "storageIdentityPreserved": true,
+    "productionLaunched": false,
+    "installedHashVerified": false,
+    "artifactHashVerified": true,
+    "installedPackageHashReadDenied": true,
+    "hapSha256": "92bd33aa63c2296dc0d0c51d9eeab591407c88e326eb290a60a0415d43713457"
+  },
+  "matepadProductionUpdated": false,
+  "nativeFiraVisualTested": false,
+  "fontRequestRegression": "Actual embedded Fira OTF and TeX WOFF2 URLs accepted only for generated math documents; external, malformed and oversized URLs rejected",
+  "publication": {
+    "remotePush": false,
+    "publicRelease": false
+  }
+}

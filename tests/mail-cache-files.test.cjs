@@ -122,6 +122,22 @@ test('Empty and absent body strings retain their original distinctions', async (
   } finally { f.close(); }
 });
 
+test('Corrected server timestamps replace cached headers without rewriting downloaded bodies', async () => {
+  const f = await fixture();
+  try {
+    const correct = Date.parse('2026-09-16T08:00:00+09:00');
+    await f.cache.saveEmail('a', mail({ receivedAt: correct + 9 * 3600000 }));
+    const before = JSON.parse(f.row().payload), writes = f.state.writes;
+    await f.cache.saveView('a', 'inbox', [mail({ receivedAt: correct, textBody: null, htmlBody: null })]);
+    const after = JSON.parse(f.row().payload);
+    assert.equal(after.mail.receivedAt, correct);
+    assert.equal(after.bodySavedAt, before.bodySavedAt);
+    assert.deepEqual(after.bodyFiles, before.bodyFiles);
+    assert.equal(f.state.writes, writes);
+    assert.equal((await f.reopen().email('a', 'one')).mail.textBody, mail().textBody);
+  } finally { f.close(); }
+});
+
 test('Attachment-only cache records survive header refresh and restart without inventing body text or losing attachment metadata', async () => {
   const f = await fixture();
   try {
@@ -636,5 +652,36 @@ test('Confirmed Trash move preserves body files, attachment origins, Archive rol
     await f.cache.moveEmailIdentity('a', 'trashed', 'restored', ['inbox']);
     const restored = await f.reopen().email('a', 'restored');
     assert.deepEqual(restored.bodyFiles, before.bodyFiles); assert.equal(restored.mail.cachedSourceId, 'one');
+  } finally { f.close(); }
+});
+
+test('Mailbox count boundaries through 5000 rows preserve exact message bodies and header pagination order', async () => {
+  const f = await fixture();
+  try {
+    const rows = Array.from({ length: 5000 }, (_, index) => mail({ id: `count-${index + 1}`,
+      threadId: `count-${index + 1}`, messageIds: [`count-${index + 1}@example.test`],
+      textBody: null, htmlBody: null, hasHtmlBody: false }));
+    const target = mail({ id: 'count-50', threadId: 'count-50', messageIds: ['count-50@example.test'],
+      textBody: null, htmlBody: '<html><body>' + 'Synthetic newsletter 中文 &amp; café '.repeat(1400) + '</body></html>' });
+    await f.cache.saveEmail('a', target);
+    const original = await f.cache.email('a', target.id);
+    for (const count of [49, 50, 51, 63, 64, 65, 199, 200, 201, 999, 1000, 1001, 5000]) {
+      const selected = rows.slice(0, count);
+      await f.cache.saveView('a', 'inbox', selected);
+      const list = await f.reopen().view('a', 'inbox', true, false);
+      assert.equal(list.emails.length, count, `header count ${count}`);
+      assert.deepEqual(list.emails.map(value => value.id), selected.map(value => value.id));
+      const saved = await f.reopen().email('a', target.id);
+      assert.equal(saved.mail.htmlBody, target.htmlBody, `target body at count ${count}`);
+      assert.equal(saved.bodySavedAt, original.bodySavedAt);
+      assert.deepEqual(saved.bodyFiles, original.bodyFiles);
+      const last = { ...selected.at(-1), htmlBody: `<p>Exact last body ${count}</p>`, hasHtmlBody: true };
+      // Save and reopen a previously missing body at each boundary.
+      if (last.id !== target.id) {
+        await f.cache.saveEmail('a', last);
+        assert.equal((await f.reopen().email('a', last.id)).mail.htmlBody, last.htmlBody);
+      }
+    }
+    assert.equal(f.sqlite.prepare("SELECT COUNT(*) AS n FROM mail_cache WHERE account_id='a' AND kind='email'").get().n, 5000);
   } finally { f.close(); }
 });

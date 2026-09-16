@@ -1,6 +1,11 @@
 // MPL-2.0: https://mozilla.org/MPL/2.0/
 import { mailHtmlAttributes, mailHtmlTokens, replaceMailHtmlTokens } from './HtmlTokens';
 
+export function isEmbeddedMathFontRequest(enabled: boolean, url: string): boolean {
+  return enabled && url.length <= 256 * 1024 &&
+    /^data:font\/(?:woff2|otf);base64,[A-Za-z0-9+/]+={0,2}$/.test(url);
+}
+
 export function htmlContentInset(value: number): number {
   return Number.isFinite(value) ? Math.max(0, Math.min(40, Math.round(value))) : 20;
 }

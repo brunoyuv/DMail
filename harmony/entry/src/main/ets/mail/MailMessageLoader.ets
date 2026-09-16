@@ -157,6 +157,37 @@ export class MailMessageLoader {
     MailMessageLoader.prepareTail = work.then(() => {}, () => {}); return work;
   }
 
+  private async mathDocument(request: MessageRequest, body: CachedEmail, base: PreparedDocumentState,
+    show: string, hide: string): Promise<PreparedMailDocument | null> {
+    if (!base.document) { return null; }
+    try {
+      const settings = await this.store.mathSettings(request.accountId); this.requireActive(request);
+      if (!settings.renderWhileReading) { return base.document; }
+      const mode = settings.renderer || 'mathml';
+      const key = (mode === 'mathml' ? 'math6:' : 'math2:') + mode + ':' + JSON.stringify([body.mail.cachedSourceId || body.mail.id, body.bodySavedAt, base.document.savedAt]);
+      if (key.length > 4096) { return base.document; }
+      const saved = await this.store.documents.read(request.accountId, key); this.requireActive(request);
+      if (saved.document) { return saved.document; }
+      if (saved.attempted || saved.failure === 'failed') { return base.document; }
+      const renderer = await import('./math/MarkdownMath'); this.requireActive(request);
+      let html: string;
+      try {
+        html = body.mail.htmlBody ? renderer.renderHtmlMath(base.document.html, mode) :
+          preparedMailDocument(renderer.renderMathPlan(renderer.markdownMathPlan(body.mail.textBody || '', show, hide, mode)), false, 0);
+      } catch (_) {
+        await this.store.documents.fail(request.accountId, key, body.bodySavedAt!);
+        this.requireActive(request); return base.document;
+      }
+      html = renderer.mathFontDocument(html, mode);
+      this.requireActive(request);
+      const result = await this.store.documents.save(request.accountId, key, html, base.document.pictures, body.bodySavedAt!);
+      this.requireActive(request); return result.document || base.document;
+    } catch (error) {
+      if (error instanceof MailMessageLoadCancelled) { throw error; }
+      return base.document;
+    }
+  }
+
   private async load(request: MessageRequest, show: string, hide: string): Promise<MailMessageResult> {
     this.requireActive(request);
     let cached = await this.cached(request); this.requireActive(request);
@@ -164,6 +195,7 @@ export class MailMessageLoader {
     const body = cached!;
     const saved = await this.document(request, body, show, hide); this.requireActive(request);
     this.requireActive(request);
-    return { mail: body.mail, document: saved.document };
+    const document = await this.mathDocument(request, body, saved, show, hide); this.requireActive(request);
+    return { mail: body.mail, document };
   }
 }

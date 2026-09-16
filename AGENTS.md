@@ -26,6 +26,22 @@ Keep signing, OAuth secrets, toolchains, logs and device serials under ignored
 snapshot is at .tools/pre-d-mail-publication/. Physical MatePad runners require
 DMAIL_AUTHORIZED_MATEPAD_SERIAL in addition to a verified HDC_TARGET.
 
+## Version 1.0.2 Markdown and math release
+
+The user requested a new local commit named 1.0.2 after the Fira Math update.
+This supersedes the earlier two-commit limit: preserve 1.0.0 and 1.0.1 and add
+1.0.2 (1000002), without rewriting them or pushing remotely. D uses Fira Math
+throughout equations, with corrected local TeX fallback for missing glyphs.
+C remains unchanged; sending remains original Markdown/TeX source only.
+Preserve MIT, Apache-2.0 and OFL-1.1 component licenses and font source hashes.
+The native reader permits bundled OTF/WOFF2 data fonts only in generated math
+documents, within the existing 256 KiB per-font URL limit. Keep source/cache
+separation and D's math6 cache revision. 1.0.2 is installed in place on Pura X;
+app/storage identities are preserved, signed input hash and installer success
+verified, and production was not launched. MatePad remains unchanged. All 779
+JavaScript and 40 Python tests pass; device Fira visual rendering is not yet
+verified. See docs/release-1.0.2.md and its validation record.
+
 ## Attachment-only and Delete setting follow-up
 
 The local follow-up after 1.0.1 fixes empty composed MIME bodies, the false

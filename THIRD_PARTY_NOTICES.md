@@ -1,7 +1,10 @@
 # Third-party notices
 
 D-Mail is an independent AI-assisted port/rework developed with OpenAI Codex.
-Its project source uses MPL-2.0. AI assistance does not replace the upstream
+Its original project source uses MPL-2.0 except where a component-specific
+license is identified. Third-party code retains its original license and
+copyright notices; inclusion in D-Mail does not relabel it as MPL-2.0.
+AI assistance does not replace the upstream
 authorship, copyright notices or component-specific licenses recorded below.
 
 ## Thunderbird for iOS
@@ -80,3 +83,43 @@ SDK. Its LLVM runtime notices, including libc++, are retained verbatim in
 `licenses/openharmony-llvm-NOTICE.txt`. SDK build tools themselves are not
 redistributed. The project source remains MPL-2.0; each runtime component retains
 its own license terms.
+
+## Offline Markdown and math
+
+MathJax 4.1.3 and its MathJax TeX font data and bundled WOFF2 fonts are distributed under Apache-2.0
+(https://github.com/mathjax/MathJax-src and https://github.com/mathjax/MathJax-fonts).
+Marked 18.0.13 remains **MIT licensed** (https://github.com/markedjs/marked),
+copyright 2018+ MarkedJS and 2011–2018 Christopher Jeffrey. Its MIT permission
+notice and the accompanying Markdown notices are retained verbatim. D-Mail's
+MPL-2.0 license does not replace these terms.
+Original licenses are in `licenses/mathjax.txt` and `licenses/marked.txt`.
+D uses the unmodified Fira Math 0.3.4 font throughout its equations, under
+**SIL Open Font License 1.1**, copyright 2018–2020 Xiangdong Zeng
+(https://github.com/firamath/firamath). Its original font bytes are pinned in
+`port/markdown-math/fonts/FiraMath-Regular.otf`; notices and the full license
+are in `licenses/firamath.txt` and the app raw resources. Fira retains its OFL
+license independently of D-Mail’s MPL-2.0.
+
+For glyphs absent from Fira, D’s fallback MathML font copy adds native operator metrics and 16 display variants from
+the upstream large-operator font, retaining the rule-thickness correction.
+`port/markdown-math/build-mathml-font.py` documents the adaptation and verifies
+original glyph outlines/advances and imported display shapes. The derived font
+retains Apache-2.0. C continues to use the unchanged upstream font files.
+The app-owned adapter, pinned package integrity, source hashes and reproducible
+bundle instructions are in `port/markdown-math/`.
+
+### HarmonyOS formula renderer under evaluation
+
+`@cangjie-tpc/formula_hybrid` 1.3.2 is an evaluated alternative, not currently
+an integrated or shipped dependency. Its OHPM metadata declares MIT, and its
+archive's license identifies the formula code as **MIT licensed**, copyright
+(c) 2020 Nano Michael. The same license file also contains Apache-2.0 terms;
+the complete file is retained verbatim in
+`port/markdown-math/licenses/formula_hybrid-1.3.2.txt` rather than treating the
+entire archive and its bundled runtimes as MIT-only.
+
+Source: https://gitcode.com/Cangjie-TPC/formula-ffi/tree/formula-ffi_hybrid_cangjie-plugin_5.1.1
+
+If adopted, retain the upstream MIT copyright and permission notice in source
+and app notices, along with all applicable runtime and font notices. Keep any
+adaptations of MIT renderer source under MIT, with changes identified separately.

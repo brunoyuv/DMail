@@ -54,6 +54,8 @@ shutil.copy2(root/'port/swift-imap/InboxWatchTests.swift',package/'Tests/IMAPTes
 shutil.copy2(root/'port/swift-smtp/MessageDataTests.swift',smtpTests/'MessageDataTests.swift')
 shutil.copy2(root/'port/swift-smtp/SenderIdentityTests.swift',smtpTests/'SenderIdentityTests.swift')
 subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/message-preview.patch').read_text(), text=True, check=True)
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/internal-date-offset.patch').read_text(), text=True, check=True)
+shutil.copy2(root/'port/swift-imap/InternalDateOffsetTests.swift',package/'Tests/IMAPTests/InternalDateOffsetTests.swift')
 shutil.copy2(root/'port/swift-imap/MessagePreviewTests.swift',package/'Tests/IMAPTests/MessagePreviewTests.swift')
 shutil.copy2(root/'port/swift-imap/PreviewSample.swift',package/'Sources/IMAP/PreviewSample.swift')
 subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/preview-fetch.patch').read_text(), text=True, check=True)

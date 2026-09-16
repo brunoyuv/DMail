@@ -921,6 +921,20 @@
     {"name": "message_deleted", "value": "Moved to Trash"},
     {"name": "delete_undone", "value": "Moved back to Inbox"},
     {"name": "delete", "value": "Delete"},
-    {"name": "trash_unavailable", "value": "Could not move to Trash. Check that the server has a writable Trash folder and supports moving messages."}
+    {"name": "trash_unavailable", "value": "Could not move to Trash. Check that the server has a writable Trash folder and supports moving messages."},
+    {"name": "math_renderer", "value": "Equation renderer"},
+    {"name": "math_commonhtml", "value": "CommonHTML (HTML and fonts)"},
+    {"name": "math_mathml", "value": "MathML (native browser math)"},
+    {"name": "math_preview_help", "value": "Rendered preview. Sending keeps your original Markdown and TeX text."},
+    {"name": "math_settings", "value": "Markdown and math"},
+    {"name": "math_reading", "value": "Render Markdown and math when reading"},
+    {"name": "math_send_format", "value": "New message format"},
+    {"name": "math_source", "value": "Original text"},
+    {"name": "math_formatted", "value": "Formatted HTML"},
+    {"name": "math_settings_help", "value": "The renderer applies when you next open a message or preview a draft. Send keeps your original text. Use $x^2$ inline or $$x^2$$ on its own line; no declaration is needed."},
+    {"name": "math_settings_error", "value": "Could not save Markdown and math settings."},
+    {"name": "math_preview", "value": "Preview message"},
+    {"name": "math_edit", "value": "Back to editor"},
+    {"name": "math_render_error", "value": "Could not format this message. Your text is unchanged. Shorten the message or reduce the number of equations and try again."}
   ]
 }

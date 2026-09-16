@@ -1,0 +1,538 @@
+{
+  "bundle": "harmony/entry/src/main/ets/mail/math/vendor/engine.js",
+  "sha256": "dea50464173405defd07a2ea047e8ca2d34630a51d2c242369402d85c6c70996",
+  "inputs": {
+    "@mathjax/mathjax-tex-font/mjs/chtml.js": "e23fcb21bece2c32df7ffe91765868306c6003a1df5f7794579459df7cfb3ae7",
+    "@mathjax/mathjax-tex-font/mjs/chtml/bold-italic.js": "b8ca8b09f4cf85130a147e309238c269d5fe7a6bbd03632a41c0b3092ddde9da",
+    "@mathjax/mathjax-tex-font/mjs/chtml/bold.js": "b6e214834324b65cfd5f79f7d24f608f002620f176ea92b3f5df2e994af74304",
+    "@mathjax/mathjax-tex-font/mjs/chtml/default.js": "bcedcafae3798df8399255bc2463e940aec86bbb67eedc2c258d33d066934321",
+    "@mathjax/mathjax-tex-font/mjs/chtml/delimiters.js": "878cc2316a71fa61f43bb94a92178bffdf5ce2064c559cafa3eea440415eed05",
+    "@mathjax/mathjax-tex-font/mjs/chtml/fraktur-bold.js": "383373b1295a449d917b58b72bdc07e9a0f9c177b7a7c5e8ec7e8123e0900f44",
+    "@mathjax/mathjax-tex-font/mjs/chtml/fraktur.js": "5b2f9d55e53eff41544452ccb522f8faaaa6f415f28871679b50a819391e3bd9",
+    "@mathjax/mathjax-tex-font/mjs/chtml/italic.js": "8b8ba0dca6ccdadd09d7f0edd7801e0136787e1fa4bb944e9beb161ad5815e4e",
+    "@mathjax/mathjax-tex-font/mjs/chtml/largeop.js": "c7a8ee3fcb5fe5a43a2000f052a6b7c99e6e124389b02145f6389150aa99b9c8",
+    "@mathjax/mathjax-tex-font/mjs/chtml/monospace.js": "a68fef541fe17dcd352afc22a21648e0d6bf4633331ac150c2f1b2afb34fba2d",
+    "@mathjax/mathjax-tex-font/mjs/chtml/normal.js": "1a382d0dd2d01d5f32d8fc0cfe2ee17c06c6fd446f9fdb2ec7cfe0651f898714",
+    "@mathjax/mathjax-tex-font/mjs/chtml/sans-serif-bold.js": "c2027fd958b58c7e5ae24c0b6d9db33fbd9618cf3f9a5eb118f24ea0e0210310",
+    "@mathjax/mathjax-tex-font/mjs/chtml/sans-serif-italic.js": "3176cbdf59a275bffe371779f02612d1015d95aa7a5db8cdba34ef2e32197828",
+    "@mathjax/mathjax-tex-font/mjs/chtml/sans-serif.js": "a63e077b188a6e4e8694c6ca27f4576083948f5d74eb3a43954e23c8db78f4a2",
+    "@mathjax/mathjax-tex-font/mjs/chtml/size3.js": "41547c92709213988756835a081e95ff83d1a0a3ce1500bf6ab056068deea3e1",
+    "@mathjax/mathjax-tex-font/mjs/chtml/size4.js": "c7fb00259201bc4694e3383bb85a23c8651fee862d234f3e7c0feb50ff35eda8",
+    "@mathjax/mathjax-tex-font/mjs/chtml/smallop.js": "2a7ed599f4ee5b7ec271c000ffca60102ce2919ae4ae8f56e81cb51380923101",
+    "@mathjax/mathjax-tex-font/mjs/chtml/tex-calligraphic-bold.js": "48d512b67ec8f13149644680b9f3dcd82b1cd5d818a0ed6ce0763b64de1046e2",
+    "@mathjax/mathjax-tex-font/mjs/chtml/tex-calligraphic.js": "383f7c26fada4b7b5442332c45a1f5ba27df7cd07acfdd3dd18159b941f9bb68",
+    "@mathjax/mathjax-tex-font/mjs/chtml/tex-mathit.js": "68740a2aab27bc6b46149eeaed54ce22972e7e73c72cd1df7ede063caa222b27",
+    "@mathjax/mathjax-tex-font/mjs/chtml/tex-oldstyle-bold.js": "02978248e63d910d01ef7ddea48bbf2c5a59de76a9e7dbbd54c421ef4c859737",
+    "@mathjax/mathjax-tex-font/mjs/chtml/tex-oldstyle.js": "af2e823ac704e9a2ac00d6877dcf06e63f37ed743fc63fc5c8eb29eaf7705957",
+    "@mathjax/mathjax-tex-font/mjs/chtml/tex-variant.js": "336505f002a1e89fd3d5f27e557919c181c9e1f188535ee962c0385fecf3cb80",
+    "@mathjax/mathjax-tex-font/mjs/common.js": "ddb5fac5a18ade8f32a7755bc5d4f08089c412d9f2c3061527e14f6017ad90dc",
+    "@mathjax/mathjax-tex-font/mjs/svg.js": "d06b0f4d0b1a8a0292dbc8d217900d77bebfa7c09796b85c49b515b48cc9c8e0",
+    "@mathjax/mathjax-tex-font/mjs/svg/bold-italic.js": "82e0ae9a4486aa73de6ea850e7a0bc97419b0a8542eb64cce152e0380da78142",
+    "@mathjax/mathjax-tex-font/mjs/svg/bold.js": "c201dd177e9b035eca0a285ea2eecb8313443fff9dcf1b7a5c220b4d39d6bf5a",
+    "@mathjax/mathjax-tex-font/mjs/svg/default.js": "952147fe6e643148dc93f454ef1bc8d723503be05b46f647bf6eb7c5aeeed450",
+    "@mathjax/mathjax-tex-font/mjs/svg/delimiters.js": "4b805e7ef24cc45af7ea211af567e707ea3f46b2a02f3d3ae07c8eaf00761a26",
+    "@mathjax/mathjax-tex-font/mjs/svg/fraktur-bold.js": "a4e9e0cf86acff76a15bdea4a4bc2af965197622274d46a3dc649dab01bebbe6",
+    "@mathjax/mathjax-tex-font/mjs/svg/fraktur.js": "2f079effb04e3161a402e5c974b01ad1b1164c246b49206d778f8421751e472f",
+    "@mathjax/mathjax-tex-font/mjs/svg/italic.js": "f85175a0d54b2a22cef69c216ca389cf81adcff3c88894e6c9e9e2307905b41d",
+    "@mathjax/mathjax-tex-font/mjs/svg/largeop.js": "07aa4a3cd1609ed8920902eb67a675ccb977511dbc09700fe3534abc93397558",
+    "@mathjax/mathjax-tex-font/mjs/svg/monospace.js": "206894e041c1acdf30f653cf49bd68939a7c433c761dd32852a3b402298c1f8a",
+    "@mathjax/mathjax-tex-font/mjs/svg/normal.js": "744be69763e35524ead4b87367fe08deac7381fb70b21378c28aacea191890ea",
+    "@mathjax/mathjax-tex-font/mjs/svg/sans-serif-bold.js": "3094f48775da80789348872baea3644344aac1a95441e59f59ece5a6d815656e",
+    "@mathjax/mathjax-tex-font/mjs/svg/sans-serif-italic.js": "ac685e0fce431196ef4634ab0664d7ee839d1196b1546313d2ff623537a22b97",
+    "@mathjax/mathjax-tex-font/mjs/svg/sans-serif.js": "6f099781f9b449efb87dfea5fc1de4f82f69215557c6e96b39f3b8fe354a1169",
+    "@mathjax/mathjax-tex-font/mjs/svg/size3.js": "2fcff411fe1d1a90ae57477cbc92f4afab8894b08dc3934b5e42b1ffc836a1f9",
+    "@mathjax/mathjax-tex-font/mjs/svg/size4.js": "11bb79440c979ac9ddffcaa678db25c1291076fdc5cdba4c1de8ed941d7c4f4f",
+    "@mathjax/mathjax-tex-font/mjs/svg/smallop.js": "b16cacb8a29fa313c7faea3a9f7b840f5151e697ef06dc55d4428ac0960d44d7",
+    "@mathjax/mathjax-tex-font/mjs/svg/tex-calligraphic-bold.js": "c78673ada3c4aa4a64877f094983450c0157b3c1876aca3aa92c805179280f4e",
+    "@mathjax/mathjax-tex-font/mjs/svg/tex-calligraphic.js": "711a2187f78b8897ef0c3b42338ae24c48d417c61ca439b5635e09a7cb12cd73",
+    "@mathjax/mathjax-tex-font/mjs/svg/tex-mathit.js": "72ba6d81473d7746cb20c4e76b01e814d536921283f6751676b473df42b973b4",
+    "@mathjax/mathjax-tex-font/mjs/svg/tex-oldstyle-bold.js": "494cb45403aa6ca717ebfcd9c5e6f1449353b66faeb14ef6bbdb657fbadbdf4d",
+    "@mathjax/mathjax-tex-font/mjs/svg/tex-oldstyle.js": "ff1384885bb5b7fa1f59463275dfe7fcbbd0b8e41f0edbae166006d77d638fc2",
+    "@mathjax/mathjax-tex-font/mjs/svg/tex-variant.js": "9c2ab009497afcb117f35c0c211c6f0e7b42ebfd5f783e7c21793cbb3894fbc2",
+    "@mathjax/src/mjs/adaptors/NodeMixin.js": "68c31e37519b188aa156175a429f666566f2b9aaf7ca267cfd7bb99087dc611a",
+    "@mathjax/src/mjs/adaptors/lite/Document.js": "e330ff1555a3d4dd88f55d13cad5a75dd0ce8e5eca1460ebcdc891ae697a7c6b",
+    "@mathjax/src/mjs/adaptors/lite/Element.js": "188de01746745e6bbd32cd3d7fa902147fc8932f92b3e165c6fecb247b2be7df",
+    "@mathjax/src/mjs/adaptors/lite/List.js": "7729f570dc3273fb5b8ff1ddb5e39ecfba67fb4362350249ba1d72a9cd030d72",
+    "@mathjax/src/mjs/adaptors/lite/Parser.js": "95a798b7337789a72ae0af6257ffbb4e03c8f0ea674e41aab163e506d86e6dc1",
+    "@mathjax/src/mjs/adaptors/lite/Text.js": "a7b1c22c70a7a5e52e95824b6bc01e4f199b08a11738115c941f03d9dec44ad5",
+    "@mathjax/src/mjs/adaptors/lite/Window.js": "11ec8464cf8405781c16efe7f4238b08bc46bddf0499dc525052b279fbac1cc3",
+    "@mathjax/src/mjs/adaptors/liteAdaptor.js": "6422e9215787b5c74dacaffdc9e4130f5bff7a0f096abc45d52190acb8dfc747",
+    "@mathjax/src/mjs/components/version.js": "b9233473a6977e71eb1e40834136d78cafd8a5fbe23d12390800a0cdba757f92",
+    "@mathjax/src/mjs/core/DOMAdaptor.js": "cfe3257f2500285dab3632361a434a517709f0f6f67e51444e7a65402a2e3819",
+    "@mathjax/src/mjs/core/FindMath.js": "5cc5c03ddc32c42dcad5d8b9014b3ae08d3135b7071ae4254c189d0daaecb797",
+    "@mathjax/src/mjs/core/Handler.js": "466fc7edbe7c324d495b742abe752ef2a2241c1fd1675291f03770ed789b20ff",
+    "@mathjax/src/mjs/core/HandlerList.js": "712f5233991489be76a5c87f62bc87d278bd7af9fd1bd88320bb25d8428af56e",
+    "@mathjax/src/mjs/core/InputJax.js": "9574960fbc6eb183ca3e9e888fb18e42cb5b57f0f1e60146df663251f2fd1196",
+    "@mathjax/src/mjs/core/MathDocument.js": "9d61ca58a555dbf60a9801c9a42d3f176d4687484aafd9bb8d951bc3fc80be2a",
+    "@mathjax/src/mjs/core/MathItem.js": "152d0a3dc1bf876e4905b7d90e27bb1eaef8a296b8af1627c1aa72ffeff273be",
+    "@mathjax/src/mjs/core/MathList.js": "49246e4b2be22a27d50fe58a0898d98ff464984c606de2c2193facc84ec09f74",
+    "@mathjax/src/mjs/core/MmlTree/Attributes.js": "dd347eaa1b883aab8d73bec4f1e453891ce7b5d00a610cae7df0a2dcded44a47",
+    "@mathjax/src/mjs/core/MmlTree/MML.js": "3b8350a84f973ab0766b3913d758b1433fb16c772e096107d763f3e628281c37",
+    "@mathjax/src/mjs/core/MmlTree/MmlFactory.js": "c86ff14625a199c5acf5b779c51d2ab0ec6254c3b01edd55dae816a259ffe815",
+    "@mathjax/src/mjs/core/MmlTree/MmlNode.js": "c90ed149ade00525e26905583f4135eb3d54d614caaf74484d50e75afde6554e",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/HtmlNode.js": "7ccf2a2556b06059025a8b9c6c67a320923b8998432165b439f15af1d7d004b8",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/TeXAtom.js": "22b2347df4e976f3a3001d605abf4b24ac7fedded0deeb5f08436beb8ae3e5a5",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/maction.js": "5c85d5e839ae92873ab7069064704ef684e484f1c386f7c28f57b00734287b89",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/maligngroup.js": "3b9bff94b764574ffbce946960616f1be5f1a84e1765e6fbd9bb6dc77b9f8802",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/malignmark.js": "d66426b558875ca4f5c2dede6bea039a318043f605dd984513afd3d60d3a180e",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/math.js": "23e4aad7730a5594b63b188653b522dc83d0544dfe9fb4356351d5cc812b143e",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/mathchoice.js": "b1bed378153fb4782646651d65a66f7b3f297f111efdcb6d3f50ee09b7b2f430",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/menclose.js": "6774132f7e39a2539e6f0737d37c5c5e0c1605a57b902b8253d1d85ef2b2392f",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/merror.js": "1d72f52cc0c28ecc9ba687a3b85e3060c03c023cb7ec069c79f561cffcc842f9",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/mfenced.js": "5f9f1254b43519f554b5e04404f8878c49ce45aeff1cdd350559fc0d2596b0dd",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/mfrac.js": "104bdee86fda443f9abd8eca3b543c60db6c7c356ba833e11880f019fe1ef2fd",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/mglyph.js": "33d8e735a361b83fb6324c13c2b7a9a2c69372e496f2e3b90823d128c4e79f24",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/mi.js": "cc191c8ac1b396e48ad7b0d88c36a5019da6bdb60aed7d3ab677cb4c9569039f",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/mmultiscripts.js": "999ec249fc9f2f5d4e1c005b3467d8152999d4e46a2264ce6c2dc8e8ecff889a",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/mn.js": "9dfb56168b4b8612a4428842353621567bab9b6f68a6cfbca9937f7c5d7cb696",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/mo.js": "1cc712245a8e6fbe29f5160b64e1cf04abff8371de508a0e7c9d812272cbaef9",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/mpadded.js": "5f7fc1a8d2ad6e79947d86c61f28239d14e58b95c617093c550bbf50b78f654b",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/mphantom.js": "6ff7abb459759da33b817077ff773d95ab33f65ffad45759caae4610cc36734f",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/mroot.js": "68ec1156602258c0be149a2b0755ac8c1d1448531c582a58f2cd5f950b806ed3",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/mrow.js": "58569b72067daf1c8a3030d1e8815ad900b31776023aa0049ff4be0327da0164",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/ms.js": "32ccf02af039f43dd95b8de000163dab1354c30e7b774ddee2d26d93a0b450ab",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/mspace.js": "939d21403dcce886275abe2e67f3ddf0ac10d4eb966ef702d35396e9245501f7",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/msqrt.js": "0ea366c8750564a11f19e2db9db01bc66282db01f8a97b195fa467c285d6a41c",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/mstyle.js": "f719e4fcaaa4685585e2edf2fdb31a70ee6db4035312f0030e7b6f0d8e9292ea",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/msubsup.js": "2e77ec3fa1f3c131438bdcbd39c18d28cc432ce9c411dc861fd7999c1ea34afc",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/mtable.js": "7c7182981270c0d47d76259fc3a089584d3c771ba3f201743443e3fabc943c53",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/mtd.js": "cfaed5aa50c538e01e5284f3f0974c70c1ece1086b17ad5c560d03de4c09a918",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/mtext.js": "d0bb1a2cb5e28028859b4fbf17180c36dbc55d20cc937a35e05ee6d8b405b1f8",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/mtr.js": "ad7084fc3f19901ad9fe109cc292d9b0f71d6d983547779ed6416799ef943377",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/munderover.js": "b08540c7a6af9ba219834387dc6112475de21ab4858ca14d0e28da9d1f2161a1",
+    "@mathjax/src/mjs/core/MmlTree/MmlNodes/semantics.js": "8b1bcd378a13183849f1ba9ee4ecd250b751fc1d417abd425c90ca62b0c848c2",
+    "@mathjax/src/mjs/core/MmlTree/MmlVisitor.js": "7b37bbb35e89c17d238d85480d1c6d66bbb55d3cb6ab6e2c1d251488cd4815fa",
+    "@mathjax/src/mjs/core/MmlTree/OperatorDictionary.js": "b38ef74905b3d7485f975be8eaccf1093db029e2e43cd1a3658c3940500a2eb0",
+    "@mathjax/src/mjs/core/MmlTree/SerializedMmlVisitor.js": "a9f3cf4e726f66c40c874ba22f0e1983dee6e8427c1d044027f36d3a1106504f",
+    "@mathjax/src/mjs/core/OutputJax.js": "1231d321817121f08cb73e366716ef2321e0ab06213f99c477e6b583e5a8aed0",
+    "@mathjax/src/mjs/core/Tree/Factory.js": "b182877311f2ab2d58e06a5903a73286c43b12ca6ecfb67094df0c2b59dfd130",
+    "@mathjax/src/mjs/core/Tree/Node.js": "13570c071113d696866228f88cf864306291d2ed937d0a68c0bfb10fd7e0bfde",
+    "@mathjax/src/mjs/core/Tree/NodeFactory.js": "f2cd506c9247e242165b4527077325df62106ef43fc2f606067e0ee4064d17e0",
+    "@mathjax/src/mjs/core/Tree/Visitor.js": "e3113010345dd5378defbe3cb1afc3a215e8c70dfdd6970f191489aa8ee2f5ff",
+    "@mathjax/src/mjs/core/Tree/Wrapper.js": "9fb1b785bfde88b897f5c97449e5044964929d9ad7433901f5af6b6e6d8c4ea0",
+    "@mathjax/src/mjs/core/Tree/WrapperFactory.js": "c1bac7f6cd323af1d175e7f024773a57854ab854b37073dea3e7d4871c59cfb6",
+    "@mathjax/src/mjs/handlers/html.js": "e7fcdc9521bc63059cc4380590e7b94eb7d4e427494701a5d818458c2d7bc4c6",
+    "@mathjax/src/mjs/handlers/html/HTMLDocument.js": "179826700dc26f2fd9f3c4e97ee7779a131ec8a2c1922140f3df4831749fd9d4",
+    "@mathjax/src/mjs/handlers/html/HTMLDomStrings.js": "17fb6a7a9547d6eb298c71593f30478530f3e4bc70cf5176f678aa670ae5e0c5",
+    "@mathjax/src/mjs/handlers/html/HTMLHandler.js": "2d2b7b1d8624da45add0c85a98e00310e0d1732240bb502c1a80e9b62ba0c6a7",
+    "@mathjax/src/mjs/handlers/html/HTMLMathItem.js": "98c864ff7f36abcd8a6d5ad27d1e49721074c2616317b41ace1a14bb3f7ee393",
+    "@mathjax/src/mjs/handlers/html/HTMLMathList.js": "0a414e15142db0c6b7bab74fd148c0015d13b779b4f0439d5b3786036dd62030",
+    "@mathjax/src/mjs/input/tex.js": "12402942e0f448baa44c952d930bb9f40c5f54080898067ad516798dd9801df0",
+    "@mathjax/src/mjs/input/tex/ColumnParser.js": "90e71ad25c894d09b158115faf9e6d79d002ceca6bc5da3ce8c68accb5a64f84",
+    "@mathjax/src/mjs/input/tex/Configuration.js": "a68467da30c7e32a48389be423c342bdebc76737e132970790f09fe7b99d257d",
+    "@mathjax/src/mjs/input/tex/FilterUtil.js": "8c8748103fdf0c45cd861028956826837631b57538b15e4b101980749691d2ec",
+    "@mathjax/src/mjs/input/tex/FindTeX.js": "4bb7282252e6bab3ff2d02d4c61e8c48214ca104308201471cffca51273acf90",
+    "@mathjax/src/mjs/input/tex/HandlerTypes.js": "c1bc7fe6ddd9efcfa54e4c47b302c94e7de31b25c39431fd8fbe78489a924115",
+    "@mathjax/src/mjs/input/tex/MapHandler.js": "f9f228b33352be8ca5f79523d8b2fa33713a26b9318fa0f5962bb03ad6ce408b",
+    "@mathjax/src/mjs/input/tex/NodeFactory.js": "8ba40e8b328932918bf8cdd532b568eea0efa75a9869c2e0ed51c6a13b6924b8",
+    "@mathjax/src/mjs/input/tex/NodeUtil.js": "ca36f54ef86e09991f1cdc883046490b70b935478e624a4e867c10c16e64238d",
+    "@mathjax/src/mjs/input/tex/ParseMethods.js": "1017e7483eecccb1e9a54b1d64890a0dccd09f2803758eb6384edef59dd36f02",
+    "@mathjax/src/mjs/input/tex/ParseOptions.js": "5e1b8d2b4e9e3438ad549b35fbe71012d943f02ccc7bd720bddda920d8e3774a",
+    "@mathjax/src/mjs/input/tex/ParseUtil.js": "90aac12073f2f32dd66e46a1c84ba8635969e85c9b7e5c557aced8e049f6bec1",
+    "@mathjax/src/mjs/input/tex/Stack.js": "5337649822b5afec4cf4024242dd573bbe77200df4e83bc589b1db50912a1983",
+    "@mathjax/src/mjs/input/tex/StackItem.js": "de684ae998b34663d5c0d4d18f3094eb1247db5c5f50797b0f320a476cabf508",
+    "@mathjax/src/mjs/input/tex/StackItemFactory.js": "341fe775882664552f7ecabd9735dc4f815155e6cce0b98ced0c48e6f024fd0d",
+    "@mathjax/src/mjs/input/tex/Tags.js": "a5c933f8f4e0d3f5cf133f3839a8d29b882f23c4ba7f0a78327a72396b59117e",
+    "@mathjax/src/mjs/input/tex/TexConstants.js": "03f47116c06853516976efc0ccd0407693c30250de571aa8439fb9473f08a247",
+    "@mathjax/src/mjs/input/tex/TexError.js": "acb4aff437921bba9cd8afe7802123cdf57d1d962616f7307a3a5cedec668640",
+    "@mathjax/src/mjs/input/tex/TexParser.js": "eaec9236d88aa75998d5a851264f569c156e0a3cfda7d9d01d5e9eb15dbabd1b",
+    "@mathjax/src/mjs/input/tex/Token.js": "67e161fd88221d43c0996b4299bbb2a8c6fcf82bc1c8bcc459227e81ab24aa47",
+    "@mathjax/src/mjs/input/tex/TokenMap.js": "c1aadaef450007af05d2eb8e5dbb087f6018d65e90c5da596cfe3f01802777a2",
+    "@mathjax/src/mjs/input/tex/UnitUtil.js": "6b2adb3347a1799535e4b74f42228ea8a961644f6eab4fd4fdd84e7a91eab0f0",
+    "@mathjax/src/mjs/input/tex/ams/AmsConfiguration.js": "fc8d8afdc6848b7965014b2696aa3d8a84edfa1f359420c9c2962edc34db99e4",
+    "@mathjax/src/mjs/input/tex/ams/AmsItems.js": "e34ba831881ea291f800f8df18108c356397c9e57be6e8d550fb8493926c7eb0",
+    "@mathjax/src/mjs/input/tex/ams/AmsMappings.js": "fee14ffd5cb1db35e3ee4d0614930a73623fd99986f906c7901e1eeb24ea2b23",
+    "@mathjax/src/mjs/input/tex/ams/AmsMethods.js": "8de98ddc3604f1145a110361532863c5d9659767bc6cf25dfbb612da4ad34d0a",
+    "@mathjax/src/mjs/input/tex/base/BaseConfiguration.js": "1dad3dea4bf189239a15100dede62713a1fe530a3e032c9c18440de8ba2253bd",
+    "@mathjax/src/mjs/input/tex/base/BaseItems.js": "448f889a87ec242ef3b18b332079829497381bfc7219fb39b14fbeff4f295560",
+    "@mathjax/src/mjs/input/tex/base/BaseMappings.js": "3dcfe39b0a49726419d4febe0c00e1e3817b17ba3af2ca51fd0fb0bf8f0e041f",
+    "@mathjax/src/mjs/input/tex/base/BaseMethods.js": "83d4af50cec5ca942a8fbbebcd734664f97948169a0615fd9a9d38e9fb8a804c",
+    "@mathjax/src/mjs/input/tex/newcommand/NewcommandConfiguration.js": "af54da08d4f5ef8ca1d35b776b7e6657ef20c78d9a31fc5f0b9d0e988fe4781f",
+    "@mathjax/src/mjs/input/tex/newcommand/NewcommandItems.js": "a68442be45740f2657ecb7f28a9ed6c29a3e07b4ed7a375459975741584da9c8",
+    "@mathjax/src/mjs/input/tex/newcommand/NewcommandMappings.js": "4e015f249763013b6620c53afda657b5ff09709170aed090c379f89bcf88dc27",
+    "@mathjax/src/mjs/input/tex/newcommand/NewcommandMethods.js": "b7641804b80cbd0a5d692302bf553e942cac8ce30c8fbe43a87e89214df977c9",
+    "@mathjax/src/mjs/input/tex/newcommand/NewcommandUtil.js": "ee87b149a746ea5fa5075e177f762888ecd57f9e424790fe7f3d4484b22f96a8",
+    "@mathjax/src/mjs/mathjax.js": "2b235665dbbc21c2f12c580b43ccebe2fce0ae63822655d9fec5d4cc2eb90611",
+    "@mathjax/src/mjs/output/chtml.js": "ab116ff165ec16b5561fa1bbb0de6468c088ed5d74323867d6c2c7631bbce8b1",
+    "@mathjax/src/mjs/output/chtml/DefaultFont.js": "a77234362dba2c06ebe99bb2036b92b0ea2c472251c94d73e90844021e3163de",
+    "@mathjax/src/mjs/output/chtml/FontData.js": "2869838d39df47b526ee73532798b6567cfb7babb5892651f1d934375652e3da",
+    "@mathjax/src/mjs/output/chtml/Notation.js": "30ea8bd08bafcbcaad8f58fc74455fac2ce75dbb931bed9dff74c68a66b31337",
+    "@mathjax/src/mjs/output/chtml/Usage.js": "2662d3070dd32471f87f75c2e49b74534efa30b61bbad8c1f36859561a64bd53",
+    "@mathjax/src/mjs/output/chtml/Wrapper.js": "fc2778dd38a8eb1404c18338b120893b9fe68ef00a37a3c46e59af97d47d4513",
+    "@mathjax/src/mjs/output/chtml/WrapperFactory.js": "547b15f54d99f62494e4f11ab41671ae811e427d72ade62fdac94293da3132c5",
+    "@mathjax/src/mjs/output/chtml/Wrappers.js": "ca02526e70c7ec38188f0b1766cc2ec22835eea9c96bbd01aaff3b185b26663d",
+    "@mathjax/src/mjs/output/chtml/Wrappers/HtmlNode.js": "b689b15520ba0c4d63b6753b7b8071f289fee9aa726aba38efa22c22d0d670fb",
+    "@mathjax/src/mjs/output/chtml/Wrappers/TeXAtom.js": "c0daba8c290b61dbe19b75458d1064668ab096a33045af899e1dc933181c43fe",
+    "@mathjax/src/mjs/output/chtml/Wrappers/TextNode.js": "30fa2508a2b183bb46cfd006179bb21a2857929742364164282abb246374fb9f",
+    "@mathjax/src/mjs/output/chtml/Wrappers/maction.js": "6b95be604d534d1a6f4bf64ebb6ffa919111b3ebb4e1b642efe8af0b8dd22b7c",
+    "@mathjax/src/mjs/output/chtml/Wrappers/math.js": "c11ae6ad846e59a32e52750dde90fc7ab6a6a526fc1016fa88ab8fb7ca746255",
+    "@mathjax/src/mjs/output/chtml/Wrappers/menclose.js": "e7a3de7352967fb0a70f210e5fe20702eda94b1c43e35201f91632a98a3ea93f",
+    "@mathjax/src/mjs/output/chtml/Wrappers/mfenced.js": "8a2f8398fbe309c66a496e44ff2fa12ec21d35bf677e7e5acc9e48ffc1c16de1",
+    "@mathjax/src/mjs/output/chtml/Wrappers/mfrac.js": "80b1c433e92ac2e0ad093e8f8415afb341961e33a2e816c36dde91147921d854",
+    "@mathjax/src/mjs/output/chtml/Wrappers/mglyph.js": "25659a7476b98ee6aab62d86e669f9c217c6db5a7058be86594057af11c8bd00",
+    "@mathjax/src/mjs/output/chtml/Wrappers/mi.js": "8e8fa0ad1c68877c6d7073e699fd61918c33eaa804f67150791c7271b1224534",
+    "@mathjax/src/mjs/output/chtml/Wrappers/mmultiscripts.js": "6963b49947facee490fbaeac09ca696b7ddc7b899534f0cdeaa3adc5c46f04ca",
+    "@mathjax/src/mjs/output/chtml/Wrappers/mn.js": "5c7bef6cd95ed8d0568b1d3d24b3880e0441ca326f947e9b07f55d0288b2445c",
+    "@mathjax/src/mjs/output/chtml/Wrappers/mo.js": "5a9b3ea680d1bc9717d688fbd52fda835c6c4f4e68c8cf043ce160f8975860f5",
+    "@mathjax/src/mjs/output/chtml/Wrappers/mpadded.js": "531e077a9eda22bbea2f589ff791360f5c3a434a64f8ab3fa4a4d38f54be7b49",
+    "@mathjax/src/mjs/output/chtml/Wrappers/mroot.js": "9ed2e4d5a6fba563368b2a77821e707aa7a81ba9e30d740b38df89753897a3b0",
+    "@mathjax/src/mjs/output/chtml/Wrappers/mrow.js": "cbb72efd6341613713a33c32255796744dc2cf2db6c4d6f2864655cda6be3c0b",
+    "@mathjax/src/mjs/output/chtml/Wrappers/ms.js": "f5bf42ec12edb09d7a8e77910f55a20f4d838199175660438d20768027185276",
+    "@mathjax/src/mjs/output/chtml/Wrappers/mspace.js": "20f5910ec55bfe0f2c6709b1c442fb34e440a4cdc83cebb5d79c70433eb13396",
+    "@mathjax/src/mjs/output/chtml/Wrappers/msqrt.js": "250ecfba9590ea1be067bee665c4601fccb33802ba5d792ca33d5d96156d5321",
+    "@mathjax/src/mjs/output/chtml/Wrappers/msubsup.js": "aed2dc9531e5d00aa7a7c5c0aeb55a7586487294ad2fea779dc6c55abd50d123",
+    "@mathjax/src/mjs/output/chtml/Wrappers/mtable.js": "d4a4c9cc1b6c658af6cacbadea6169e3b35c7b742064a62e35d042d228f9e6f2",
+    "@mathjax/src/mjs/output/chtml/Wrappers/mtd.js": "ae3cfbee403dfa1f6919dc3760ebca1a8a1d263c9bcfadf221bf498c5fe9ac3c",
+    "@mathjax/src/mjs/output/chtml/Wrappers/mtext.js": "b298dcfba8b0177cb03f23d3e3a703bc6282c60f40698c02d4154bf33ef89d21",
+    "@mathjax/src/mjs/output/chtml/Wrappers/mtr.js": "c9dd8dc7b87750516b86f164c5ca7a7b10a19d2b89fdfe8e8a79184178cd584d",
+    "@mathjax/src/mjs/output/chtml/Wrappers/munderover.js": "e339a1b7e7a1d7b1ceafda84a47463c590ee10a52954b6f33e317ff25e6e51ba",
+    "@mathjax/src/mjs/output/chtml/Wrappers/scriptbase.js": "c56c7f49016dc5275e976936bcaecba0c00f1ff6f0e5e992734471dcc37775c1",
+    "@mathjax/src/mjs/output/chtml/Wrappers/semantics.js": "2de7c868e8e94d03b53fbbcdba3e0e50d55d02538634f35ded43f5f948837edb",
+    "@mathjax/src/mjs/output/common.js": "fb102402d7f67078c4240c68f4f2bc073c78418c8da3efa5c451cc9df7fb4a24",
+    "@mathjax/src/mjs/output/common/Direction.js": "4a66d36b67c3c5c57df8bd739defe23d6223a66e032f0f27dfaf2a95377adf8d",
+    "@mathjax/src/mjs/output/common/FontData.js": "5f4f8fa3e9331ac9f40ab4f87ae79b4ec3b4615ddc25ca3059b521e6ec40f939",
+    "@mathjax/src/mjs/output/common/LineBBox.js": "ea30655ee18c2cafcdb44f35522ff5668a5fe9520a0c73f95df78b22eb519836",
+    "@mathjax/src/mjs/output/common/LinebreakVisitor.js": "c06ce1a44f5a31e1eca5ee6bf5a7e8594f9a8aa8aea454cee4eac5f8e814aed5",
+    "@mathjax/src/mjs/output/common/Notation.js": "739a4e698dd4a8f77d5300c5387c4549f3b76de517dff28f5f663843a4391079",
+    "@mathjax/src/mjs/output/common/Wrapper.js": "ea43f474dd7158251a97af9df8a82f2d3a83d289e5eb264d9235cef2dc12c6c5",
+    "@mathjax/src/mjs/output/common/WrapperFactory.js": "5513d123a167f3a704cbabfc3367be3b1380e557332fdc4d9b81ed6fe5853dc8",
+    "@mathjax/src/mjs/output/common/Wrappers/TeXAtom.js": "fe8ee13486861934262ba766cd72c7a1bbd49e5a7b70dfa62447ee920eff59aa",
+    "@mathjax/src/mjs/output/common/Wrappers/TextNode.js": "21bda4bf0c038e28d15163d4b4109a10a75de8e46afbbb85b2a26ddf35406cba",
+    "@mathjax/src/mjs/output/common/Wrappers/XmlNode.js": "ccf13ac83805df5eae7473c19cc72ee48533868cc59b48841a16c7f55a0919de",
+    "@mathjax/src/mjs/output/common/Wrappers/maction.js": "2bec9ad7fa9f2891a9451360a36d13ca586b45c021d4d369cef1ceaa81dbaa6e",
+    "@mathjax/src/mjs/output/common/Wrappers/math.js": "4cb0c0d10c1ad3249b6f94bd85b9f7ae6259e43d4fe7c55647e7abcfb16d6866",
+    "@mathjax/src/mjs/output/common/Wrappers/menclose.js": "061f915a6e9cec1e02c9eb5ed3eb9be58df2eccdb4f434ae547cd751c7b3bec5",
+    "@mathjax/src/mjs/output/common/Wrappers/mfenced.js": "e1c7af26578f015df55b2689f48499f731a5c77b7c6bb3f071ab316e0e253239",
+    "@mathjax/src/mjs/output/common/Wrappers/mfrac.js": "a26998ee9ed994cffab9cee6024760eb3bd74ef0a52835a77e8e1f58f86a16e5",
+    "@mathjax/src/mjs/output/common/Wrappers/mglyph.js": "1e7d929c6e9743f79d2cd7b16911f265ed25122b04e51015b41918dd7296b8b6",
+    "@mathjax/src/mjs/output/common/Wrappers/mi.js": "babe3538cbb85245333bfa75b9fb635843e40afba19da16ca4c3635b1b8c0090",
+    "@mathjax/src/mjs/output/common/Wrappers/mmultiscripts.js": "737b6a988337019f8e1c3625075f918d9cee57be7fc9a46b0c98c693f72681d6",
+    "@mathjax/src/mjs/output/common/Wrappers/mn.js": "5fa35f100cee01f4ec6b4cf2901d56a075427341bc7604a65a38acfe67e703b7",
+    "@mathjax/src/mjs/output/common/Wrappers/mo.js": "2c6ee52407eee7c2dc5ffe57bc5fd2c5425217e5412db8148df7359d799afc18",
+    "@mathjax/src/mjs/output/common/Wrappers/mpadded.js": "9035a595b636620032ededcfb13bf6c4de46d4db4a5d2d41cdb67a68d1953e5d",
+    "@mathjax/src/mjs/output/common/Wrappers/mroot.js": "4127800b1d57fd9a20ea137fc886b443ed6c876154f13e2dddbf6056f092de86",
+    "@mathjax/src/mjs/output/common/Wrappers/mrow.js": "29dce316967893193f493239ebcc504da7c2d8d6a25755e0bc89e77829ba53fb",
+    "@mathjax/src/mjs/output/common/Wrappers/ms.js": "e6165670bf45c395c0255370758caee8bbf2a7f24856fa005f1ed7f67b8d8142",
+    "@mathjax/src/mjs/output/common/Wrappers/mspace.js": "5f6bc2f65d9a11f4b3840de77f0c8a82988e8e5af8e2cebffaa2bb9e091b082c",
+    "@mathjax/src/mjs/output/common/Wrappers/msqrt.js": "d3fc1b5efdacaf3725e4ff3cee08c44608b5c3e5b219eafe27448b667d060271",
+    "@mathjax/src/mjs/output/common/Wrappers/msubsup.js": "5577b060aa4f941f12220bed5a9c194db3b939c929a96bda893a211e6c422984",
+    "@mathjax/src/mjs/output/common/Wrappers/mtable.js": "40d1800b318f21d6769168cca47c84c7a7b62c796f9f4827826f07ba744d81a1",
+    "@mathjax/src/mjs/output/common/Wrappers/mtd.js": "f57bc3a2e8c64771d76ca40cb6f11b31d069628b3bce9b7b03907721de14ad8e",
+    "@mathjax/src/mjs/output/common/Wrappers/mtext.js": "2adb017eeed8a7d55dd0f6258fceb167eb3163430f417ddff3915f431a9d9ebd",
+    "@mathjax/src/mjs/output/common/Wrappers/mtr.js": "4c0e543d20c30d3cbe1317b20793144b70a322dbe107d4ca2bd382687c0bf351",
+    "@mathjax/src/mjs/output/common/Wrappers/munderover.js": "958932958010abf55ac7582067e9651ddcf362c092fa484bbd256c19368524bd",
+    "@mathjax/src/mjs/output/common/Wrappers/scriptbase.js": "1e53701c886b25b9ce20a8336b018385472cb775267bedf47e65f45d406b3ba3",
+    "@mathjax/src/mjs/output/common/Wrappers/semantics.js": "05f1c7a9adc56183eeefa901f83b146446cba0f6e667107c80721ad765811464",
+    "@mathjax/src/mjs/output/svg.js": "28bc3f87cb881411b9575814491784094b1a88b471f551ca80b1b2dbea7c033d",
+    "@mathjax/src/mjs/output/svg/DefaultFont.js": "b5d0e6388febaccdc39bd9f563060ec0d4eec1c01f198d3485799e6dc52ba7fa",
+    "@mathjax/src/mjs/output/svg/FontCache.js": "8f8ede7a2195a277c3ab82d9b9bf0ad3c50c59b21f8d36d36ec44ae04a4f310e",
+    "@mathjax/src/mjs/output/svg/FontData.js": "a19b8d04e8b32cc8e9054718cf545431d04778e019f3b5a108faaa27f2a8600b",
+    "@mathjax/src/mjs/output/svg/Notation.js": "c8676e106be70fdb593fc15f5c2c1eae7054b7b73db518ca8a7417bb725d0682",
+    "@mathjax/src/mjs/output/svg/Wrapper.js": "5ef0fec407ca9ff34a7cf0bdfcb2839caf3adaaddb81e171da8e50901d8b80ac",
+    "@mathjax/src/mjs/output/svg/WrapperFactory.js": "576f148d50005a68b3b76d4e30a8805a16d2dfbf69ef4800b9162353e46f57f6",
+    "@mathjax/src/mjs/output/svg/Wrappers.js": "8d6f7b4527cf64404abd56aabdb5575e75d8f6fa4054bfa2b2396c7788f270ba",
+    "@mathjax/src/mjs/output/svg/Wrappers/HtmlNode.js": "1d8b09996b7aa5a11bce0b6af66f9a6787d340cc722098da2954b37fc0019926",
+    "@mathjax/src/mjs/output/svg/Wrappers/TeXAtom.js": "85cb2b84f7555859e506d78e0f96239eee169da906124ff7a6a8c80f87f91f60",
+    "@mathjax/src/mjs/output/svg/Wrappers/TextNode.js": "7d3479311a7ec39a1cc1804e3e676dfe91d5c917c17a302c8529302529393c3d",
+    "@mathjax/src/mjs/output/svg/Wrappers/maction.js": "a3f863766872e75ba71597ba0729f6b4b4905973159d887b2355587de008f8cf",
+    "@mathjax/src/mjs/output/svg/Wrappers/math.js": "20f0b93f3e7cd855d881545704ca86f6ac411b352b92449eccbcb3d97090c409",
+    "@mathjax/src/mjs/output/svg/Wrappers/menclose.js": "11209335de57d230006e7ec270e250c0e4d8269ca56ee9397794e34021fc9a04",
+    "@mathjax/src/mjs/output/svg/Wrappers/merror.js": "1ee5d138ae52203bee1a8d49173d22be4e8cf8019ea59130c84f7475cbd4a49b",
+    "@mathjax/src/mjs/output/svg/Wrappers/mfenced.js": "b76b3fe3842871b1739308c624f8692243b5adf0681b1164b940e458d34b62f7",
+    "@mathjax/src/mjs/output/svg/Wrappers/mfrac.js": "05b7a576bc07854b8d317ab57e99a53fa1ce25c99042f5e0442791b1755a062b",
+    "@mathjax/src/mjs/output/svg/Wrappers/mglyph.js": "7cc9bcbf6b5bd1342f74c95c3b03f712c52a2546f5fb66ebf17f9904ea7157c5",
+    "@mathjax/src/mjs/output/svg/Wrappers/mi.js": "74174496fa409fdf89d76ec025ddf50f44ea6eeb3efd4a20e250a8a749a662f0",
+    "@mathjax/src/mjs/output/svg/Wrappers/mmultiscripts.js": "857d371e487c6a2965c540d67df4e8a35344805fb017f34dc38e5130c52ccfc3",
+    "@mathjax/src/mjs/output/svg/Wrappers/mn.js": "43da428f90b5a2a06bc399262b3f0f833b35cf42ea48c7270dbbbd0b90e547ea",
+    "@mathjax/src/mjs/output/svg/Wrappers/mo.js": "e4a8d0eec05d72d0bf384d68674d33b350eba937e3aa3493ec74109bfc01779d",
+    "@mathjax/src/mjs/output/svg/Wrappers/mpadded.js": "a9b3a5634d05e66a25d9c18826a38178e9496d4814643eb5445eec688d90d281",
+    "@mathjax/src/mjs/output/svg/Wrappers/mphantom.js": "5b96a9febe2362d639a086fb03b357bb52ff76d7cd49eeccfce276d3a5c2845b",
+    "@mathjax/src/mjs/output/svg/Wrappers/mroot.js": "4db7ac206e60e54d3bc5a924e4758e11722f3d6e08e35a437cb7d3a727addb5f",
+    "@mathjax/src/mjs/output/svg/Wrappers/mrow.js": "5fc4180d8a9c883814b0db9e0138ce0fc37b6dbc51394ad991c8ffa1479e5b69",
+    "@mathjax/src/mjs/output/svg/Wrappers/ms.js": "054bea45bca845fc447816550b05cb5c31fc03392c4787ab357884e860259ffb",
+    "@mathjax/src/mjs/output/svg/Wrappers/mspace.js": "cbf9d8c4db62e28c6d333eb7b0b6dfcee695546c494da46f42766275cc711ce8",
+    "@mathjax/src/mjs/output/svg/Wrappers/msqrt.js": "fd3af970c2bd5ca02db5072caadd7b1ce25b441fd819c082fd8e8550c89e41c3",
+    "@mathjax/src/mjs/output/svg/Wrappers/msubsup.js": "e3ba5e310cc094df55ab024e73a8defc3c186695a5df6da69f30ad74c35730fb",
+    "@mathjax/src/mjs/output/svg/Wrappers/mtable.js": "206b4d5cb9b71d5e1942a504ea50670135169fb6ad0411e4d4ded4be90d8e97c",
+    "@mathjax/src/mjs/output/svg/Wrappers/mtd.js": "271e975f86ac06b62c946a6272e10f10db826f65560adfe7b21954e4144a3580",
+    "@mathjax/src/mjs/output/svg/Wrappers/mtext.js": "f4cb66a2f8ef2bad6f1235515a6c915d3027b743bfa87bf944b27ffd7f2f37eb",
+    "@mathjax/src/mjs/output/svg/Wrappers/mtr.js": "1884a582317d8cba534cbad01411c57a3919d533b5ef9aef6d0b9f3585cdf234",
+    "@mathjax/src/mjs/output/svg/Wrappers/munderover.js": "b221cf8a6bc57dd595737f9eaa14321f9ff7312608a822938a0b82637d5b3e43",
+    "@mathjax/src/mjs/output/svg/Wrappers/scriptbase.js": "91f9b6c59f88efad6aaff17e2af7a598fddc045906726bb050127d78c65f6c29",
+    "@mathjax/src/mjs/output/svg/Wrappers/semantics.js": "81af407611afea4e043a651e7d15b75c02661f531fb5c2476301da748a06bdee",
+    "@mathjax/src/mjs/output/svg/Wrappers/zero.js": "a2bd7bc9a6a8c188a3317005f265097e891d8025b4745465636d8d8f4add18ef",
+    "@mathjax/src/mjs/util/AsyncLoad.js": "c6186da73e91e3ed4a5a8c12c6dc9c19535dd0bc6f99036670670031e7c0465b",
+    "@mathjax/src/mjs/util/BBox.js": "fd9e3b75ea101ef9f1c3a8f769676113d1207a023c2275c2760e5a4960b3ad72",
+    "@mathjax/src/mjs/util/BitField.js": "8a229cd6edd4d319863be28280f403762b491c85a770a2d8fb17e418942e6f66",
+    "@mathjax/src/mjs/util/Entities.js": "8c1b46285f1be84557282ea4af63717ba3fe6c81615ece859cd41caffe6f05e2",
+    "@mathjax/src/mjs/util/FunctionList.js": "9dab97d932772c7eb56c5677b83c91deb395bc04e762db79acb10bed8e17859b",
+    "@mathjax/src/mjs/util/LinkedList.js": "28e4887e8965b6f9be45454fbc66b68529f6aa48d95b1d20377e12ef098ad491",
+    "@mathjax/src/mjs/util/Options.js": "065873dcc58a7d01fcbce9ecb80d3a170f9a95961d48b29c0e475e39359f85aa",
+    "@mathjax/src/mjs/util/PrioritizedList.js": "20da6cd83b73f4e1f0de74a775c8e7ca9a627f9cc0a939a6456101a99f748777",
+    "@mathjax/src/mjs/util/Retries.js": "78e159c638e2251bc89aa5ac3b2912b611761573d377bd38dfdbf46a265cc9ba",
+    "@mathjax/src/mjs/util/StyleJson.js": "ec91a0f7f7e7d0ee0f6f7e50e4149cf83f0168017bcc764999ad824ce0a81e76",
+    "@mathjax/src/mjs/util/Styles.js": "816e726e0bc0c933cd60fbdb689d96ffcf6c0783a7cfa6962625994e1085d431",
+    "@mathjax/src/mjs/util/context.js": "ce08acfe3c079fd0f7ab96f89ee6050748ebf577e412fb0f84e66dd247dcb69b",
+    "@mathjax/src/mjs/util/lengths.js": "c8ccd5489b0c1ef97022cf4e88e5f851b909ff8442605749a6e03e1bcb847cf2",
+    "@mathjax/src/mjs/util/numeric.js": "0057bec8d790682e10ee6fab337250b1678310aee1ea841f98d64cfe1d1021e8",
+    "@mathjax/src/mjs/util/string.js": "9bbb6763c21c993c6c5cef454d4d51f294e9f9d02d9e276d3900439bf0376c26",
+    "marked/lib/marked.esm.js": "2e70fea3ee49f98ab67ee395e5af51cc6bee4fafed15910da9ccb7f650df8014",
+    "port/markdown-math/engine.js": "957519b11475ce4fed5007a9c2101998b9c07fc3ef03bdda1df8e79645f7bc05",
+    "port/markdown-math/font-data.js": "57d20eb93b781a59de2c20f716e272ff9e324966bb9527c71539d27bcab434ad"
+  },
+  "fonts": {
+    "mjx-tex-b.woff2": "69e45ca329dd2fcc3671dc20884f2baf29348a43833104266be098eba544fda2",
+    "mjx-tex-bi.woff2": "d0c95edf7b3223c8e66fcb4b6faaf74fc3376eea59c20f23677f4d54905a356e",
+    "mjx-tex-brk.woff2": "4f03a0d86ff005f12cbb0ffd162bae0766415e48e07ed3fa5970e685594de15d",
+    "mjx-tex-c.woff2": "1faef92bbe440c459bcea0b7530044827749507e39bf49248c2203f9eb422bce",
+    "mjx-tex-cb.woff2": "03de6a3467f88e79425df3505a936e6b336efbc5c0421f40905d1d52fddbe4ed",
+    "mjx-tex-f.woff2": "6cb008e934883d1f4652562276469dfc1ade06ee4ceebd6979e79b1c98472b47",
+    "mjx-tex-fb.woff2": "303b28cdca9c064d93dc1672b843933ab20e28f777adb08b9eafa6f442f074d7",
+    "mjx-tex-i.woff2": "82c82a2e0c8bc89421ce9cbb4ecea806c8ceec4b4fd0269726b9439ca853b365",
+    "mjx-tex-lo.woff2": "98b20475232f47749126ae098177b5c71d3b6512e068efedb3a912c2c8f6ed0f",
+    "mjx-tex-m.woff2": "82e8abfaecf005f639e18b1e7dece8700c56df76eac8ea94e4b5915bedee7567",
+    "mjx-tex-mi.woff2": "4bd1e8cefc7cf1b9aa2f2c6beb01ecef7ebf5d1f81d82f954a9688360a399fc3",
+    "mjx-tex-n.woff2": "fad3b88ec7aac4959e3de19044931682bd4d1500c72a85d2d113b73b694c4133",
+    "mjx-tex-ob.woff2": "62f1a8f7ced532d6ab1f6af3a5b3363eb6c774fe40d29092bbea27ac95a9f89e",
+    "mjx-tex-os.woff2": "01bc6e82013dca9c1cbb132c353a0f63add97325bb979bba5e619591525c2a6e",
+    "mjx-tex-s3.woff2": "07165a0e10ae4b6b24db34b28d0a8c46bd4ac53b4d1682098ee7a3e88d2f1c83",
+    "mjx-tex-s4.woff2": "b20a0e1b03043ae1a540857bdf1b220297ff0e78b110b1e15554addf91ad0937",
+    "mjx-tex-so.woff2": "0e9f0e5baa090d44c728e2ddaa39b4c465ff15d349e3547488503eb318628a45",
+    "mjx-tex-ss.woff2": "e0d564a939fce2e4d0c09a86f0dc936c2a9cdb42e44eb264dbc5ef01d71e179c",
+    "mjx-tex-ssb.woff2": "4a2e4827bad85a9ae5fe906f179ccfce154bfc29e19115ceb8d7f1f6e8ce31cd",
+    "mjx-tex-ssi.woff2": "b6dfb310dd7b5c059e9b748b4766fcdd6fa0005c17d9229f3bb1bd095acfae1a",
+    "mjx-tex-v.woff2": "bd9d7db0883dc1adca7ed1c20042609e4e3d1f07f106b6bc8eeeab49d560393b",
+    "mjx-tex-zero.woff2": "2c146f72c9a345aa282398a752d03af71d83a011f3d067297b533a31f0c5f5cb"
+  },
+  "mathmlFont": {
+    "source": "@mathjax/mathjax-tex-font/chtml/woff2/mjx-tex-n.woff2",
+    "sourceSha256": "fad3b88ec7aac4959e3de19044931682bd4d1500c72a85d2d113b73b694c4133",
+    "sha256": "41b7d4f3e06330eb6bc0faabd860d72bf75c1a844da4fff236e26f6270059b29",
+    "fontToolsVersion": "4.60.1",
+    "largeOperatorSource": "@mathjax/mathjax-tex-font/chtml/woff2/mjx-tex-lo.woff2",
+    "largeOperatorSourceSha256": "98b20475232f47749126ae098177b5c71d3b6512e068efedb3a912c2c8f6ed0f",
+    "change": "D-only MATH operator metrics and 16 display variants; rule thickness 60; original glyphs preserved",
+    "mathConstants": {
+      "ScriptPercentScaleDown": 71,
+      "ScriptScriptPercentScaleDown": 50,
+      "DisplayOperatorMinHeight": 1300,
+      "AxisHeight": 250,
+      "UpperLimitGapMin": 111,
+      "UpperLimitBaselineRiseMin": 200,
+      "LowerLimitGapMin": 167,
+      "LowerLimitBaselineDropMin": 600,
+      "AccentBaseHeight": 431,
+      "SubscriptShiftDown": 150,
+      "SubscriptBaselineDropMin": 35.5,
+      "SubscriptTopMax": 353.6,
+      "SuperscriptShiftUp": 363,
+      "SuperscriptShiftUpCramped": 289,
+      "SuperscriptBaselineDropMax": 274.06,
+      "SuperscriptBottomMin": 110.5,
+      "SubSuperscriptGapMin": 180,
+      "SuperscriptBottomMaxWithSubscript": 353.6,
+      "SpaceAfterScript": 50,
+      "StackGapMin": 180,
+      "StackDisplayStyleGapMin": 420,
+      "FractionNumeratorGapMin": 60,
+      "FractionNumDisplayStyleGapMin": 180,
+      "FractionRuleThickness": 60,
+      "FractionDenominatorGapMin": 60,
+      "FractionDenomDisplayStyleGapMin": 180,
+      "OverbarVerticalGap": 180,
+      "OverbarRuleThickness": 60,
+      "OverbarExtraAscender": 60,
+      "UnderbarVerticalGap": 180,
+      "UnderbarRuleThickness": 60,
+      "UnderbarExtraDescender": 60,
+      "RadicalVerticalGap": 75,
+      "RadicalDisplayStyleVerticalGap": 167.75,
+      "RadicalRuleThickness": 60,
+      "RadicalExtraAscender": 60,
+      "RadicalKernBeforeDegree": 277.77777777777777,
+      "RadicalKernAfterDegree": -555.5555555555555,
+      "RadicalDegreeBottomRaisePercent": 60
+    },
+    "displayVariants": {
+      "product": [
+        [
+          "product",
+          1000
+        ],
+        [
+          "product.display",
+          1400
+        ]
+      ],
+      "uni2210": [
+        [
+          "uni2210",
+          1000
+        ],
+        [
+          "uni2210.display",
+          1400
+        ]
+      ],
+      "summation": [
+        [
+          "summation",
+          1000
+        ],
+        [
+          "summation.display",
+          1400
+        ]
+      ],
+      "integral": [
+        [
+          "integral",
+          932
+        ],
+        [
+          "integral.display",
+          2222
+        ]
+      ],
+      "uni222C": [
+        [
+          "uni222C",
+          1111
+        ],
+        [
+          "uni222C.display",
+          2222
+        ]
+      ],
+      "uni222D": [
+        [
+          "uni222D",
+          1111
+        ],
+        [
+          "uni222D.display",
+          2222
+        ]
+      ],
+      "uni222E": [
+        [
+          "uni222E",
+          1111
+        ],
+        [
+          "uni222E.display",
+          2222
+        ]
+      ],
+      "uni22C0": [
+        [
+          "uni22C0",
+          999
+        ],
+        [
+          "uni22C0.display",
+          1400
+        ]
+      ],
+      "uni22C1": [
+        [
+          "uni22C1",
+          999
+        ],
+        [
+          "uni22C1.display",
+          1400
+        ]
+      ],
+      "uni22C2": [
+        [
+          "uni22C2",
+          999
+        ],
+        [
+          "uni22C2.display",
+          1399
+        ]
+      ],
+      "uni22C3": [
+        [
+          "uni22C3",
+          999
+        ],
+        [
+          "uni22C3.display",
+          1399
+        ]
+      ],
+      "uni2A00": [
+        [
+          "uni2A00",
+          1000
+        ],
+        [
+          "uni2A00.display",
+          1398
+        ]
+      ],
+      "uni2A01": [
+        [
+          "uni2A01",
+          1000
+        ],
+        [
+          "uni2A01.display",
+          1398
+        ]
+      ],
+      "uni2A02": [
+        [
+          "uni2A02",
+          1000
+        ],
+        [
+          "uni2A02.display",
+          1398
+        ]
+      ],
+      "uni2A04": [
+        [
+          "uni2A04",
+          999
+        ],
+        [
+          "uni2A04.display",
+          1399
+        ]
+      ],
+      "uni2A06": [
+        [
+          "uni2A06",
+          999
+        ],
+        [
+          "uni2A06.display",
+          1400
+        ]
+      ]
+    },
+    "displayAdvanceCorrections": {
+      "integral.display": 388,
+      "uni222C.display": 388,
+      "uni222D.display": 388,
+      "uni222E.display": 388
+    },
+    "adapterSha256": "062d9e2a86cfc772f90073d30bdb90de52230469a4331188376a1e10a08c7007",
+    "originalGlyphsAndAdvancesUnchanged": true,
+    "displayGlyphsMatchCommonHTML": true,
+    "license": "Apache-2.0"
+  },
+  "mathmlPrimaryFont": {
+    "source": "https://mirrors.ctan.org/fonts/firamath.zip",
+    "file": "port/markdown-math/fonts/FiraMath-Regular.otf",
+    "version": "0.3.4",
+    "sha256": "2028cbd3dd4d8c0cf1608520eb4759956a83a67931d7b6d8e7c313520186e35b",
+    "license": "OFL-1.1",
+    "modified": false,
+    "fallback": "dmail-tex-mathml.woff2"
+  }
+}

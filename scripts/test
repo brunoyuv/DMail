@@ -4,6 +4,8 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 export PATH="$ROOT/.tools/runtime/node_modules/node/bin:$PATH"
 node .tools/test/node_modules/typescript/bin/tsc \
+  harmony/entry/src/main/ets/mail/math/MarkdownMath.ts \
+  harmony/entry/src/main/ets/data/MathSettings.ts \
   harmony/entry/src/main/ets/mail/html/HtmlDocument.ts \
   harmony/entry/src/main/ets/mail/html/HtmlPicturePlan.ts \
   harmony/entry/src/main/ets/mail/smtp/Reply.ts \

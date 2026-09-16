@@ -1,7 +1,7 @@
 // MPL-2.0: https://mozilla.org/MPL/2.0/
 import { webview } from '@kit.ArkWeb';
 import { common } from '@kit.AbilityKit';
-import { htmlContentInset, preparedMailDocument } from '../mail/html/HtmlDocument';
+import { htmlContentInset, preparedMailDocument, isEmbeddedMathFontRequest } from '../mail/html/HtmlDocument';
 import { PreparedMailDocument } from '../data/PreparedDocumentModel';
 import { PictureCache, CachedPicture, PictureSnapshotScope } from '../data/PictureCache';
 import { loadPictureSnapshot, PictureSnapshotResource } from '../data/PictureSnapshot';
@@ -30,9 +30,11 @@ class HtmlReaderSnapshot {
   deadlineTimer: number = -1;
   controller: webview.WebviewController = new webview.WebviewController();
   attached: boolean = false;
+  readonly embeddedMathFonts: boolean;
   constructor(id: string, html: string, pictures: Map<string, CachedPicture>) {
     this.id = id; this.url = `https://mail.invalid/snapshot/${id}/message.html`;
     this.html = html; this.pictures = pictures;
+    this.embeddedMathFonts = html.slice(0, 512).includes("font-src data:;");
   }
 }
 
@@ -256,7 +258,9 @@ export struct HtmlMail {
       .onPermissionRequest((event) => event.request.deny()).onShowFileSelector(() => true)
       .onLoadIntercept((event) => this.blockNavigation(snapshot, event.data))
       .onInterceptRequest((event) => {
-        if (/^data:image\//i.test(event.request.getRequestUrl())) { return null; }
+        const url = event.request.getRequestUrl();
+        if (/^data:image\//i.test(url)) { return null; }
+        if (isEmbeddedMathFontRequest(snapshot.embeddedMathFonts, url)) { return null; }
         return this.resourceResponse(snapshot, event.request);
       })
       .onControllerAttached(() => this.attachSnapshot(snapshot))

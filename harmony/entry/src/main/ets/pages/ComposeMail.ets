@@ -1,4 +1,6 @@
 // MPL-2.0: https://mozilla.org/MPL/2.0/
+import { PreparedMailDocument } from '../data/PreparedDocumentModel';
+import { preparedMailDocument } from '../mail/html/HtmlDocument';
 import { HtmlMail } from './HtmlMail';
 import { DeferredSave } from './DeferredSave';
 import { util } from '@kit.ArkTS';
@@ -32,6 +34,10 @@ export struct ComposeMail {
   @State private username: string = '';
   @State private password: string = '';
   @State private setup: boolean = false;
+  @State private previewing: boolean = false;
+  @State private previewDocument: PreparedMailDocument | undefined = undefined;
+  @State private previewBusy: boolean = false;
+  private previewRevision: number = 0;
   @State private ready: boolean = false;
   @State private busy: boolean = false;
   @State private notice: string = '';
@@ -58,13 +64,14 @@ export struct ComposeMail {
   aboutToAppear(): void { this.active = true; this.initialize(); }
   aboutToDisappear(): void {
     this.saves.flush().catch(() => {});
-    this.active = false; ++this.initializeRevision; this.password = '';
+    this.active = false; ++this.previewRevision; ++this.initializeRevision; this.password = '';
   }
   private sendingChanged(): void {
     if (this.active && this.draft.state === 'sending' && !BackgroundSend.isSending(this.account.id)) { this.initialize(); }
   }
   private async initialize(): Promise<void> {
     const revision = ++this.initializeRevision, account = this.account;
+    ++this.previewRevision; this.previewing = false; this.previewBusy = false; this.previewDocument = undefined;
     ++this.attachmentRevision; this.attachmentPicking = false; this.attachmentNotice = '';
     this.ready = false;
     this.loadRecipients();
@@ -290,6 +297,35 @@ export struct ComposeMail {
       else { BackgroundSend.publish(this.account.id, notice, this.draft.failureStage, this.draft.failureCode); }
     } finally { this.busy = false; }
   }
+  private async preview(): Promise<void> {
+    if (!this.ready || this.busy || this.previewBusy) { return; }
+    const revision = ++this.previewRevision, accountId = this.account.id, draftId = this.draft.id;
+    const text = this.draft.text, forward = this.draft.forwardHtml;
+    this.previewBusy = true; this.notice = '';
+    try {
+      const options = await this.store.mathSettings(accountId);
+      const renderer = await import('../mail/math/MarkdownPreview');
+      const math = await import('../mail/math/MarkdownMath');
+      const html = await renderer.markdownPreview(text, options.renderer || 'mathml');
+      if (!this.active || revision !== this.previewRevision || accountId !== this.account.id || draftId !== this.draft.id ||
+        text !== this.draft.text || forward !== this.draft.forwardHtml) { return; }
+      this.previewDocument = { version: 1, messageKey: draftId + ':preview:' + revision, bodySavedAt: this.draft.date,
+        savedAt: Date.now(), html: math.mathFontDocument(preparedMailDocument(html + (forward ? '<br>' + forward : ''), false, 20), options.renderer || 'mathml'), pictures: [] };
+      this.previewing = true;
+    } catch (_) { if (this.active && revision === this.previewRevision) { this.notice = this.label('math_render_error'); } }
+    finally { if (this.active && revision === this.previewRevision) { this.previewBusy = false; } }
+  }
+  @Builder
+  private previewSheet() {
+    Column({ space: 12 }) {
+      Button(this.label('math_edit')).id('close-compose-preview').onClick(() => this.previewing = false)
+      Text(this.label('math_preview_help')).fontSize(14).padding({ left: 20, right: 20 })
+      if (this.previewDocument) {
+        HtmlMail({ savedDocument: this.previewDocument, html: '', messageKey: this.previewDocument.messageKey,
+          accountId: this.account.id, readerVisible: this.previewing }).id('compose-preview').width('100%').layoutWeight(1)
+      }
+    }.width('100%').height('100%').padding({ top: 12 })
+  }
   private cancel(): void {
     // Navigation never waits on validation, credential renewal or submission.
     // The submission job owns its snapshot once Send has been pressed.
@@ -346,8 +382,9 @@ export struct ComposeMail {
         }
         Button({ type: ButtonType.Circle }) { Text('⋯').fontSize(24).fontColor($r('app.color.mail_text_primary')) }
           .id('compose-more').width(40).height(44).backgroundColor(Color.Transparent).accessibilityText(this.label('more'))
-          .enabled(this.ready && !this.busy).bindMenu([{ value: this.label('outgoing_server'), action: () => { this.notice = ''; this.setup = true; } }])
-        if (this.busy) { LoadingProgress().width(40).height(40) }
+          .enabled(this.ready && !this.busy && !this.previewBusy).bindMenu([{ value: this.label('math_preview'), action: () => this.preview() }, { value: this.label('outgoing_server'), action: () => { this.notice = ''; this.setup = true; } }])
+          .bindSheet($$this.previewing, this.previewSheet, { height: SheetSize.LARGE, dragBar: true })
+        if (this.busy || this.previewBusy) { LoadingProgress().width(40).height(40) }
         else {
           Button(this.label('send')).id('send-mail').buttonStyle(ButtonStyleMode.EMPHASIZED).fontSize(17)
             .height(44).padding({ left: this.compact ? 16 : 15, right: this.compact ? 16 : 15 })

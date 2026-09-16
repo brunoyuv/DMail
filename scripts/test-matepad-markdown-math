@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+# Isolated synthetic font comparison. No production launch, mail or screenshots.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+: "${HDC_TARGET:?Set the verified MatePad target}"
+[[ "$HDC_TARGET" == "${DMAIL_AUTHORIZED_MATEPAD_SERIAL:?Set the separately verified MatePad target}" ]]
+MODE="${1:?Choose baseline, candidate, operators or native-font}"
+case "$MODE" in baseline|candidate|operators|native-font) ;; *) exit 2 ;; esac
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+OUT="$ROOT/.tools/math-font-match/matepad/$MODE"
+run_hdc() { timeout --foreground --kill-after=3s 30s "$HDC" -t "$HDC_TARGET" "$@"; }
+[[ "$(run_hdc shell uname -m | tr -d '[:space:]')" == aarch64 ]]
+[[ "$(run_hdc shell param get const.product.model | tr -d '[:space:]')" == MRO-W00 ]]
+[[ -f "$OUT/main.hap" && -f "$OUT/test.hap" ]]
+for name in commonhtml mathml; do
+  rm -f "$OUT/$name.png" "$OUT/operators-$name.png"
+done
+cleanup() {
+  local result=$?
+  trap - EXIT
+  run_hdc shell aa force-stop org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  run_hdc uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+  for name in commonhtml mathml; do
+    run_hdc shell rm -f "/data/local/tmp/math-preview-$name.png" "/data/local/tmp/math-operators-$name.png" >/dev/null 2>&1 || true
+  done
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+run_hdc uninstall org.thunderbird.harmony.imaptest >/dev/null 2>&1 || true
+run_hdc install "$OUT/main.hap"
+run_hdc install "$OUT/test.hap"
+for name in commonhtml mathml; do run_hdc shell rm -f "/data/local/tmp/math-preview-$name.png"; done
+# The runner starts and proves its isolated blank page before wake/swipe.
+# It captures only after a synthetic compose-preview component is verified.
+timeout --foreground --kill-after=5s 90s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/MarkdownMathUIRunner \
+  -s timeout 75000 > "$OUT/ui.log" 2>&1
+grep -E 'MATH_UI_|Tests run:|FAIL' "$OUT/ui.log" || true
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/ui.log"
+for name in commonhtml mathml; do
+  run_hdc file recv "/data/local/tmp/math-preview-$name.png" "$OUT/$name.png" >/dev/null
+  [[ -s "$OUT/$name.png" ]]
+  run_hdc shell rm -f "/data/local/tmp/math-preview-$name.png"
+done
+if [[ "$MODE" == operators || "$MODE" == native-font ]]; then
+  run_hdc shell aa force-stop org.thunderbird.harmony.imaptest
+  timeout --foreground --kill-after=5s 90s "$HDC" -t "$HDC_TARGET" shell aa test \
+    -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/MarkdownMathOperatorsRunner \
+    -s timeout 75000 > "$OUT/operators-ui.log" 2>&1
+  grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/operators-ui.log"
+  for name in commonhtml mathml; do
+    run_hdc file recv "/data/local/tmp/math-operators-$name.png" "$OUT/operators-$name.png" >/dev/null
+    [[ -s "$OUT/operators-$name.png" ]]
+    run_hdc shell rm -f "/data/local/tmp/math-operators-$name.png"
+  done
+fi
+# UI first establishes the isolated foreground/unlocked state before Asset writes.
+run_hdc shell aa force-stop org.thunderbird.harmony.imaptest
+if [[ "$MODE" != baseline ]]; then
+  timeout --foreground --kill-after=5s 110s "$HDC" -t "$HDC_TARGET" shell aa test \
+    -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/MarkdownMathRunner \
+    -s timeout 90000 > "$OUT/core.log" 2>&1
+  grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/core.log"
+  run_hdc shell aa force-stop org.thunderbird.harmony.imaptest
+fi
+printf 'PASS: isolated MatePad %s preview comparison.\n' "$MODE"

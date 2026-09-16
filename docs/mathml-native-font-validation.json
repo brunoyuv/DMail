@@ -1,0 +1,47 @@
+{
+  "date": "2026-09-16",
+  "deviceModel": "MRO-W00",
+  "request": "Restore D native text font while retaining operator layout fixes",
+  "syntheticOnly": true,
+  "nativeTests": {
+    "core": 1,
+    "standardPreview": 1,
+    "operatorPreview": 1,
+    "markupReferences": 22,
+    "passed": true
+  },
+  "focusedHostTests": {
+    "renderer": 13,
+    "reader": 19,
+    "passed": true
+  },
+  "fontChoice": {
+    "lettersNumbersOrdinarySymbols": "native math family",
+    "largeOperators": "DMail MathJax TeX",
+    "mathLayoutConstantsRetained": true
+  },
+  "visualChecks": {
+    "nativeTextFontVisible": true,
+    "sumSizeAndLimitsRetained": true,
+    "integralScriptsClear": true,
+    "nestedStylesVisible": true,
+    "commonhtmlChangedPixels": 0,
+    "commonhtmlPixelsCompared": 1066000,
+    "commonhtmlHostMarkupAndCSSComparisons": 18
+  },
+  "cacheRevision": "math5:mathml:",
+  "mainTestHapSha256": "31af4382b93ef4b7e89df923e1e68738f325a759e630995baa6df4b532b0b4d7",
+  "testHapSha256": "0ef33967855b62d05dc2dce7c66dfc50934d171377954b68a1b45187d7cbf7d5",
+  "bundleSha256": "03b65764b3129a82bbec33311bf5ea26f081392ab13dc3f96ea77616ce633f62",
+  "screenshots": {
+    "commonhtml.png": "1727ad9ce30f257329c747df6624e625204b03f19accbe4b19942453d372760c",
+    "operators-commonhtml.png": "1ded5b495e082bccd9b224d2bb35a1e93da35c87dfde3014777cbb45a8660e4b",
+    "operators-mathml.png": "88e77568a39bcb16932b71130c180e2ed315414ca0a88400cc5b5c33e250bbbd",
+    "mathml.png": "facf36cdb8cf930076b707387189d653d1512328272dbf7ed9fef6427fbe6bbb"
+  },
+  "isolatedAppRemoved": true,
+  "testProcessAbsent": true,
+  "emulatorStopped": true,
+  "productionAppsUpdated": false,
+  "productionAppsLaunched": false
+}

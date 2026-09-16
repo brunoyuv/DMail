@@ -1,0 +1,31 @@
+{
+  "date": "2026-09-16",
+  "request": "Use Fira Math throughout D equations, matching sans-serif prose",
+  "font": {
+    "name": "Fira Math",
+    "version": "0.3.4",
+    "modified": false,
+    "license": "OFL-1.1",
+    "sha256": "2028cbd3dd4d8c0cf1608520eb4759956a83a67931d7b6d8e7c313520186e35b",
+    "fallback": "Corrected MathJax TeX (Apache-2.0)"
+  },
+  "hostTests": {
+    "rendererPassed": 13,
+    "readerPassed": 19,
+    "fontPassed": 8,
+    "commonhtmlMarkupAndCSSComparisonsUnchanged": 22
+  },
+  "browserPreview": "http://127.0.0.1:18873/fira-math.html",
+  "browserVisualChecked": true,
+  "cacheRevision": "math6:mathml:",
+  "commonhtmlCacheRevision": "math2:commonhtml:",
+  "signedArmBuildPassed": true,
+  "signedHapSha256": "5e5c84f809f6e4a02765b15330228a09148a1e5f6920c9ea2534de59db26ad8b",
+  "signedSourceParityPassed": true,
+  "fontLicenseInHapVerified": true,
+  "nativeRuntimeTested": false,
+  "deviceInstallationPerformed": true,
+  "productionLaunched": false,
+  "bundleSha256": "dea50464173405defd07a2ea047e8ca2d34630a51d2c242369402d85c6c70996",
+  "installationRecord": "mathml-fira-pura-installation.json"
+}
