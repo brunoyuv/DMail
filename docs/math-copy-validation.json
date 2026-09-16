@@ -1,0 +1,58 @@
+{
+  "date": "2026-09-16",
+  "change": "Normal selection Copy preserves original equation delimiters/TeX within paragraphs",
+  "implementation": "Script-free selectable source overlay; nonselectable visual equation; atomic equation selection",
+  "pageScriptsEnabled": false,
+  "tests": {
+    "javascriptPassed": 782,
+    "pythonPassed": 40
+  },
+  "browserChecks": {
+    "commonhtmlParagraphContainsAllOriginalEquations": true,
+    "mathmlParagraphContainsAllOriginalEquations": true,
+    "mathmlIndividualEquationCopiesExactSource": true
+  },
+  "knownLimitations": [
+    "MathML native selection inserts line breaks around some inline equations.",
+    "Native MatePad probe did not reach its isolated fixture; device copy behavior remains unverified."
+  ],
+  "nativeProbeAppRemoved": true,
+  "productionLaunched": false,
+  "productionInstalled": true,
+  "signedBuildPassed": true,
+  "signedHapSha256": "c34eafb76ea9c9ec32e5ffc5f8e5d9304e6fd830705e9a5ddff1895ad12389ff",
+  "cacheRevisions": {
+    "mathml": "math8",
+    "commonhtml": "math4"
+  },
+  "installations": [
+    {
+      "device": "pura",
+      "model": "VDE-AL00",
+      "versionName": "1.0.2",
+      "versionCode": 1000002,
+      "bundleName": "org.thunderbird.harmony.dev",
+      "upgradeOnly": true,
+      "storageIdentityPreserved": true,
+      "artifactHashVerified": true,
+      "hapSha256": "c34eafb76ea9c9ec32e5ffc5f8e5d9304e6fd830705e9a5ddff1895ad12389ff",
+      "productionLaunched": false,
+      "installedHashVerified": false,
+      "installedHashCheck": "Not attempted; prior OS reads denied"
+    },
+    {
+      "device": "matepad",
+      "model": "MRO-W00",
+      "versionName": "1.0.2",
+      "versionCode": 1000002,
+      "bundleName": "org.thunderbird.harmony.dev",
+      "upgradeOnly": true,
+      "storageIdentityPreserved": true,
+      "artifactHashVerified": true,
+      "hapSha256": "c34eafb76ea9c9ec32e5ffc5f8e5d9304e6fd830705e9a5ddff1895ad12389ff",
+      "productionLaunched": false,
+      "installedHashVerified": false,
+      "installedHashCheck": "Not attempted; prior OS reads denied"
+    }
+  ]
+}

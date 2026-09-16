@@ -165,16 +165,13 @@ export class MailMessageLoader {
       if (!settings.renderWhileReading) { return base.document; }
       const mode = settings.renderer || 'mathml';
       const identity = mode + ':' + JSON.stringify([body.mail.cachedSourceId || body.mail.id, body.bodySavedAt, base.document.savedAt]);
-      const key = (mode === 'mathml' ? 'math7:' : 'math3:') + identity;
+      const key = (mode === 'mathml' ? 'math8:' : 'math4:') + identity;
       if (key.length > 4096) { return base.document; }
       const saved = await this.store.documents.read(request.accountId, key); this.requireActive(request);
       if (saved.document) { return saved.document; }
       if (saved.attempted || saved.failure === 'failed') { return base.document; }
-      // Reuse successful documents from before the equation-count cap removal.
-      // Old failures may have hit that cap, so retry those once under this revision.
-      const previous = await this.store.documents.read(request.accountId, (mode === 'mathml' ? 'math6:' : 'math2:') + identity);
-      this.requireActive(request);
-      if (previous.document) { return previous.document; }
+      // Older documents lack selectable equation source. Regenerate locally
+      // once in either renderer, without replacing or downloading original mail.
       const renderer = await import('./math/MarkdownMath'); this.requireActive(request);
       let html: string;
       try {

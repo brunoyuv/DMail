@@ -1,9 +1,9 @@
 // MPL-2.0: https://mozilla.org/MPL/2.0/
 import { typesetEquation, mathStyles, markdown } from './vendor/engine';
-import { mailHtmlTokens } from '../html/HtmlTokens';
+import { mailHtmlTokens, mailHtmlAttributes } from '../html/HtmlTokens';
 import { HTML_ATTRIBUTE_ENTITIES } from '../html/HtmlEntities';
 import { prepareMailHtml } from '../html/HtmlDocument';
-export interface MathImage { source: string; original: string; svg: string; display: boolean; marker: string; }
+export interface MathImage { source: string; original: string; copySource: string; svg: string; display: boolean; marker: string; }
 export interface MathPlan { html: string; images: MathImage[]; renderer: string; styles: string; }
 export const MATH_RENDER_REVISION = 'math2';
 const MAX_INPUT = 262144, MAX_OUTPUT = 4 * 1024 * 1024;
@@ -51,11 +51,11 @@ function prefix(source: string): string {
   let serial = 0; while (used.has(String(serial))) { serial++; }
   return 'DMAILMATH' + serial + 'TOKEN';
 }
-function appendMath(images: MathImage[], token: string, tex: string, display: boolean, original: string, renderer: string): string {
+function appendMath(images: MathImage[], token: string, tex: string, display: boolean, original: string, renderer: string, copySource = original): string {
   let svg: string;
   try { svg = typesetEquation(tex, display, renderer); } catch (_) { return original; }
   const marker = token + images.length + 'END';
-  images.push({ source: tex, original, svg, display, marker }); return marker;
+  images.push({ source: tex, original, copySource, svg, display, marker }); return marker;
 }
 export function markdownMathPlan(source: string, show = '', hide = '', renderer = 'svg'): MathPlan {
   if (source.length > MAX_INPUT) { throw new Error('Markdown input limit'); }
@@ -94,7 +94,11 @@ export function mathFontDocument(html: string, renderer: string): string {
   return ['commonhtml', 'mathml'].includes(renderer) ? html.replace("style-src 'unsafe-inline'; img-src", "style-src 'unsafe-inline'; font-src data:; img-src") : html;
 }
 export function renderMathPlan(plan: MathPlan): string {
-  const html = replaceMathImages(plan, item => `<span role="math" aria-label="${escape(item.source)}" title="${escape(item.source)}" style="${item.display ? 'display:block;text-align:center;overflow-x:auto;margin:0.75em 0;' : 'display:inline;'}">${item.svg}</span>`);
+  // Native selection copies the original delimiters and TeX. An invisible,
+  // selectable overlay leaves glyph layout unchanged and avoids enabling page
+  // scripts or rewriting the clipboard after a copy. Treat an equation as one
+  // selection unit, including when a paragraph selection crosses its boundary.
+  const html = replaceMathImages(plan, item => `<span role="math" data-dmail-math-source="${escape(item.copySource)}" aria-label="${escape(item.source)}" title="${escape(item.source)}" style="position:relative;user-select:all;-webkit-user-select:all;${item.display ? 'display:block;text-align:center;overflow-x:auto;margin:0.75em 0;' : 'display:inline;'}"><span aria-hidden="true" style="user-select:none;-webkit-user-select:none;">${item.svg}</span><span aria-hidden="true" data-dmail-math-copy="source" style="position:absolute;inset:0;opacity:0;overflow:hidden;white-space:pre-wrap;user-select:all;-webkit-user-select:all;">${escape(item.copySource)}</span></span>`);
   if (!plan.styles) { return html; }
   const styles = '<style>' + plan.styles + '</style>';
   return html.includes('</head>') ? html.replace('</head>', styles + '</head>') : styles + html;
@@ -102,18 +106,23 @@ export function renderMathPlan(plan: MathPlan): string {
 // Operate only on visible text spans; never on attributes, CSS, scripts or code.
 export function renderHtmlMath(html: string, renderer = 'svg'): string {
   if (html.length > MAX_OUTPUT || !/[\$\\]/.test(html)) { return html; }
-  const parts: string[] = [], images: MathImage[] = []; let last = 0, codeDepth = 0;
+  const parts: string[] = [], images: MathImage[] = []; let last = 0, codeDepth = 0, copyDepth = 0;
   const token = prefix(html);
   for (const tag of mailHtmlTokens(html)) {
     const text = html.slice(last, tag.start);
-    parts.push(codeDepth === 0 ? replaceMath(text, (tex, display, original) => {
-      const marker = appendMath(images, token, decodeMailHtmlEntities(tex), display, original, renderer); return marker;
+    parts.push(codeDepth === 0 && copyDepth === 0 ? replaceMath(text, (tex, display, original) => {
+      const marker = appendMath(images, token, decodeMailHtmlEntities(tex), display, original, renderer, decodeMailHtmlEntities(original)); return marker;
     }, false) : text, html.slice(tag.start, tag.end));
     if (['code', 'pre', 'textarea', 'math', 'svg', 'mjx-container'].includes(tag.name)) { codeDepth = Math.max(0, codeDepth + (tag.closing ? -1 : 1)); }
+    if (tag.name === 'span') {
+      if (copyDepth > 0) { copyDepth += tag.closing ? -1 : 1; }
+      else if (!tag.closing && mailHtmlAttributes(html.slice(tag.start, tag.end)).some(attribute =>
+        attribute.name === 'data-dmail-math-copy' && attribute.value === 'source')) { copyDepth = 1; }
+    }
     last = tag.end;
   }
   const tail = html.slice(last);
-  parts.push(codeDepth === 0 ? replaceMath(tail, (tex, display, original) => appendMath(images, token, decodeMailHtmlEntities(tex), display, original, renderer), false) : tail);
+  parts.push(codeDepth === 0 && copyDepth === 0 ? replaceMath(tail, (tex, display, original) => appendMath(images, token, decodeMailHtmlEntities(tex), display, original, renderer, decodeMailHtmlEntities(original)), false) : tail);
   const result = renderMathPlan({ html: parts.join(''), images, renderer, styles: images.length ? mathStyles(renderer) : '' });
   return result.length <= MAX_OUTPUT ? result : html;
 }

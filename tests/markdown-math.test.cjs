@@ -79,6 +79,28 @@ test('Long notes render every equation beyond the former count cap in both mail 
   }
 });
 
+test('Selectable equation source preserves original delimiters and decodes HTML text exactly once', () => {
+  const source = String.raw`Inline $x^2$ and \(a+b\).
+
+$$\sum_{i=1}^{n} x_i$$
+
+\[c < d\]`;
+  for (const renderer of ['mathml', 'commonhtml']) {
+    const plan = math.markdownMathPlan(source, '', '', renderer);
+    assert.deepEqual(plan.images.map(item => item.copySource), [String.raw`$x^2$`, String.raw`\(a+b\)`, String.raw`$$\sum_{i=1}^{n} x_i$$`, String.raw`\[c < d\]`]);
+    const html = math.renderMathPlan(plan);
+    assert.equal((html.match(/data-dmail-math-copy="source"/g) || []).length, 4);
+    assert.match(html, /user-select:none/);
+    assert.match(html, /user-select:all/);
+    assert.doesNotMatch(html, /<script|oncopy=|onclick=/);
+    assert.equal(math.renderHtmlMath(html, renderer), html);
+    const authored = math.renderHtmlMath(String.raw`<p>Compare $x &lt; y$ and $\text{&amp;lt;}$.</p>`, renderer);
+    assert.match(authored, /data-dmail-math-source="\$x &lt; y\$"/);
+    assert.match(authored, /data-dmail-math-source="\$\\text\{&amp;lt;\}\$"/);
+    assert.equal(math.renderHtmlMath(authored, renderer), authored);
+  }
+});
+
 test('CommonHTML and MathML render inline and display equations without equation images', () => {
   for (const renderer of ['commonhtml', 'mathml']) {
     const plan = math.markdownMathPlan('Inline $a+b$.\n\n$$\\frac{1}{2}$$\n\n`$literal$`', '', '', renderer);
@@ -87,7 +109,7 @@ test('CommonHTML and MathML render inline and display equations without equation
     assert.match(html, renderer === 'commonhtml' ? /<mjx-container/ : /<math /);
     assert.doesNotMatch(html, /<img|<svg|data:image|cid:/);
     assert.match(html, /\$literal\$/);
-    assert.match(html, /style="display:inline;"/);
+    assert.match(html, /style="[^"\n]*display:inline;"/);
     if (renderer === 'commonhtml') {
       assert.match(html, /data:font\/woff2;base64,/);
       assert.doesNotMatch(html, /url\(["']?(?:https?:|dmail-math-font)/);

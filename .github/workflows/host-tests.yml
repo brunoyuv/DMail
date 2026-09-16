@@ -19,5 +19,16 @@ jobs:
           node-version: '22.23.2'
       - name: Install the host test compiler
         run: npm install --prefix .tools/test --ignore-scripts --no-audit --no-fund typescript@5.9.3
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Prepare pinned math renderer and font assets
+        run: |
+          python3 -m pip install fonttools==4.60.1 brotlicffi==1.0.9.2
+          mkdir -p .tools/math-render
+          cp port/markdown-math/package.json port/markdown-math/package-lock.json .tools/math-render/
+          npm ci --prefix .tools/math-render --ignore-scripts --no-audit --no-fund
+          python3 port/markdown-math/build-mathml-font.py
+          node port/markdown-math/build.cjs
       - name: Run synthetic host tests
         run: ./scripts/test

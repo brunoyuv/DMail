@@ -179,3 +179,36 @@ This follow-up is installed in place on Pura X, still version 1.0.2 / 1000002,
 with app/storage identities preserved and without launching production. The
 signed build and installer success were verified; actual device appearance is
 user-tested. See [limit-removal validation](markdown-equation-limit-validation.json).
+
+The user subsequently requested MatePad installation. The same signed HAP is
+now installed there too (MRO-W00), upgraded from 1.0.1 to 1.0.2 / 1000002 with
+app/storage identities preserved and without launching production. Both devices
+use the identical signed artifact recorded in the limit-removal validation.
+
+## Copying equation source (installed on both devices)
+
+Normal selection Copy includes each equation’s original delimiters and TeX
+within the selected prose, in both C and D. A transparent selectable source
+layer occupies the rendered equation’s area; visual glyphs are nonselectable.
+The equation is a single selection unit. The source is escaped as text and
+attributes, and original HTML entities are decoded exactly once. No clipboard
+listener, JavaScript bridge or email script execution is enabled. Copying HTML
+messages works when literal equation delimiters remain within visible text
+spans. Code/preformatted blocks remain literal; equations split across tags or
+already converted to images cannot be reconstructed by this renderer.
+
+The copy feature uses new local cache revisions `math8:mathml:` and
+`math4:commonhtml:` to regenerate older rendered documents with selectable
+source. Original mail is retained and not downloaded again. Glyph fonts and
+equation layout engines are unchanged.
+
+Browser normal Copy was checked for complete paragraphs in C/D and an individual
+MathML equation. Native selection may insert extra line breaks around inline
+MathML equations; original TeX is intact. The MatePad probe could not reach its
+isolated fixture, so native copying is not yet verified. Its isolated app was
+removed and production was not accessed. The signed build is prepared, with
+782 JavaScript and 40 Python checks passing. The user subsequently requested installation on both devices. The identical signed
+1.0.2 update is installed in place on Pura X and MatePad, with app/storage
+identities preserved and production not launched. Device copy behavior remains
+user-tested.
+See [copy validation](math-copy-validation.json).

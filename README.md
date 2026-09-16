@@ -11,21 +11,22 @@ the upstream work. The app uses its own generic mail icon.
 
 ## Status
 
-The current development baseline is **0.1.11**. The full port is unfinished.
-Synthetic host and native tests cover the implemented workflows; live-provider
-compatibility is not comprehensively verified. The D-Mail rename and Gmail
-app-password default follow this baseline; older release records and screenshots
-retain their historical names and behavior.
+The current release is **1.0.3**. The full port is unfinished. Synthetic host
+and native tests cover the implemented workflows; live-provider compatibility
+is not comprehensively verified.
 
 - IMAP mailboxes, paging, read/unread flags, stars, archive and server Sent folders.
 - SMTP composition, Reply / Reply All / Forward, sender names, signatures and
   encrypted drafts, with explicit recovery for uncertain delivery.
 - HTML reading, conversation grouping, attachment download/open/save, and remote
-  pictures loaded with per-message consent and cached for reuse.
-- Multiple accounts, encrypted local storage and seven-day downloaded-mail
-  retention, with cached reading before network refresh.
+  pictures loaded in a bounded batch after opening a message and cached for reuse.
+- Multiple accounts, encrypted account records and drafts, and app-private body
+  and picture files with seven-day downloaded-mail retention. Cached messages
+  open before network refresh.
 - Foreground Inbox updates, per-account optional alerts, persisted unread badges
   and OS-deferred background checks, connecting directly to the existing mail server.
+- Optional Markdown and TeX math reading, two equation renderers, composer
+  preview, and normal Copy that retains equation source.
 - English and Simplified Chinese, light/dark appearance, phone and tablet layouts.
 - Provider discovery, password/app-password setup and experimental Microsoft
   browser OAuth. Gmail browser sign-in is disabled by default; use an app password.
@@ -35,7 +36,24 @@ background checking remains unresolved. No privately operated relay is required.
 JMAP has a native reader and message-action path; submission and full parity
 remain unfinished. See [background checking](docs/background-checking.md),
 [OAuth configuration](docs/browser-oauth.md) and the latest
-[release validation](docs/release-0.1.11.md).
+[release validation](docs/release-1.0.3.md).
+
+## Markdown and equations
+
+Enable **Markdown and math** in the account settings to render while reading.
+Choose **D: native MathML** with Fira Math, or **C: CommonHTML**. Use `$...$` for
+inline equations and `$$...$$` for display equations; `\(...\)` and `\[...\]`
+are supported too. The composer’s **More → Preview** shows the formatted result.
+Sending preserves the original Markdown/TeX text.
+
+Version 1.0.3 removes the equation-count cap and preserves the original equation
+source when copying an equation or a paragraph. Input, individual-expression and
+output-size safeguards remain. Native MathML selection can add line breaks around
+inline equations; device clipboard behavior still needs user verification.
+Literal equations in HTML replies are supported when the delimiters and expression
+remain together in a text run. Code/preformatted content stays literal, and
+existing equation images cannot be converted back into TeX. See
+[Markdown and math](docs/markdown-math.md) for details and limitations.
 
 ## Gmail and your own OAuth registration
 
@@ -70,15 +88,27 @@ The repository is [brunoyuv/DMail](https://github.com/brunoyuv/DMail).
 With the native toolchain prepared and source changes committed, run
 `./scripts/build-release` to create a local ARM64 release-mode package under
 `dist/`. It includes an unsigned HAP, checksums, matching source and license
-notices. Device installation requires signing. See
+notices. Use `./scripts/build-release --appgallery` for the separate registered
+store identity. The upload artifact is the release-signed `.app`; the ZIP carries
+matching source and notices for GitHub distribution. Device installation requires
+appropriate signing. See
 [release-package instructions](docs/release-packages.md).
 
 ## Development
 
-Host tests require Node.js 22, npm and Python 3 (including SQLite support):
+Host tests require Node.js 22, npm and Python 3 (including SQLite support).
+Install the pinned renderer/font dependencies and regenerate local font assets:
 
 ```sh
 npm install --prefix .tools/test --ignore-scripts --no-audit --no-fund typescript@5.9.3
+python3 -m venv .tools/test-python
+. .tools/test-python/bin/activate
+python3 -m pip install fonttools==4.60.1 brotlicffi==1.0.9.2
+mkdir -p .tools/math-render
+cp port/markdown-math/package.json port/markdown-math/package-lock.json .tools/math-render/
+npm ci --prefix .tools/math-render --ignore-scripts --no-audit --no-fund
+python3 port/markdown-math/build-mathml-font.py
+node port/markdown-math/build.cjs
 ./scripts/test
 ```
 
@@ -111,7 +141,7 @@ user-operated. Preserve saved accounts with in-place upgrades.
 
 | Path | Contents |
 | --- | --- |
-| `harmony/` | ArkUI app, encrypted storage and native bridge |
+| `harmony/` | ArkUI app, local storage and native bridge |
 | `port/` | Swift adapters, explicit upstream patches, provenance and fixtures |
 | `scripts/` | Toolchain setup, builds and bounded validation runners |
 | `tests/` | Synthetic host regression tests |
@@ -128,6 +158,9 @@ D-Mail uses the [Mozilla Public License 2.0](LICENSE), the same file-level
 copyleft license as Thunderbird's upstream source. Component-specific notices are in
 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and `licenses/`.
 Upstream source headers, patch provenance and dependency licenses are retained.
+**Marked remains MIT-licensed**, MathJax and its TeX fonts remain Apache-2.0,
+and Fira Math remains OFL-1.1. These component licenses are not replaced by MPL.
+See the [renderer provenance and licenses](port/markdown-math/README.md).
 The repository name and visible app name are D-Mail. Legacy internal package,
 database and native-library names remain for installation and data compatibility;
 see [the rename notes](docs/publishing.md#name-and-compatibility).

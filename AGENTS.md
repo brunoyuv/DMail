@@ -26,7 +26,30 @@ Keep signing, OAuth secrets, toolchains, logs and device serials under ignored
 snapshot is at .tools/pre-d-mail-publication/. Physical MatePad runners require
 DMAIL_AUTHORIZED_MATEPAD_SERIAL in addition to a verified HDC_TARGET.
 
+## Version 1.0.3 publication
+
+The user requested a new 1.0.3 (1000003) commit, README update, GitHub push and
+uploadable packages for both GitHub and AppGallery. Preserve existing history,
+including the separate equation-limit fix; do not rewrite or force-push.
+Use the matching AppGallery release signing materials for its separate identity.
+Device installations below remain historical 1.0.2 builds; packaging does not
+update or launch production. See docs/release-1.0.3.md.
+
 ## Version 1.0.2 Markdown and math release
+
+Current follow-up: normal Copy uses script-free selectable original TeX layers
+in generated equations. C/D source caches are now math4/math8 respectively.
+Regenerate old rendered documents locally; keep mail scripts disabled and
+preserve raw mail. The copy build is installed in place on both devices at the user’s request,
+with app/storage identities preserved and production not launched. Browser copying passed,
+but the isolated MatePad probe did not reach its fixture and native Copy is
+unverified. See docs/math-copy-validation.json.
+
+Latest follow-up: the equation-count cap is removed and the same signed 1.0.2
+update is installed on both Pura X and MatePad at the user's request. Accounts
+and app/storage identities are preserved; production was not launched. See
+docs/markdown-equation-limit-validation.json. Earlier installation scopes below
+are historical.
 
 The user requested a new local commit named 1.0.2 after the Fira Math update.
 This supersedes the earlier two-commit limit: preserve 1.0.0 and 1.0.1 and add

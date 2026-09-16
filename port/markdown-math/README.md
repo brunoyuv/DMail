@@ -101,7 +101,11 @@ The trusted typesetter runs in app code, never inside an email document.
 
 `MarkdownPreview.ets` generates local preview HTML. The composer and stored drafts
 retain their original source; there is no Markdown-to-HTML sending path.
-Received rendering uses `math7:mathml:` and `math3:commonhtml:` for new attempts
-after removing the equation-count cap. Successful documents at the preceding
-`math6:mathml:` and `math2:commonhtml:` keys remain reusable; old failures can
-retry locally once. Input, per-expression and output-size limits remain.
+Received rendering uses `math8:mathml:` and `math4:commonhtml:` after adding
+selectable original equation source. Older generated documents are regenerated
+locally, without fetching mail. Transparent source overlays make native Copy
+include the original delimiters/TeX, while nonselectable glyphs retain visual
+layout. Both Markdown and HTML preserve the source; HTML entity decoding occurs
+once. Copy-source spans are excluded from a repeated HTML math pass. No page
+scripts or clipboard listeners are added. Input, per-expression and output-size
+limits remain, with no equation-count cap.

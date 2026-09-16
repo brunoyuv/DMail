@@ -27,5 +27,20 @@
     ]
   },
   "syntheticEquations": 96,
-  "nativeVisualTested": false
+  "nativeVisualTested": false,
+  "matepadInstallation": {
+    "device": "MatePad",
+    "model": "MRO-W00",
+    "versionName": "1.0.2",
+    "versionCode": 1000002,
+    "bundleName": "org.thunderbird.harmony.dev",
+    "upgradeOnly": true,
+    "storageIdentityPreserved": true,
+    "artifactHashVerified": true,
+    "hapSha256": "bacdbed71ea8f741906a90f0e8b670f9f2b251f0847422f0fed9f58fa6fbf254",
+    "productionLaunched": false,
+    "installedHashVerified": false,
+    "installedHashCheck": "Not attempted; prior OS reads denied",
+    "date": "2026-09-16"
+  }
 }
