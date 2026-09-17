@@ -194,6 +194,8 @@
       "name": "access_token",
       "value": "Access token"
     },
+    {"name": "imap_account_details_required", "value": "Enter your email account details before connecting: email address, IMAP server, login name, and password or app password."},
+    {"name": "jmap_account_details_required", "value": "Enter your email account’s JMAP server address and access token before connecting."},
     {
       "name": "connect_account",
       "value": "Connect"

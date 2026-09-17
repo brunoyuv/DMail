@@ -82,7 +82,7 @@ def add_notices(root, app, revision):
         f'D-Mail: independent AI-assisted HarmonyOS port/rework with OpenAI Codex.\n'
         f'Project source: {REPOSITORY}/tree/{revision}\n'
         'Project license: MPL-2.0; component licenses accompany this package.\n'
-        'The distribution ZIP includes the matching project source and upstream\n'
+        'The accompanying source distribution includes project source and upstream\n'
         'revision/hash manifests, dependency URLs and explicit port patches.\n')
     return legal
 
@@ -160,6 +160,7 @@ def main():
     parser.add_argument('--arch', choices=ARCHITECTURES, default='arm64')
     parser.add_argument('--appgallery', action='store_true',
                         help='Build an unsigned ARM64 APP with the registered AppGallery identity; release signing is still required')
+    parser.add_argument('--no-zip', action='store_true', help='Export standalone artifacts and source/notices in a directory, without a ZIP')
     args = parser.parse_args()
     if args.appgallery and args.arch != 'arm64':
         parser.error('AppGallery packaging requires ARM64')
@@ -201,7 +202,7 @@ cd "$DMAIL_RELEASE_PROJECT"
     app_package = app/f'build/outputs/default/{app.name}-default-unsigned.app'
     inspect_app(app_package, hap, expected)
     version = metadata['versionName']
-    if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+(?:-[a-zA-Z0-9.-]+)?', version):
+    if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+(?:[a-zA-Z][a-zA-Z0-9]*)?(?:-[a-zA-Z0-9.-]+)?', version):
         raise SystemExit('Version cannot be used as an artifact filename')
     variant = '-appgallery' if args.appgallery else ''
     name = f'D-Mail-{version}-{abi}{variant}-unsigned'
@@ -241,17 +242,22 @@ cd "$DMAIL_RELEASE_PROJECT"
             'are included. This build has not been installed or device-tested.\n')
         members = sorted(p for p in bundle.rglob('*') if p.is_file())
         (bundle/'SHA256SUMS').write_text(''.join(f'{sha(p.read_bytes())}  {p.relative_to(bundle)}\n' for p in members))
-        output = Path(temporary)/f'{name}.zip'
-        with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
-            for p in sorted(bundle.rglob('*')):
-                if p.is_file():
-                    archive.write(p, f'{name}/{p.relative_to(bundle)}')
-        checksum = sha(output.read_bytes())
-        output.replace(dist/output.name)
-        (dist/f'{name}.zip.sha256').write_text(f'{checksum}  {name}.zip\n')
+        if args.no_zip:
+            output = dist/name
+            shutil.copytree(bundle, output, dirs_exist_ok=True)
+            checksum = sha(app_package.read_bytes())
+        else:
+            output = Path(temporary)/f'{name}.zip'
+            with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
+                for p in sorted(bundle.rglob('*')):
+                    if p.is_file():
+                        archive.write(p, f'{name}/{p.relative_to(bundle)}')
+            checksum = sha(output.read_bytes())
+            output.replace(dist/output.name)
+            (dist/f'{name}.zip.sha256').write_text(f'{checksum}  {name}.zip\n')
         shutil.copy2(app_package, dist/f'{name}.app')
         (dist/f'{name}.app.sha256').write_text(f'{sha(app_package.read_bytes())}  {name}.app\n')
-    print(f'Release package: {dist/name}.zip')
+    print(f'Release artifacts: {dist/name if args.no_zip else dist/(name + ".zip")}')
     print(f'Unsigned APP: {dist/name}.app')
     print(f'SHA-256: {checksum}')
     print('Unsigned; no install, upload or GitHub release performed.')

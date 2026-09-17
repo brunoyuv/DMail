@@ -194,6 +194,8 @@
       "name": "access_token",
       "value": "访问令牌"
     },
+    {"name": "imap_account_details_required", "value": "请先填写电子邮件账号信息，再连接：邮箱地址、IMAP 服务器、登录名，以及密码或应用专用密码。"},
+    {"name": "jmap_account_details_required", "value": "请先填写电子邮件账号的 JMAP 服务器地址和访问令牌，再连接。"},
     {
       "name": "connect_account",
       "value": "连接"

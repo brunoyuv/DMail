@@ -298,10 +298,21 @@ export struct ConnectedMail {
     if (this.error === this.label('account_network_error')) { this.error = ''; }
   }
 
+  private connectionNotice(name: string): void {
+    this.getUIContext().showAlertDialog({ title: this.label('connect_account'), message: this.label(name),
+      confirm: { value: this.label('done'), action: () => {} } });
+  }
+
   private async probe(): Promise<void> {
     if (this.busy) { return; }
+    if (this.serverUrl.trim().length === 0 || this.token.length === 0 ||
+      (this.protocol === 'imap' && (this.username.trim().length === 0 || this.emailAddress.trim().length === 0))) {
+      this.connectionNotice(this.protocol === 'imap' ? 'imap_account_details_required' : 'jmap_account_details_required');
+      return;
+    }
+    if (!this.ready) { this.connectionNotice('account_storage_error'); return; }
     if (this.protocol === 'imap' && !validateEmailAddress(this.emailAddress.trim())) {
-      this.error = this.label('imap_email_invalid'); return;
+      this.connectionNotice('imap_email_invalid'); return;
     }
     const generation = ++this.generation;
     this.busy = true; this.error = ''; this.candidates = [];
@@ -2085,8 +2096,7 @@ export struct ConnectedMail {
             Text(this.label('discovery_smtp_edit')).fontSize(13).fontColor($r('app.color.mail_text_secondary')).width('100%')
           }
           Button(this.label('connect_account')).id('connect-account').width('100%')
-            .enabled(this.ready && !this.busy && this.serverUrl.trim().length > 0 && this.token.length > 0 &&
-              (this.protocol === 'jmap' || (this.username.trim().length > 0 && this.emailAddress.trim().length > 0)))
+            .backgroundColor($r('app.color.mail_primary_button')).fontColor(Color.White)
             .onClick(() => this.probe())
           ForEach(this.candidates, (candidate: JmapAccount) => {
             Button(candidate.name).width('100%').enabled(!this.busy).onClick(() => this.saveAccount(candidate))
