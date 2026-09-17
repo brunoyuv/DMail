@@ -11,7 +11,7 @@ the upstream work. The app uses its own generic mail icon.
 
 ## Status
 
-The current release is **1.0.3**. The full port is unfinished. Synthetic host
+The current release is **1.0.4**. The full port is unfinished. Synthetic host
 and native tests cover the implemented workflows; live-provider compatibility
 is not comprehensively verified.
 
@@ -36,7 +36,7 @@ background checking remains unresolved. No privately operated relay is required.
 JMAP has a native reader and message-action path; submission and full parity
 remain unfinished. See [background checking](docs/background-checking.md),
 [OAuth configuration](docs/browser-oauth.md) and the latest
-[release validation](docs/release-1.0.3.md).
+[release validation](docs/release-1.0.4.md).
 
 ## Markdown and equations
 
