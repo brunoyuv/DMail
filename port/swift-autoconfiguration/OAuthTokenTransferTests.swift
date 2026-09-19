@@ -12,7 +12,8 @@ private final class TokenProtocol: URLProtocol, @unchecked Sendable {
         // Observe the request at the actual URLSession boundary, not just its builder.
         let valid = request.httpMethod == "POST" && request.value(forHTTPHeaderField: "Accept") == "application/json" &&
             request.value(forHTTPHeaderField: "Cache-Control") == "no-store" && request.url?.query == nil
-        let status = valid && path != "/rejected" && !path.hasPrefix("/error-") ? 200 : 400
+        let status = !valid ? 400 : path.hasPrefix("/status-") ? Int(path.dropFirst("/status-".count))! :
+            path == "/rejected" || path.hasPrefix("/error-") ? 400 : 200
         let headers = path == "/declared-large" ? ["Content-Length": "65537"] : ["Content-Type": "application/json"]
         client!.urlProtocol(self, didReceive: HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: "HTTP/1.1", headerFields: headers)!, cacheStoragePolicy: .notAllowed)
         if path == "/stream-large" {
@@ -52,6 +53,17 @@ struct OAuthTokenTransferTests {
         }
         #expect(throws: OAuthTransferError.rejected) { try transfer("error-private-secret") }
         #expect(throws: OAuthTransferError.rejected) { try transfer("error-network") }
+    }
+    @Test func temporaryTokenFailuresDoNotRequestAnotherSignIn() {
+        for status in [429, 500, 502, 503, 504] {
+            // Even a token-shaped body must not be accepted on a failed HTTP response.
+            #expect(throws: OAuthTransferError.network) { try transfer("status-\(status)") }
+        }
+        for code in ["server_error", "temporarily_unavailable"] {
+            #expect(throws: OAuthTransferError.network) { try transfer("error-\(code)") }
+        }
+        #expect(throws: OAuthTransferError.rejected) { try transfer("status-401") }
+        #expect(throws: OAuthTransferError.invalid_grant) { try transfer("error-invalid_grant") }
     }
     @Test func oversizedTokenResponseRejectedWithAndWithoutLength() {
         #expect(throws: OAuthTransferError.responseTooLarge) { try transfer("declared-large") }

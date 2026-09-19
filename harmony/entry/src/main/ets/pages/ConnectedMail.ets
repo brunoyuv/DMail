@@ -5,13 +5,14 @@ import { common } from '@kit.AbilityKit';
 import { LengthMetrics, SymbolGlyphModifier } from '@kit.ArkUI';
 import { util } from '@kit.ArkTS';
 import { AccountStore, SavedAccount } from '../data/AccountStore';
-import { JmapService, JmapClientFactory, JmapCredentials, JmapAccount, JmapMailbox, JmapEmail, JmapError,
+import { JmapService, JmapClientFactory, JmapCredentials, JmapAccount, JmapMailbox, JmapEmail, JmapEmailPage, JmapError,
   JmapKeyword, canSetKeyword, archiveTarget, trashTarget, JmapArchiveUndo, MailAttachment, MailAttachmentData, JmapAddress, shallowCopyEmail } from '../mail/jmap/JmapClient';
 import { AttachmentFiles } from '../mail/attachments/AttachmentFiles';
 import { OutgoingAttachmentFiles } from '../mail/attachments/OutgoingAttachmentFiles';
 import { OutgoingAttachment, outgoingAttachmentReference, outgoingUUIDValid } from '../mail/attachments/OutgoingAttachmentModel';
 import { MailCache } from '../data/MailCache';
 import { PreparedMailDocument } from '../data/PreparedDocumentModel';
+import { InboxPrefetch } from '../mail/InboxPrefetch';
 import { MailMessageLoader, MailMessageLoadCancelled } from '../mail/MailMessageLoader';
 import { AutomaticMailWork, AutomaticMailWorkCancelled } from '../mail/AutomaticMailWork';
 import { MAILBOX_ROLE_REVISION } from '../data/MailCacheModel';
@@ -28,6 +29,7 @@ import { DeferredSave } from './DeferredSave';
 import { HtmlMail } from './HtmlMail';
 import { Settings } from './Settings';
 import { AppLanguage } from '../settings/AppLanguage';
+import { MailListItem } from './MailListItem';
 import { HarmonyMailClientFactory } from '../mail/HarmonyMailClientFactory';
 import { LoopbackBrowserSignIn } from '../mail/oauth/LoopbackBrowserSignIn';
 import { MailOAuthProvider } from '../mail/oauth/NativeBrowserOAuth';
@@ -37,9 +39,19 @@ import { MailNotificationService } from '../mail/notifications/MailNotificationS
 import { NotificationPlatform } from '../mail/notifications/NotificationPlatform';
 import { MailInboxUpdates } from '../mail/notifications/MailInboxUpdates';
 import { MailUnreadStatus } from '../mail/MailUnreadStatus';
-import { NotificationInboxPrompt } from './NotificationInboxPrompt';
 import { MailBannerNotice } from '../mail/notifications/MailBannerNotice';
 import { MailBadgeService } from '../mail/notifications/MailBadgeService';
+
+interface VisibleMailRows {
+  emails: JmapEmail[];
+  accountId: string;
+  mailboxId: string;
+  query: string;
+  unreadOnly: boolean;
+  conversationRevision: number;
+  operationRevision: number;
+  rows: JmapEmail[];
+}
 
 class TokenCredentials implements JmapCredentials {
   username?: string;
@@ -90,6 +102,7 @@ export struct ConnectedMail {
   private conversationLoadRevision: number = 0;
   private conversationIndexPending: boolean = false;
   private conversationRefreshes: Map<string, number> = new Map();
+  private visibleMailRows?: VisibleMailRows;
   @State private accounts: SavedAccount[] = [];
   @State serverUrl: string = '';
   @State token: string = '';
@@ -107,11 +120,11 @@ export struct ConnectedMail {
   @State @Watch('inboxChanged') private busy: boolean = false;
   @State private ready: boolean = false;
   @State private compact: boolean = false;
-  @State private rowContentHeights: Map<string, number> = new Map();
   @State private tablet: boolean = false;
   @State private readerCompact: boolean = false;
   @State private readerDetails: boolean = false;
   @State private error: ResourceStr = '';
+  @State private authenticationDetail: string = '';
   @State private account: SavedAccount = new SavedAccount();
   @State private query: string = '';
   @State private searchVisible: boolean = false;
@@ -151,6 +164,7 @@ export struct ConnectedMail {
   private paths: NavPathStack = new NavPathStack();
   private client: JmapService | null = null;
   private messageLoader?: MailMessageLoader;
+  private inboxPrefetch?: InboxPrefetch;
   private inboxVisible: boolean = true;
   @State private readerVisible: boolean = false;
   private readerScrollActive: boolean = false;
@@ -177,9 +191,11 @@ export struct ConnectedMail {
     this.pendingSwipeAction?.();
     this.inboxVisible = false; this.readerVisible = false;
     this.retireInboxInteraction(); this.readerScrollActive = false;
+    const readClosing = this.client?.closeReadSession?.() || Promise.resolve();
     this.active = false; ++this.generation; this.oauthFlow?.cancel(); this.token = ''; this.client = null;
-    this.messageLoader?.cancel(); AutomaticMailWork.cancelInactive();
-    const loading = this.messageLoader?.whenIdle() || Promise.resolve(); this.messageLoader = undefined;
+    this.messageLoader?.cancel(); this.inboxPrefetch?.pause(); AutomaticMailWork.cancelInactive();
+    const loading = Promise.all([this.messageLoader?.whenIdle(), this.inboxPrefetch?.close(), readClosing]);
+    this.messageLoader = undefined; this.inboxPrefetch = undefined;
     const generation = this.generation;
     // Flushing a composer can start a send. Observe its idle barrier only after
     // those saves finish, otherwise a previously idle snapshot closes the store
@@ -202,6 +218,9 @@ export struct ConnectedMail {
     try {
       await this.accountStore.open(this.getUIContext().getHostContext() as common.Context);
       this.messageLoader = new MailMessageLoader(this.accountStore);
+      this.inboxPrefetch = new InboxPrefetch(this.accountStore, () => this.active && this.ready &&
+        MailInboxUpdates.isForeground() && (this.inboxVisible || this.readerVisible) && !this.inboxBlocked() &&
+        !this.readerScrollActive && this.boxes.some(box => box.id === this.mailboxId && box.role === 'inbox'));
       const context = this.getUIContext().getHostContext()!;
       await AttachmentFiles.prune(context.filesDir).catch(() => {});
       await AttachmentFiles.prune(context.cacheDir).catch(() => {});
@@ -255,6 +274,9 @@ export struct ConnectedMail {
 
   private showError(error: Object): void {
     const code = (error as JmapError).code;
+    const stage = (error as JmapError).authenticationStage;
+    this.authenticationDetail = code === 'authenticationRequired' &&
+      (stage === 'credentials' || stage === 'server' || stage === 'refresh') ? `authenticationRequired/${stage}` : '';
     this.error = code === 'authenticationRequired' ? this.label('account_auth_error') :
       code === 'unsafeEndpoint' || code === 'untrustedApiOrigin' ? this.label('account_endpoint_error') :
       code === 'queryChanged' ? this.label('mailbox_changed') : this.label('account_network_error');
@@ -360,7 +382,7 @@ export struct ConnectedMail {
       if (generation === this.generation) {
         const code = (error as JmapError).code;
         this.error = code === 'cancelled' ? '' :
-          `${this.label(oauthFailureLabel(stage === 'oauth' ? flow.failureStage : stage))} (${oauthFailureCode(code)})`;
+          `${this.label(oauthFailureLabel(stage === 'oauth' ? flow.failureStage : stage))} (${oauthFailureCode(code, (error as JmapError).authenticationStage)})`;
       }
     } finally {
       if (this.oauthFlow === flow) { this.oauthFlow = undefined; this.oauthPending = false; }
@@ -411,7 +433,7 @@ export struct ConnectedMail {
       if (generation === this.generation) {
         const code = (error as JmapError).code;
         this.error = code === 'cancelled' ? '' :
-          `${this.label(oauthFailureLabel(stage === 'oauth' ? flow.failureStage : stage))} (${oauthFailureCode(code)})`;
+          `${this.label(oauthFailureLabel(stage === 'oauth' ? flow.failureStage : stage))} (${oauthFailureCode(code, (error as JmapError).authenticationStage)})`;
       }
     } finally {
       if (this.oauthFlow === flow) { this.oauthFlow = undefined; this.oauthPending = false; }
@@ -517,7 +539,8 @@ export struct ConnectedMail {
     this.busy = true; this.error = '';
     try {
       const notifications = await store.notificationSettings(accountId);
-      this.messageLoader?.cancel(); AutomaticMailWork.cancelInactive();
+      this.messageLoader?.cancel(); this.inboxPrefetch?.pause(); AutomaticMailWork.cancelInactive();
+      if (this.account.id === accountId) { this.client?.closeReadSession?.().catch(() => {}); }
       await store.remove(accountId);
       // The requested removal and its original notification cleanup survive
       // navigation; only the originating view may apply the resulting state.
@@ -545,8 +568,9 @@ export struct ConnectedMail {
   }
 
   private async openAccount(account: SavedAccount, openInbox: boolean = false, refreshInbox: boolean = false): Promise<void> {
-    this.messageLoader?.cancel(); AutomaticMailWork.cancelInactive();
+    this.messageLoader?.cancel(); this.inboxPrefetch?.pause(); AutomaticMailWork.cancelInactive();
     if (this.paths.getAllPathName().includes('compose')) { return; }
+    this.client?.closeReadSession?.().catch(() => {});
     this.pendingSwipeAction?.();
     ++this.generation; ++this.mailboxRefreshRevision; this.busy = false; this.mailboxRefreshActive = false; this.refreshing = false; this.boxRolesCurrent = false;
     this.resetInboxScroll();
@@ -679,7 +703,7 @@ export struct ConnectedMail {
   }
 
   private async openBox(box: JmapMailbox, preferCache: boolean = true): Promise<void> {
-    this.messageLoader?.cancel(); AutomaticMailWork.cancelInactive();
+    this.messageLoader?.cancel(); this.inboxPrefetch?.pause(); AutomaticMailWork.cancelInactive();
     this.pendingSwipeAction?.();
     ++this.generation; ++this.mailboxRefreshRevision; this.busy = false; this.mailboxRefreshActive = false; this.refreshing = false;
     if (this.inboxTimer !== -1) { clearTimeout(this.inboxTimer); this.inboxTimer = -1; }
@@ -728,6 +752,13 @@ export struct ConnectedMail {
     const foreground = MailInboxUpdates.isForeground();
     if (!foreground && this.unreadForeground === true) {
       this.retireInboxInteraction(); this.readerScrollActive = false; this.messageLoader?.cancel();
+      this.client?.closeReadSession?.().catch(() => {});
+    }
+    if (this.inboxPrefetch) {
+      if (this.client && this.account.id && this.boxes.some(box => box.id === this.mailboxId && box.role === 'inbox')) {
+        this.inboxPrefetch.update(this.client, this.account, this.mailboxId, this.emails, this.nextPosition,
+          this.queryState, this.label('show_quoted_text'), this.label('hide_quoted_text'));
+      } else { this.inboxPrefetch.clear(); }
     }
     AutomaticMailWork.cancelInactive();
     if (foreground !== this.unreadForeground) {
@@ -791,14 +822,9 @@ export struct ConnectedMail {
         const arrivals = cached?.emails.length === 0 ? page.emails : firstKnown > 0 ? page.emails.slice(0, firstKnown) : [];
         const newUnread = cached !== null && arrivals.some(mail => !known.has(mail.id) &&
           !MailOperations.overlay(account.id, mail).keywords.includes('$seen'));
-        const ids = new Set(page.emails.map(mail => mail.id));
-        const previous = cached?.emails || this.emails;
-        const tail = page.nextPosition === null || !previous.some(mail => ids.has(mail.id)) ? [] :
-          previous.filter(mail => !ids.has(mail.id));
-        const messages = page.emails.concat(tail);
-        // Keep the downloaded tail but restart paging from the verified server
-        // head. Subsequent Load more skips duplicate-only pages without gaps.
-        await this.accountStore.mail.saveView(account.id, mailboxId, messages, page.nextPosition, page.queryState, mutationRevision);
+        const merged = this.refreshedPage(page, cached?.emails || this.emails,
+          cached?.nextPosition ?? null, cached?.queryState);
+        await this.accountStore.mail.saveView(account.id, mailboxId, merged.emails, merged.nextPosition, merged.queryState, mutationRevision, page.emails);
         if (!current()) { return false; }
         downloaded = true;
         this.inboxAcknowledged.set(key, requested); this.inboxCachedUpdates.add(key);
@@ -853,6 +879,19 @@ export struct ConnectedMail {
     } finally { this.inboxFetching.delete(key); }
   }
 
+  private refreshedPage(page: JmapEmailPage, previous: JmapEmail[], nextPosition: number | null,
+    queryState?: string): JmapEmailPage {
+    // Refresh adds headers without discarding downloaded entries. The cache
+    // applies seven-day retention and explicit mailbox changes before display.
+    const ids = new Set(page.emails.map(mail => mail.id));
+    return { accountId: page.accountId, queryState: page.queryState, emailState: page.emailState,
+      position: page.position, total: page.total, notFound: page.notFound,
+      emails: page.emails.concat(previous.filter(mail => !ids.has(mail.id))),
+      // Keep the reached position (including end-of-mailbox) only while the
+      // server confirms the same snapshot. Changed snapshots restart safely.
+      nextPosition: page.nextPosition !== null && queryState !== undefined && queryState === page.queryState ? nextPosition : page.nextPosition };
+  }
+
   private async loadPage(refresh: boolean, preferCache: boolean = false): Promise<void> {
     const client = this.client;
     if (!client || this.busy || (!refresh && this.nextPosition === null)) { return; }
@@ -885,13 +924,15 @@ export struct ConnectedMail {
         if (mailboxId.startsWith('local_')) { return; }
       }
       const revision = MailCache.mutationRevision();
-      const previous = refresh ? [] : this.emails;
+      const previous = this.emails;
       const previousIds = new Set(previous.map(mail => mail.id));
       const previewCache = await this.accountStore.mail.view(account.id, mailboxId, true, false).catch(() => null);
       if (!this.active || !MailInboxUpdates.isForeground() || generation !== this.generation || this.account.id !== account.id || this.mailboxId !== mailboxId) { return; }
       const previewKnownIds = (previewCache?.emails || previous).filter(mail => mail.preview.trim().length > 0).slice(0, 500).map(mail => mail.id);
       let page = await client.emailPage(account.serverId, mailboxId,
         refresh ? 0 : this.nextPosition as number, refresh ? undefined : this.queryState, previewKnownIds);
+      const refreshedHeaders = page.emails;
+      if (refresh) { page = this.refreshedPage(page, previous, this.nextPosition, this.queryState); }
       // A quiet prepend preserves the old downloaded tail. Walk any pages that
       // consist entirely of that tail instead of advancing past unseen rows.
       let skippedPages = 0;
@@ -900,12 +941,16 @@ export struct ConnectedMail {
         page = await client.emailPage(account.serverId, mailboxId, page.nextPosition, page.queryState, previewKnownIds); ++skippedPages;
       }
       if (!this.active || generation !== this.generation || this.account.id !== account.id || this.mailboxId !== mailboxId) { return; }
-      let messages = previous.concat(page.emails.filter(mail => !previousIds.has(mail.id)));
+      let messages = refresh ? page.emails : previous.concat(page.emails.filter(mail => !previousIds.has(mail.id)));
       let stateDirty = false;
       try {
-        await this.accountStore.mail.saveView(account.id, mailboxId, messages, page.nextPosition, page.queryState, revision);
+        await this.accountStore.mail.saveView(account.id, mailboxId, messages, page.nextPosition, page.queryState, revision,
+          refresh ? refreshedHeaders : page.emails);
         const persisted = await this.accountStore.mail.view(account.id, mailboxId, true, false);
-        if (persisted) { messages = persisted.emails; stateDirty = persisted.stateDirty === true; }
+        if (persisted) {
+          messages = persisted.emails; stateDirty = persisted.stateDirty === true;
+          page.nextPosition = persisted.nextPosition ?? null;
+        }
       } catch (_) { if (generation === this.generation) { this.cacheWarning = true; } }
       if (generation === this.generation) {
         ++this.inboxViewRevision;
@@ -948,7 +993,7 @@ export struct ConnectedMail {
     const account = this.account, client = this.client, loader = this.messageLoader;
     const readerOperationRevision = this.operationRevision;
     if (!client || !loader) { return; }
-    loader.cancel();
+    loader.cancel(); this.inboxPrefetch?.pause();
     const generation = ++this.generation;
     const current = (): boolean => this.active && generation === this.generation && this.account.id === account.id &&
       MailInboxUpdates.isForeground();
@@ -1044,7 +1089,8 @@ export struct ConnectedMail {
       // A superseded list response must not overwrite a newer Inbox/Sent view.
       // Confirmed message mutations keep their separate original-account path.
       if (!this.active || generation !== this.generation || this.account.id !== account.id || this.mailboxId !== mailboxId) { return; }
-      await this.saveCache(this.accountStore.mail.saveView(account.id, related.id, page.emails, page.nextPosition, page.queryState, revision), generation);
+      const merged = this.refreshedPage(page, cached?.emails || [], cached?.nextPosition ?? null, cached?.queryState);
+      await this.saveCache(this.accountStore.mail.saveView(account.id, related.id, merged.emails, merged.nextPosition, merged.queryState, revision, page.emails), generation);
       await this.loadConversationIndex(account.id, generation);
     } catch (_) { /* Keep the previous downloaded conversation when offline. */ }
     finally {
@@ -1060,8 +1106,11 @@ export struct ConnectedMail {
   }
 
   private allows(keyword: JmapKeyword): boolean {
-    return !this.busy && this.savedCopyAt === 0 && !this.refreshRequired && !this.readOnly && this.selected !== null &&
-      canSetKeyword(this.selected, this.boxes, keyword);
+    // Cached IMAP bodies come from EXAMINE, so their false permission bits
+    // describe that read-only session, not the user's ability to mark mail.
+    // Use the same gate as an explicit row action; native SELECT rechecks
+    // permissions and UIDVALIDITY before STORE. JMAP still checks all rights.
+    return !this.busy && this.selected !== null && this.rowAllows(this.selected, keyword);
   }
 
   private applyMessage(mail: JmapEmail | null): void {
@@ -1170,7 +1219,7 @@ export struct ConnectedMail {
     this.pendingSwipeAction?.();
     this.oauthFlow?.cancel(); this.oauthPending = false;
     ++this.generation; ++this.mailboxRefreshRevision; this.mailboxRefreshActive = false; this.refreshing = false;
-    this.busy = false; this.readerScrollActive = false; this.messageLoader?.cancel(); AutomaticMailWork.cancelInactive();
+    this.busy = false; this.readerScrollActive = false; this.messageLoader?.cancel(); this.inboxPrefetch?.pause(); AutomaticMailWork.cancelInactive();
     this.error = ''; this.attachmentBusy = ''; return false;
   }
 
@@ -1319,6 +1368,10 @@ export struct ConnectedMail {
     if (showActivity && this.busy) { LoadingProgress().id('connection-loading').width(32).height(32).margin(12) }
     if (this.error !== '') {
       Text(this.error).id('connection-error').fontSize(15).fontColor($r('app.color.mail_text_primary')).padding(16)
+      if (this.error === this.label('account_auth_error') && this.authenticationDetail !== '') {
+        Text(this.authenticationDetail).id('authentication-detail').fontSize(12)
+          .fontColor($r('app.color.mail_text_secondary')).padding({ left: 16, right: 16, bottom: 8 })
+      }
       if (this.error === this.label('account_auth_error') && this.account.authentication === 'oauth' &&
         this.account.sessionUrl === RegisteredMailOAuth.incoming('google') && !RegisteredMailOAuth.googleBrowserSignInEnabled) {
         Text(this.label('gmail_app_password_help')).id('gmail-auth-app-password-help')
@@ -1625,8 +1678,13 @@ export struct ConnectedMail {
   }
 
   private visibleEmails(): JmapEmail[] {
-    this.conversationRevision;
     const query = this.query.trim().toLocaleLowerCase();
+    const cached = this.visibleMailRows;
+    if (cached && cached.emails === this.emails && cached.accountId === this.account.id &&
+      cached.mailboxId === this.mailboxId && cached.query === query && cached.unreadOnly === this.unreadOnly &&
+      cached.conversationRevision === this.conversationRevision && cached.operationRevision === this.operationRevision) {
+      return cached.rows;
+    }
     const visited = new Set<string>();
     const result: JmapEmail[] = [];
     const messages = this.emails.map(mail => MailOperations.overlay(this.account.id, mail))
@@ -1668,6 +1726,9 @@ export struct ConnectedMail {
       // its newest already-read member appears forever despite repeated visits.
       result.push(shown);
     }
+    this.visibleMailRows = { emails: this.emails, accountId: this.account.id, mailboxId: this.mailboxId,
+      query, unreadOnly: this.unreadOnly, conversationRevision: this.conversationRevision,
+      operationRevision: this.operationRevision, rows: result };
     return result;
   }
 
@@ -1742,105 +1803,6 @@ export struct ConnectedMail {
   }
 
   @Builder
-  private swipeRead(mail: JmapEmail) {
-    Button({ type: ButtonType.Normal }) {
-      Column({ space: 6 }) {
-        SymbolGlyph($r('sys.symbol.envelope')).fontSize(24).fontColor([Color.White])
-        Text(this.label(mail.keywords.includes('$seen') ? 'mark_unread' : 'mark_read')).fontSize(13).fontColor(Color.White).maxLines(2).textAlign(TextAlign.Center)
-      }.width('100%').height('100%').justifyContent(FlexAlign.Center).padding(8)
-    }.id(`swipe-read-${mail.id}`).width(88)
-      .height(Math.max(44, this.rowContentHeights.get(`${this.account.id}:${mail.id}`) || 0))
-      .padding(0).borderRadius(0).backgroundColor($r('app.color.mail_accent'))
-      .responseRegion({ x: 0, y: 0, width: '100%', height: '100%' })
-      .enabled(this.rowAllows(mail, '$seen')).onClick(() => this.rowKeyword(mail, '$seen'))
-  }
-
-  @Builder
-  private swipeMore(mail: JmapEmail) {
-    Row() {
-      Button({ type: ButtonType.Normal }) {
-        Column({ space: 6 }) {
-          SymbolGlyph(mail.keywords.includes('$flagged') ? $r('sys.symbol.star_fill') : $r('sys.symbol.star')).fontSize(24).fontColor([Color.White])
-          Text(this.label(mail.keywords.includes('$flagged') ? 'unstar' : 'star')).fontSize(13).fontColor(Color.White).maxLines(2)
-        }.width('100%').height('100%').justifyContent(FlexAlign.Center).padding(8)
-      }.id(`swipe-star-${mail.id}`).width(76)
-        .height(Math.max(44, this.rowContentHeights.get(`${this.account.id}:${mail.id}`) || 0))
-        .padding(0).borderRadius(0).backgroundColor('#A66B00')
-        .responseRegion({ x: 0, y: 0, width: '100%', height: '100%' })
-        .enabled(this.rowAllows(mail, '$flagged')).onClick(() => this.rowKeyword(mail, '$flagged'))
-      Button({ type: ButtonType.Normal }) {
-        Column({ space: 6 }) {
-          SymbolGlyph(this.mailAction === 'delete' ? $r('sys.symbol.trash') : $r('sys.symbol.folder')).fontSize(24).fontColor([Color.White])
-          Text(this.label(this.mailAction)).fontSize(13).fontColor(Color.White).maxLines(2)
-        }.width('100%').height('100%').justifyContent(FlexAlign.Center).padding(8)
-      }.id(`swipe-archive-${mail.id}`).width(76)
-        .height(Math.max(44, this.rowContentHeights.get(`${this.account.id}:${mail.id}`) || 0))
-        .padding(0).borderRadius(0).backgroundColor(this.mailAction === 'delete' ? '#B3261E' : '#46656A')
-        .responseRegion({ x: 0, y: 0, width: '100%', height: '100%' })
-        .enabled(this.rowArchiveAllows(mail))
-        .onClick(() => this.archive(mail))
-    }.height(Math.max(44, this.rowContentHeights.get(`${this.account.id}:${mail.id}`) || 0))
-  }
-
-  @Builder
-  private unreadMarker(mail: JmapEmail) {
-    if (!mail.keywords.includes('$seen')) {
-      Row().id(`unread-marker-${mail.id}`).width(3)
-        .height(Math.max(0, (this.rowContentHeights.get(`${this.account.id}:${mail.id}`) || 0) - (this.compact ? 24 : 32)))
-        .borderRadius(2).backgroundColor($r('app.color.mail_accent'))
-        .position({ x: 0, y: this.compact ? 12 : 16 })
-        .hitTestBehavior(HitTestMode.None)
-    }
-  }
-
-  @Builder
-  private mailRow(mail: JmapEmail) {
-    Stack({ alignContent: Alignment.TopStart }) {
-      Column({ space: 4 }) {
-        Row({ space: 12 }) {
-          Text(mail.from.map(address => address.name || address.email).join(', '))
-            .fontSize(16).lineHeight(19.2).fontWeight((!mail.keywords.includes('$seen')) ? FontWeight.Bold : FontWeight.Medium)
-            .fontColor($r('app.color.mail_text_primary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-            .layoutWeight(1)
-          Text(this.dateLabel(mail.receivedAt)).fontSize(12).fontColor($r('app.color.mail_text_secondary'))
-        }
-        Row({ space: 8 }) {
-          Text(mail.subject || this.label('no_subject')).fontSize(16).lineHeight(21.6)
-            .fontWeight((!mail.keywords.includes('$seen')) ? FontWeight.Bold : FontWeight.Normal).layoutWeight(1)
-            .fontColor($r('app.color.mail_text_primary')).maxLines(1).textOverflow({ overflow: TextOverflow.Ellipsis })
-          if (this.conversationCount(mail) > 1) {
-            Text(`${this.conversationCount(mail)}`).id(`conversation-count-${mail.id}`).fontSize(12)
-              .fontColor($r('app.color.mail_text_secondary')).padding({ left: 7, right: 7, top: 2, bottom: 2 })
-              .backgroundColor($r('app.color.mail_surface')).borderRadius(12)
-          }
-        }.width('100%')
-        Row({ space: 6 }) {
-          Text(mail.preview.replace(/\s+/g, ' ')).fontSize(14).lineHeight(20.3).fontColor($r('app.color.mail_text_secondary'))
-            .maxLines(2).textOverflow({ overflow: TextOverflow.Ellipsis }).layoutWeight(1)
-          if (mail.keywords.includes('$flagged')) {
-            SymbolGlyph($r('sys.symbol.star')).id(`remote-star-${mail.id}`).fontSize(14).fontColor([$r('app.color.mail_accent')]).margin({ top: 3 })
-          }
-        }.alignItems(VerticalAlign.Top)
-      }.alignItems(HorizontalAlign.Start).width('100%')
-        .padding({ top: this.compact ? 12 : 16, bottom: this.compact ? 12 : 16, left: this.compact ? 16 : 20, right: this.compact ? 16 : 20 })
-        .onAreaChange((_, area) => {
-          const key = `${this.account.id}:${mail.id}`;
-          const height = Number(area.height);
-          if (height > 0 && Math.abs((this.rowContentHeights.get(key) || 0) - height) > 0.5) {
-            const measured = new Map(this.rowContentHeights);
-            measured.set(key, height); this.rowContentHeights = measured;
-          }
-        })
-      // A finite height measured from the text cannot expand the row to the
-      // list viewport, unlike percentage sizing in an intrinsically sized Stack.
-      this.unreadMarker(mail)
-    }.width('100%')
-    .onClick(() => { if (!this.swipeClosing) { this.read(mail); } })
-    .accessibilityGroup(true)
-    .accessibilityText(`${(!mail.keywords.includes('$seen')) ? `${this.label('unread')}. ` : ''}${mail.from.map(address => address.name || address.email).join(', ')}. ${mail.subject}. ${mail.keywords.includes('$flagged') ? this.label('starred') : ''}`)
-  }
-
-  @Builder
   private accountPickerItem(account: SavedAccount) {
     Row({ space: 12 }) {
       Text(account.emailAddress || account.name).fontSize(16).layoutWeight(1)
@@ -1865,7 +1827,6 @@ export struct ConnectedMail {
   }
 
   private resetInboxScroll(): void {
-    this.rowContentHeights = new Map();
     this.searchInteracted = false; this.searchVisible = false;
     this.inboxPullActive = false;
     this.inboxFirstVisible = 0; ++this.inboxScrollRevision;
@@ -1927,7 +1888,6 @@ export struct ConnectedMail {
           // Native Refresh owns pull feedback; transient activity must not add
           // another spinner or shift the list above the user's finger.
           this.status(false)
-          NotificationInboxPrompt({ accountId: this.account.id, store: this.accountStore })
           Refresh({ refreshing: $$this.refreshing }) {
             List({ scroller: this.mailScroller }) {
               if (this.busy && !this.mailboxRefreshActive && !this.refreshing && this.emails.length === 0) {
@@ -1937,15 +1897,20 @@ export struct ConnectedMail {
                 }
               }
               ForEach(this.visibleEmails(), (mail: JmapEmail) => {
-                ListItem() { this.mailRow(mail) }
-                  .id(`remote-mail-${mail.id}`).enabled(this.client !== null)
-                  .swipeAction({ start: this.swipeRead.bind(this, mail), end: this.swipeMore.bind(this, mail), edgeEffect: SwipeEdgeEffect.None,
-                    onOffsetChange: (offset: number) => {
-                      if (!this.inboxVisible || !MailInboxUpdates.isForeground()) { return; }
-                      const key = `${this.account.id}:${mail.id}`;
-                      if (Math.abs(offset) > 0.5) { this.inboxSwipes.add(key); }
-                      else { this.inboxSwipes.delete(key); this.inboxChanged(); }
-                    } })
+                MailListItem({ mail, count: this.conversationCount(mail), compact: this.compact,
+                  connected: this.client !== null, readAllowed: this.rowAllows(mail, '$seen'),
+                  starAllowed: this.rowAllows(mail, '$flagged'), archiveAllowed: this.rowArchiveAllows(mail),
+                  mailAction: this.mailAction,
+                  onReadFlag: () => { this.rowKeyword(mail, '$seen'); },
+                  onStar: () => { this.rowKeyword(mail, '$flagged'); },
+                  onArchive: () => { this.archive(mail); },
+                  onOpen: () => { if (!this.swipeClosing) { this.read(mail); } },
+                  onSwipeOffset: (offset: number) => {
+                    if (!this.inboxVisible || !MailInboxUpdates.isForeground()) { return; }
+                    const key = `${this.account.id}:${mail.id}`;
+                    if (Math.abs(offset) > 0.5) { this.inboxSwipes.add(key); }
+                    else { this.inboxSwipes.delete(key); this.inboxChanged(); }
+                  } })
               }, (mail: JmapEmail) => this.mailRowKey(mail))
               if (this.mailboxId !== '' && this.nextPosition !== null) {
                 ListItem() { Button(this.label('load_more')).onClick(() => this.loadPage(false)).enabled(!this.busy).margin(20) }

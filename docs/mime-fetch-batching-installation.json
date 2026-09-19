@@ -1,0 +1,20 @@
+{
+  "device": "Pura X",
+  "model": "VDE-AL00",
+  "bundleName": "org.thunderbird.harmony.dev",
+  "previousVersionName": "1.0.4",
+  "previousVersionCode": 1000004,
+  "versionName": "1.0.4",
+  "versionCode": 1000004,
+  "upgradeOnly": true,
+  "storageIdentityPreserved": true,
+  "artifactHashVerified": true,
+  "hapSha256": "2f865c2e2442bc431b552afce9d49c5a0956d69fa9a0fcf875cff3edc2a5f39f",
+  "productionLaunched": false,
+  "productionProcessAbsentAfterInstall": true,
+  "installedHashVerified": false,
+  "installedHashCheck": "Not attempted; prior OS reads denied",
+  "sourceBranch": "main",
+  "sourceBaseRevision": "c21edcea3143b97c8e7818bc983b00125b18cf4e",
+  "scope": "Bounded MIME fetch batching, including prior greeting/auth/SMTP fixes; 1.0.4-mime-batching"
+}

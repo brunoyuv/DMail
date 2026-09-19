@@ -122,9 +122,7 @@ class CheckEnvironment implements NotificationEnvironment {
       }
       if (this.cancelled() || !await this.mayCheck(settings)) { return; }
       if (page) {
-        const ids = new Set(page.emails.map(mail => mail.id));
-        const tail = page.nextPosition !== null && cached?.emails.some(mail => ids.has(mail.id)) ? cached.emails.filter(mail => !ids.has(mail.id)) : [];
-        await this.store.mail.saveView(account.id, check.mailboxId, page.emails.concat(tail), page.nextPosition, page.queryState, revision);
+        await this.store.mail.saveView(account.id, check.mailboxId, page.emails, page.nextPosition, page.queryState, revision);
       }
     } catch (_) { /* Header caching cannot discard a successful bounded arrival check. */ }
   }

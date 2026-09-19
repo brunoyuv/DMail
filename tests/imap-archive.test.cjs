@@ -9,6 +9,7 @@ function load(file, dependencies, globals = {}) {
     compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS }
   }).outputText;
   new Function('require', 'module', 'exports', ...Object.keys(globals), source)(name => {
+    if (name === '@kit.ArkTS' && !(name in dependencies)) return { util: { generateRandomUUID: () => require('node:crypto').randomUUID() } };
     assert.ok(name in dependencies, `Unexpected dependency: ${name}`); return dependencies[name];
   }, module, module.exports, ...Object.values(globals));
   return module.exports;

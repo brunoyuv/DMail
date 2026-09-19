@@ -12,6 +12,7 @@ function model(file) {
 const { RegisteredMailOAuth } = model('harmony/entry/src/main/ets/mail/oauth/RegisteredMailOAuth.ets');
 const { oauthFailureLabel, oauthFailureCode } = model('harmony/entry/src/main/ets/mail/oauth/OAuthFailure.ets');
 const source = fs.readFileSync('harmony/entry/src/main/ets/pages/ConnectedMail.ets', 'utf8');
+const accountSource = fs.readFileSync('harmony/entry/src/main/ets/data/AccountStore.ets', 'utf8');
 const methods = ['signIn', 'reconnectProvider', 'reconnectOAuth', 'cancelSignIn'].map(name => {
   const found = source.match(new RegExp(`  private (?:async )?${name}\\([^\\n]*[\\s\\S]*?\\n  }`));
   if (name === 'cancelSignIn') return source.match(/  private cancelSignIn\(\): void \{[^\n]*\}/)[0];
@@ -19,6 +20,39 @@ const methods = ['signIn', 'reconnectProvider', 'reconnectOAuth', 'cancelSignIn'
 }).join('\n');
 class JmapError extends Error { constructor(code) { super(code); this.code = code; } }
 class TokenCredentials { constructor(token, scheme, username) { this.token = token; this.scheme = scheme; this.username = username; } }
+
+test('Transient refresh failure preserves credentials and uses network UI; rejected credentials still request reconnect', async () => {
+  const refresh = accountSource.match(/  private async refreshOAuth\([^\n]*[\s\S]*?\n  }/)[0];
+  const showError = source.match(/  private showError\([^\n]*[\s\S]*?\n  }/)[0];
+  for (const [code, label] of [['network', 'account_network_error'], ['invalid_grant', 'account_auth_error']]) {
+    const account = { id: 'synthetic-account', username: 'synthetic@example.test', sessionUrl: 'imaps://synthetic.test:993' };
+    const login = { username: account.username, registration: { provider: 'microsoft' },
+      tokens: { accessToken: 'synthetic-expired', refreshToken: 'synthetic-refresh', expiresAt: 1 } };
+    const original = structuredClone(login), state = { requests: 0, released: 0, closed: 0 };
+    const key = { open: async envelope => { assert.equal(envelope, 'unchanged-envelope'); return JSON.stringify(login); },
+      seal: async () => assert.fail('A failed refresh must not replace saved credentials'), close: () => state.closed++ };
+    const Host = new Function('util', 'OAuthSecretBox', 'RegisteredMailOAuth', 'JmapError', compile(`class Host { ${refresh}\n${showError} }; return Host;`))(
+      { generateRandomUUID: () => 'synthetic-owner' }, { retain: async () => key },
+      { valid: value => value.username === account.username, incoming: () => account.sessionUrl }, JmapError);
+    const host = Object.assign(new Host(), {
+      oauthAlias: () => 'synthetic-alias', oauthEnvelope: async () => 'unchanged-envelope',
+      acquireRefreshLease: async () => true,
+      releaseRefreshLease: async (id, owner) => { assert.equal(id, account.id); assert.equal(owner, 'synthetic-owner'); state.released++; },
+      enqueue: async () => assert.fail('A failed refresh must not write credentials'),
+      oauthService: { refresh: async () => { state.requests++; throw Object.assign(new Error('private provider detail'), { code }); } },
+      label: key => key, error: ''
+    });
+    await assert.rejects(host.refreshOAuth(account, login, 'unchanged-envelope'), error => {
+      host.showError(error);
+      assert.equal(host.error, label);
+      assert.ok(!error.message.includes('private'));
+      return true;
+    });
+    assert.deepEqual(login, original);
+    assert.deepEqual(state, { requests: 1, released: 1, closed: 1 });
+  }
+});
+
 function fixture(googleBrowserSignInEnabled = true) {
   // Exercise the retained experimental path without changing the shipping default.
   const policy = Object.assign(Object.create(RegisteredMailOAuth), { googleBrowserSignInEnabled });

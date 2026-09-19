@@ -7,6 +7,14 @@ import NIO
 import NIOSSL
 import HarmonyLogging
 
+private func imapTraceError(_ error: any Error) -> any Error {
+    if let stage = error as? ImapAuthenticationStage {
+        if stage == .server { return AuthenticationFailure.rejected }
+        return ImapFailure.authenticationRequired
+    }
+    return error
+}
+
 private struct Epoch: Codable, Equatable {
     let validity: UInt32, next: UInt32, count: Int
     init(_ status: IMAP.Mailbox.Status) throws {
@@ -56,17 +64,17 @@ struct ImapConnection: Sendable {
             guard let login = input.username, !login.isEmpty, login.utf8.count <= 512,
                   !login.unicodeScalars.contains(where: { $0.value < 32 || $0.value == 127 }),
                   !token.isEmpty, token.utf8.count <= 32768, token.utf8.allSatisfy({ $0 > 32 && $0 < 127 })
-            else { throw ImapFailure.authenticationRequired }
+            else { throw ImapAuthenticationStage.credentials }
             username = login; password = ""; accessToken = token
             return
         }
         accessToken = nil
         guard input.authorization.hasPrefix("Basic "), input.authorization.utf8.count <= 4096,
               let bytes = Data(base64Encoded: String(input.authorization.dropFirst(6))),
-              let credentials = String(data: bytes, encoding: .utf8), let separator = credentials.firstIndex(of: ":") else { throw ImapFailure.authenticationRequired }
+              let credentials = String(data: bytes, encoding: .utf8), let separator = credentials.firstIndex(of: ":") else { throw ImapAuthenticationStage.credentials }
         username = String(credentials[..<separator]); password = String(credentials[credentials.index(after: separator)...])
         guard !username.isEmpty, !password.isEmpty, username.utf8.count <= 512, password.utf8.count <= 1024,
-              !credentials.contains("\0"), !credentials.contains("\r"), !credentials.contains("\n") else { throw ImapFailure.authenticationRequired }
+              !credentials.contains("\0"), !credentials.contains("\r"), !credentials.contains("\n") else { throw ImapAuthenticationStage.credentials }
     }
 }
 private func bodyPreview(_ body: EmailBody?) -> String {
@@ -110,10 +118,11 @@ private func email(_ message: IMAP.Message, mailbox: String, epoch: Epoch, inclu
                 if unconfirmedEmpty || (source?.part.data.isEmpty == true && readable?.partial == true) { throw MIME.MIMEError.dataNotFound }
                 body = try EmailBody(body: source)
             }
-            catch { failed = true }
+            catch { IMAP.MailDownloadTrace.current?.mark(.decode, error: error); failed = true }
         }
     }
     if includeBody, readable?.partial == true, body?.text == nil, body?.html(.none) == nil { failed = true }
+    IMAP.MailDownloadTrace.current?.mark(.decode, values: [body?.text?.utf8.count ?? -1, body?.html(.none)?.utf8.count ?? -1, failed ? 1 : 0, readable?.partial == true ? 1 : 0])
     let rendered = body?.renderedHTML()
     let html = rendered?.html
     let text = body?.text
@@ -169,9 +178,17 @@ private func samplePreviews(_ messages: IMAP.MessageSet, client: IMAPClient, mai
         let ids = UIDSet(set: .init(group.map { .init($0.uid...$0.uid) }))!
         let fetched: IMAP.MessageSet
         do {
+            IMAP.MailDownloadTrace.current?.mark(.preview)
             fetched = try await client.fetch(uid: ids, attributes: [.uid,
                 .bodySection(peek: true, section, 0...UInt32(IMAP.PreviewSample.byteLimit - 1))], timeout: 1)
-        } catch { try Task.checkCancellation(); return (previews, true) }
+        } catch {
+            IMAP.MailDownloadTrace.current?.mark(.previewFailed, error: error)
+            try Task.checkCancellation()
+            // Header success survives an optional preview failure, but the
+            // failed exchange must finish closing before pool reuse is decided.
+            try? await client.shutdown()
+            return (previews, true)
+        }
         // Ignore unrequested/duplicate UIDs and oversized or absent literals.
         // Optional samples cannot replace a verified header or be saved as a body.
         var duplicates = Set<UInt32>(), seen = Set<UInt32>()
@@ -182,7 +199,8 @@ private func samplePreviews(_ messages: IMAP.MessageSet, client: IMAPClient, mai
                   let bytes = value.bodySections[section] else { continue }
             var decoded: EmailBody?
             for source in sample.candidates(bytes) {
-                if let body = try? EmailBody(body: MIME.Body(source)) { decoded = body; break }
+                do { decoded = try EmailBody(body: MIME.Body(source)); break }
+                catch { IMAP.MailDownloadTrace.current?.mark(.previewFailed, error: error, values: [source.count]) }
             }
             guard let body = decoded else { continue }
             let text = bodyPreview(body)
@@ -201,7 +219,7 @@ private func perform(_ input: ImapRequest) async throws -> ImapReply {
         return ImapReply(state: "closed")
     }
     if let id = input.syncSessionId {
-        guard input.operation == "readEmail", UUID(uuidString: id) != nil else { throw ImapFailure.invalidArgument }
+        guard ["readEmail", "emailPage"].contains(input.operation), UUID(uuidString: id) != nil else { throw ImapFailure.invalidArgument }
     }
     if input.operation == "stopInboxWatch" {
         guard let id = input.watchId, UUID(uuidString: id) != nil else { throw ImapFailure.invalidArgument }
@@ -241,7 +259,7 @@ private func perform(_ input: ImapRequest) async throws -> ImapReply {
         } catch let error as IMAP.InboxWatchError {
             switch error {
             case .invalidArgument: throw ImapFailure.invalidArgument
-            case .authenticationRequired: throw ImapFailure.authenticationRequired
+            case .authenticationRequired: throw ImapAuthenticationStage.server
             case .certificate: throw ImapFailure.certificate
             case .network: throw ImapFailure.network
             case .watchRestart: throw ImapFailure.watchRestart
@@ -254,35 +272,43 @@ private func perform(_ input: ImapRequest) async throws -> ImapReply {
         return try await IMAP.SyncReadSessionPool.shared.read(id: id,
             owner: [input.sessionUrl, input.accountId ?? "", connection.username, input.authorization],
             create: {
+                IMAP.MailDownloadTrace.current?.mark(.trust)
                 let trust = try ImapTrust(host: connection.host)
                 return IMAPClient(Server(hostname: connection.host, username: connection.username,
                     password: connection.password, port: connection.port), tlsConfiguration: trust.configuration,
                     commandTimeout: 10, additionalPeerVerification: trust.verifyPeer)
             }, authenticate: { client in
+                IMAP.MailDownloadTrace.current?.mark(.authenticate)
                 do {
                     if let token = connection.accessToken {
                         try await client.authenticateXOAUTH2(username: connection.username, accessToken: token)
                     } else { try await client.login() }
-                } catch AuthenticationFailure.rejected { throw ImapFailure.authenticationRequired }
+                } catch AuthenticationFailure.rejected { throw ImapAuthenticationStage.server }
             }, operation: { client in
                 try await performAuthenticated(input, connection: connection, client: client, inboxPrevious: nil)
             })
     }
     // Trust roots and pins come from the calling app's HarmonyOS policy, never JSON input.
+    IMAP.MailDownloadTrace.current?.mark(.trust)
     let trust = try ImapTrust(host: connection.host)
     let client = IMAPClient(Server(hostname: connection.host, username: connection.username,
         password: connection.password, port: connection.port), tlsConfiguration: trust.configuration,
         commandTimeout: 10, additionalPeerVerification: trust.verifyPeer)
     let outcome: Result<ImapReply, Error>
     do {
+        IMAP.MailDownloadTrace.current?.mark(.connect)
         try await client.connect()
+        IMAP.MailDownloadTrace.current?.mark(.authenticate)
         do {
             if let token = connection.accessToken {
                 try await client.authenticateXOAUTH2(username: connection.username, accessToken: token)
             } else { try await client.login() }
-        } catch AuthenticationFailure.rejected { throw ImapFailure.authenticationRequired }
+        } catch AuthenticationFailure.rejected {
+            IMAP.MailDownloadTrace.current?.mark(.failed, error: AuthenticationFailure.rejected)
+            throw ImapAuthenticationStage.server
+        }
         outcome = .success(try await performAuthenticated(input, connection: connection, client: client, inboxPrevious: inboxPrevious))
-    } catch { outcome = .failure(error) }
+    } catch { IMAP.MailDownloadTrace.current?.mark(.failed, error: imapTraceError(error)); outcome = .failure(error) }
     return try await IMAP.finishIMAPOperation(outcome,
         logout: { if client.isConnected { try await client.logout(timeout: 1) } },
         shutdown: { try await client.shutdown() })
@@ -370,6 +396,7 @@ private func performAuthenticated(_ input: ImapRequest, connection: ImapConnecti
         guard let mailboxId = input.mailboxId, let position = input.position, position >= 0,
               position == 0 || input.queryState != nil else { throw ImapFailure.invalidArgument }
         let mailbox = try imapMailboxName(mailboxId)
+        IMAP.MailDownloadTrace.current?.mark(.select)
         let epoch = try await selectedEpoch(client.examine(mailbox: IMAP.Mailbox.Name(mailbox)), client: client, mailbox: IMAP.Mailbox.Name(mailbox))
         let state = try imapEncode(epoch)
         if let previous = input.queryState, previous != state { throw ImapFailure.queryChanged }
@@ -378,6 +405,7 @@ private func performAuthenticated(_ input: ImapRequest, connection: ImapConnecti
         var emails = [ImapEmail]()
         if end > 0 {
             let range = SequenceNumber(rawValue: UInt32(start))...SequenceNumber(rawValue: UInt32(end))
+            IMAP.MailDownloadTrace.current?.mark(.headers)
             let messages = try await client.fetch(SequenceSet(range: .init(range)), attributes: [.bodyStructure(extensions: true)] + .standard)
             guard messages.count == end-start+1,
                   Set(messages.keys.map { Int($0.rawValue) }) == Set(start...end) else { throw ImapFailure.queryChanged }
@@ -447,6 +475,7 @@ private func performAuthenticated(_ input: ImapRequest, connection: ImapConnecti
         guard identity.uid > 0, identity.validity > 0,
               try imapMailboxName(imapEncode(identity.mailbox)) == identity.mailbox else { throw ImapFailure.invalidArgument }
         let mailbox = IMAP.Mailbox.Name(identity.mailbox)
+        IMAP.MailDownloadTrace.current?.mark(.select)
         let selection = try await client.selectWithPermissions(mailbox: mailbox)
         let uid = UID(rawValue: identity.uid)
         let identifiers = UIDSet(range: .init(uid...uid))
@@ -497,11 +526,13 @@ private func performAuthenticated(_ input: ImapRequest, connection: ImapConnecti
             break
         }
         let readable = try await client.fetchReadable(uid: uid)
+        IMAP.MailDownloadTrace.current?.mark(.verify)
         let again = try await selectedEpoch(client.examine(mailbox: mailbox), client: client, mailbox: mailbox)
         guard again.validity == epoch.validity else { throw ImapFailure.queryChanged }
         if let readable {
             let message = readable.message
             guard message.uid?.rawValue == identity.uid else { throw ImapFailure.invalidResponse }
+            IMAP.MailDownloadTrace.current?.mark(.decode)
             reply = ImapReply(email: ImapNullable(try email(message,mailbox:identity.mailbox,epoch:epoch,includeBody:true,selection:selection,readable:readable)))
         } else { reply = ImapReply(email: ImapNullable(nil)) }
     default: throw ImapFailure.unsupported
@@ -513,7 +544,7 @@ private final class ResultBox: @unchecked Sendable {
     private let lock = NSLock()
     private var reply = ImapReply(error: ImapFailure.network.rawValue)
     private var sealed = false
-    func set(_ value: ImapReply) { lock.lock(); defer { lock.unlock() }; if !sealed { reply=value;sealed=true } }
+    @discardableResult func set(_ value: ImapReply) -> Bool { lock.lock(); defer { lock.unlock() }; if sealed { return false }; reply=value;sealed=true; return true }
     func get() -> ImapReply { lock.lock();defer { lock.unlock() };return reply }
 }
 private func encoded(_ reply: ImapReply) -> UnsafeMutablePointer<CChar>? {
@@ -529,13 +560,33 @@ public func imapAccountRequest(_ raw: UnsafePointer<CChar>?) -> UnsafeMutablePoi
         return encoded(ImapReply(error:ImapFailure.invalidArgument.rawValue))
     }
     let result=ResultBox(), done=DispatchSemaphore(value:0)
+    let trace = request.downloadDiagnostics == true ? IMAP.MailDownloadTrace() : nil
+    let active = trace == nil ? 0 : IMAP.MailDownloadCompletions.shared.begin()
+    let late = trace == nil ? nil : IMAP.MailDownloadCompletions.shared.drain()
+    trace?.mark(.request, values: [active])
     let task=Task {
-        do { result.set(try await perform(request)) }
-        catch { result.set(ImapReply(error:(error as? ImapFailure ?? .network).rawValue)) }
+        await MIME.MimeDiagnostics.$sink.withValue(trace?.mimeSink) {
+          await IMAP.MailDownloadTrace.$current.withValue(trace) {
+            do {
+                var reply = try await perform(request)
+                trace?.mark(.complete); reply.downloadTrace = trace?.snapshot(); reply.lateDownloadCompletions = late
+                let accepted = result.set(reply)
+                if let trace { IMAP.MailDownloadCompletions.shared.finish(attempt: request.diagnosticAttempt ?? 0, trace: trace.snapshot(), wasLate: !accepted) }
+            } catch {
+                trace?.mark(.failed, error: imapTraceError(error))
+                var reply = imapFailureReply(error)
+                reply.downloadTrace = trace?.snapshot(); reply.lateDownloadCompletions = late
+                let accepted = result.set(reply)
+                if let trace { IMAP.MailDownloadCompletions.shared.finish(attempt: request.diagnosticAttempt ?? 0, trace: trace.snapshot(), wasLate: !accepted) }
+            }
+        }
+        }
         done.signal()
     }
     if done.wait(timeout:.now()+30) == .timedOut {
-        result.set(ImapReply(error:(["setKeyword", "archiveEmail", "undoArchive"].contains(request.operation) ? ImapFailure.changeUnconfirmed : .network).rawValue));task.cancel()
+        trace?.mark(.deadline)
+        var reply = ImapReply(error:(["setKeyword", "archiveEmail", "undoArchive"].contains(request.operation) ? ImapFailure.changeUnconfirmed : .network).rawValue)
+        reply.downloadTrace = trace?.snapshot(); reply.lateDownloadCompletions = late; result.set(reply); task.cancel()
     }
     return encoded(result.get())
 }

@@ -1,0 +1,49 @@
+#!/usr/bin/env bash
+# Isolated synthetic OAuth persistence. No production app, UI, mail or network.
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+: "${HDC_TARGET:?Set the verified MatePad target}"
+[[ "$HDC_TARGET" == "${DMAIL_AUTHORIZED_MATEPAD_SERIAL:?Set the authorized MatePad target}" ]]
+HDC="$ROOT/.tools/deveco-26/command-line-tools/sdk/default/openharmony/toolchains/hdc"
+APP="$ROOT/.tools/imap-test-app-aarch64"
+OUT="$ROOT/.tools/outlook-stress/matepad"
+mkdir -p "$OUT"
+run_hdc() { timeout --foreground --kill-after=3s 30s "$HDC" -t "$HDC_TARGET" "$@"; }
+[[ "$(run_hdc shell uname -m | tr -d '[:space:]')" == aarch64 ]]
+[[ "$(run_hdc shell param get const.product.model | tr -d '[:space:]')" == MRO-W00 ]]
+python3 - "$APP" <<'PY'
+from pathlib import Path
+import json, sys, zipfile
+app = Path(sys.argv[1])
+for variant in ('default', 'ohosTest'):
+    with zipfile.ZipFile(app / f'entry/build/default/outputs/{variant}/entry-{variant}-signed.hap') as hap:
+        manifest = json.loads(hap.read('module.json'))
+        assert manifest['app']['bundleName'] == 'org.thunderbird.harmony.imaptest'
+PY
+cleanup() {
+  local result=$?
+  trap - EXIT
+  run_hdc shell aa force-stop org.thunderbird.harmony.imaptest > "$OUT/stop.log" 2>&1 || true
+  if ! run_hdc uninstall org.thunderbird.harmony.imaptest > "$OUT/uninstall.log" 2>&1; then result=1; fi
+  if ! grep -q 'success' "$OUT/uninstall.log"; then result=1; fi
+  exit "$result"
+}
+trap cleanup EXIT
+trap 'exit 130' INT TERM
+run_hdc uninstall org.thunderbird.harmony.imaptest > "$OUT/initial-uninstall.log" 2>&1 || true
+run_hdc install "$APP/entry/build/default/outputs/default/entry-default-signed.hap" > "$OUT/install-main.log" 2>&1
+grep -qi 'success' "$OUT/install-main.log"
+run_hdc install "$APP/entry/build/default/outputs/ohosTest/entry-ohosTest-signed.hap" > "$OUT/install-test.log" 2>&1
+grep -qi 'success' "$OUT/install-test.log"
+timeout --foreground --kill-after=5s 75s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/OAuthColdSeedRunner \
+  -s timeout 60000 > "$OUT/seed.log" 2>&1
+grep -q 'Tests run: 1, Failure: 0, Error: 0, Pass: 1, Ignore: 0' "$OUT/seed.log"
+run_hdc shell aa force-stop org.thunderbird.harmony.imaptest > "$OUT/cold-stop.log" 2>&1
+run_hdc shell pidof org.thunderbird.harmony.imaptest > "$OUT/cold-pid.log" 2>&1 || true
+[[ -z "$(tr -d '[:space:]' < "$OUT/cold-pid.log")" ]]
+timeout --foreground --kill-after=5s 120s "$HDC" -t "$HDC_TARGET" shell aa test \
+  -b org.thunderbird.harmony.imaptest -m entry_test -s unittest /ets/testrunner/OAuthReopenStressRunner \
+  -s timeout 100000 > "$OUT/stress.log" 2>&1
+grep -q 'Tests run: 2, Failure: 0, Error: 0, Pass: 2, Ignore: 0' "$OUT/stress.log"
+grep -E 'OAUTH_STRESS:|Tests run:' "$OUT/seed.log" "$OUT/stress.log"

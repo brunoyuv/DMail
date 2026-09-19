@@ -201,7 +201,8 @@ export function cacheEmail(mail: JmapEmail, fullBody: boolean, previous: CachedE
   }
   const text = copy.textBody, html = copy.htmlBody;
   if (!validTextBody(text) || !validHtmlBody(html)) { throw new Error('Invalid mail cache body'); }
-  const validated = decodeCachedEmail(JSON.stringify({ version: 1, savedAt: now,
+  // Refreshing headers or downloading a body must not restart entry retention.
+  const validated = decodeCachedEmail(JSON.stringify({ version: 1, savedAt: previous?.savedAt ?? now,
     bodySavedAt: fullBody ? now : previous?.bodySavedAt ?? null,
     bodyFiles: fullBody ? undefined : previous?.bodyFiles,
     bodyDecoderRevision: fullBody ? BODY_DECODER_REVISION : previous?.bodyDecoderRevision,

@@ -849,14 +849,6 @@
       "value": "关闭通知"
     },
     {
-      "name": "notification_inbox_offer",
-      "value": "接收新邮件横幅通知"
-    },
-    {
-      "name": "notification_enable",
-      "value": "启用"
-    },
-    {
       "name": "notification_system_settings",
       "value": "系统通知设置"
     },
@@ -937,6 +929,11 @@
     {"name": "math_settings_error", "value": "无法保存 Markdown 和数学公式设置。"},
     {"name": "math_preview", "value": "预览邮件"},
     {"name": "math_edit", "value": "返回编辑器"},
-    {"name": "math_render_error", "value": "无法格式化此邮件。原始文本未更改。请缩短邮件或减少公式数量后重试。"}
+    {"name": "math_render_error", "value": "无法格式化此邮件。原始文本未更改。请缩短邮件或减少公式数量后重试。"},
+    {"name": "smtp_load_error", "value": "无法读取发件服务器设置。请解锁设备后重试；已保存的设置未更改。"},
+    {"name": "smtp_settings_missing", "value": "此账号尚未保存发件服务器设置。"},
+    {"name": "gmail_smtp_recover", "value": "使用已保存的 Gmail 登录信息"},
+    {"name": "gmail_smtp_recovered", "value": "已根据收件服务器登录信息填入 Gmail 设置。请核对后点击“保存”。"},
+    {"name": "gmail_smtp_recovery_error", "value": "无法恢复 Gmail 设置。请重新打开此页面，或输入 SMTP 设置和应用专用密码。"}
   ]
 }

@@ -8,6 +8,7 @@ const compile = source => ts.transpileModule(source, { compilerOptions: {
 function load(file, imports, globals = {}) {
   const module = { exports: {} };
   new Function('require', 'module', 'exports', ...Object.keys(globals), compile(fs.readFileSync(file, 'utf8')))(name => {
+    if (name === '@kit.ArkTS' && !(name in imports)) return { util: { generateRandomUUID: () => require('node:crypto').randomUUID() } };
     assert.ok(name in imports, `Unexpected dependency ${name}`); return imports[name];
   }, module, module.exports, ...Object.values(globals));
   return module.exports;
@@ -117,4 +118,109 @@ test('Closing during credential refresh prevents a late native read after pause'
   const read=f.client.readEmailForSync('default','one','old-lease');await Promise.resolve();
   await f.client.closeSyncSession('old-lease');gate.resolve('Bearer synthetic-late');
   await assert.rejects(read,e=>e.code==='network');assert.deepEqual(f.state.calls.map(r=>r.operation),['closeSyncSession']);
+});
+
+test('Foreground IMAP body and page work recheck ownership after delayed credentials before starting native sockets', async () => {
+  for (const kind of ['body', 'page']) {
+    const gate = deferred(); let active = true;
+    const cancelled = new Error('Synthetic cancelled');
+    const beforeRequest = () => { if (!active) throw cancelled; };
+    const f = imapFixture(async () => assert.fail('Retired work reached native IMAP'), async () => {
+      await gate.promise; return 'Bearer synthetic';
+    });
+    const request = kind === 'body' ? f.client.readEmail('default', 'id', beforeRequest) :
+      f.client.emailPage('default', 'inbox', 0, undefined, undefined, beforeRequest);
+    await Promise.resolve();
+    active = false; gate.resolve(); await assert.rejects(request, error => error === cancelled);
+    assert.equal(f.state.calls.length, 0); assert.equal(f.state.authorizations, 1);
+  }
+});
+
+test('Foreground JMAP body and page work also recheck ownership after credentials', async () => {
+  const { JmapClient } = load('harmony/entry/src/main/ets/mail/jmap/JmapClient.ts', {});
+  for (const kind of ['body', 'page']) {
+    const gate = deferred(); let active = true;
+    const cancelled = new Error('Synthetic cancelled');
+    const beforeRequest = () => { if (!active) throw cancelled; };
+    const client = new JmapClient('https://example.test/session', { parseUrl: value => new URL(value), accountCore: {
+      getEmails: async () => assert.fail('Retired body reached core'), emailPage: async () => assert.fail('Retired page reached core')
+    } }, { authorization: async () => { await gate.promise; return 'Bearer synthetic'; } });
+    const request = kind === 'body' ? client.readEmail('a', 'id', beforeRequest) :
+      client.emailPage('a', 'inbox', 0, undefined, undefined, beforeRequest);
+    active = false; gate.resolve(); await assert.rejects(request, error => error === cancelled);
+  }
+});
+
+test('Foreground Inbox pages and bodies serialize on one lease and refresh credentials only when admitted', async () => {
+  const gate = deferred(), started = deferred(); let active = 0, peak = 0;
+  const f = imapFixture(async r => {
+    if (r.operation === 'closeSyncSession') return { state: 'closed' };
+    peak = Math.max(peak, ++active);
+    if (r.operation === 'emailPage') { started.resolve(); await gate.promise; }
+    --active; return r.operation === 'emailPage' ? { page: { emails: [] } } : { email: { id: r.emailId } };
+  });
+  const page = f.client.emailPage('default', 'inbox'), body = f.client.readEmail('default', 'one');
+  await started.promise; assert.equal(f.state.authorizations, 1); assert.equal(f.state.calls.length, 1);
+  gate.resolve(); await Promise.all([page, body]);
+  assert.equal(peak, 1); assert.equal(f.state.authorizations, 2);
+  const [a, b] = f.state.calls; assert.match(a.syncSessionId, /^[0-9a-f-]{36}$/i);
+  assert.equal(a.syncSessionId, b.syncSessionId);
+  await f.client.closeReadSession(); assert.equal(f.state.calls.at(-1).syncSessionId, a.syncSessionId);
+});
+
+test('A failed native read retires queued reads without another login or replay and preserves the first error', async () => {
+  for (const code of ['authenticationRequired', 'network']) {
+    const gate = deferred(), started = deferred(); let fail = true;
+    const f = imapFixture(async r => {
+      if (r.operation === 'closeSyncSession') throw Error('Synthetic cleanup failure');
+      if (fail) { started.resolve(); await gate.promise; return { error: code }; }
+      return { email: { id: r.emailId } };
+    });
+    const pending = Promise.allSettled([f.client.emailPage('default', 'inbox'), f.client.readEmail('default', 'one'), f.client.readEmail('default', 'two')]);
+    await started.promise; gate.resolve(); const results = await pending;
+    assert.ok(results.every(r => r.status === 'rejected' && r.reason.code === code));
+    assert.equal(results[0].reason, results[1].reason);
+    assert.equal(f.state.authorizations, 1);
+    assert.deepEqual(f.state.calls.map(r => r.operation), ['emailPage', 'closeSyncSession']);
+    fail = false; await f.client.readEmail('default', 'later');
+    assert.notEqual(f.state.calls[0].syncSessionId, f.state.calls.at(-1).syncSessionId);
+    await f.client.closeReadSession();
+  }
+});
+
+test('Lifecycle close drains accepted reads, retires queued reads, and resumes with a new lease', async () => {
+  const gate = deferred(), started = deferred();
+  const f = imapFixture(async r => {
+    if (r.operation === 'closeSyncSession') return { state: 'closed' };
+    if (r.emailId === 'one') { started.resolve(); await gate.promise; }
+    return { email: { id: r.emailId } };
+  });
+  const accepted = f.client.readEmail('default', 'one');
+  const retired = assert.rejects(f.client.readEmail('default', 'two'), { code: 'network' });
+  await started.promise;
+  const closing = f.client.closeReadSession(); assert.equal(f.client.closeReadSession(), closing);
+  const resumed = f.client.readEmail('default', 'three');
+  assert.equal(f.state.calls.length, 1); gate.resolve();
+  await Promise.all([accepted, retired, closing, resumed]);
+  assert.deepEqual(f.state.calls.map(r => r.operation), ['readEmail', 'closeSyncSession', 'readEmail']);
+  assert.notEqual(f.state.calls[0].syncSessionId, f.state.calls[2].syncSessionId);
+  await f.client.closeReadSession();
+});
+
+test('Credential rotation closes the old connection before admitting a new token', async () => {
+  let token = 'old';
+  const f = imapFixture(async r => r.operation === 'closeSyncSession' ? { state: 'closed' } : { email: { id: r.emailId } }, async () => token);
+  await f.client.readEmail('default', 'one'); token = 'new'; await f.client.readEmail('default', 'two');
+  assert.deepEqual(f.state.calls.map(r => r.operation), ['readEmail', 'closeSyncSession', 'readEmail']);
+  assert.equal(f.state.calls[0].authorization, 'old'); assert.equal(f.state.calls[2].authorization, 'new');
+  assert.notEqual(f.state.calls[0].syncSessionId, f.state.calls[2].syncSessionId);
+  await f.client.closeReadSession();
+});
+
+test('Closing during a foreground credential wait prevents a late socket', async () => {
+  const gate = deferred(), started = deferred();
+  const f = imapFixture(async () => assert.fail('Cancelled read reached native'), async () => { started.resolve(); return gate.promise; });
+  const retired = assert.rejects(f.client.readEmail('default', 'one'), { code: 'network' });
+  await started.promise; const closed = f.client.closeReadSession(); gate.resolve('synthetic');
+  await Promise.all([retired, closed]); assert.equal(f.state.calls.length, 0);
 });

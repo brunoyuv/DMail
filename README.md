@@ -11,7 +11,7 @@ the upstream work. The app uses its own generic mail icon.
 
 ## Status
 
-The current release is **1.0.4**. The full port is unfinished. Synthetic host
+The current release is **1.0.5**. The full port is unfinished. Synthetic host
 and native tests cover the implemented workflows; live-provider compatibility
 is not comprehensively verified.
 
@@ -23,6 +23,8 @@ is not comprehensively verified.
 - Multiple accounts, encrypted account records and drafts, and app-private body
   and picture files with seven-day downloaded-mail retention. Cached messages
   open before network refresh.
+- Foreground Inbox body prefetch, bounded reuse of IMAP connections, and paired
+  MIME fetches for faster opening.
 - Foreground Inbox updates, per-account optional alerts, persisted unread badges
   and OS-deferred background checks, connecting directly to the existing mail server.
 - Optional Markdown and TeX math reading, two equation renderers, composer
@@ -36,7 +38,7 @@ background checking remains unresolved. No privately operated relay is required.
 JMAP has a native reader and message-action path; submission and full parity
 remain unfinished. See [background checking](docs/background-checking.md),
 [OAuth configuration](docs/browser-oauth.md) and the latest
-[release validation](docs/release-1.0.4.md).
+[release validation](docs/release-1.0.5.md).
 
 ## Markdown and equations
 

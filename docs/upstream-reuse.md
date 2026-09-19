@@ -87,3 +87,34 @@ MIME Body and Part now have recorded byte-preserving parser adaptations. The
 original Account body decoder also maps legacy charsets and keeps readable parts
 when a sibling fails. See [MIME port details](../port/swift-mime/README.md). The
 separate 13-file Autoconfiguration stage is not included in these shipping counts.
+
+The local 1.0.4 detailed-download diagnostic follow-up adds the explicit
+`port/swift-imap/download-diagnostics.patch` after the existing protocol patches.
+It observes safe command/response/literal categories before generic error mapping;
+original pinned source files and hashes remain unchanged. Additional bounded
+instrumentation lives in the existing MIME parser and IMAP account/body port
+adapters. See [download diagnostics](download-diagnostics.md).
+
+The subsequent singlepart correction is confined to the existing
+`port/swift-imap/ReadableBody.swift` adaptation: root bodies and attachments use
+the original client's HEADER fetch, while multipart child MIME requests remain
+unchanged. Original pinned sources, hashes and attribution are preserved. See
+[the synthetic reproduction](outlook-singlepart-header-fix.md).
+
+Foreground page/body reads also use the existing port-owned SyncReadSessionPool
+with original IMAPClient operations. The follow-up discards sockets closed by
+optional command timeouts and adds safe session lifecycle trace reasons; it does
+not replace upstream protocol/MIME clients. See [read-session follow-up](imap-read-session-follow-up.md).
+
+The connection greeting correction adds `port/swift-imap/initial-greeting.patch`
+and the port-owned `InitialGreeting.swift` handler after the existing patches.
+The original Swift client's verified TLS pipeline now waits for the greeting
+before CAPABILITY. Pinned upstream files, hashes and attribution are unchanged.
+See [the greeting reproduction and validation](imap-greeting-fix.md).
+
+The MIME fetch batching follow-up changes the existing local
+`port/swift-imap/ReadableBody.swift` adaptation. It groups at most two small,
+already-selected MIME parts into one original-client UID FETCH, preserving
+root/child header selection, UID checks, per-part limits and partial siblings.
+No pinned upstream source/hash or Swift protocol implementation is replaced.
+See [batching validation](mime-fetch-batching.md).

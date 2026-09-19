@@ -44,3 +44,21 @@ test('Nonmatching large threads only evaluate their members once per rendering p
  assert.deepEqual(ui.visibleEmails(), []);
  assert.equal(searches, messages.length);
 });
+
+test('Unrelated UI updates reuse the visible rows without rescanning 2000 messages', () => {
+ let reads = 0;
+ const messages = Array.from({ length: 2000 }, (_, i) => {
+  const value = mail('mail-' + i), id = value.id;
+  Object.defineProperty(value, 'id', { get() { reads++; return id; } }); return value;
+ });
+ const ui = inbox(messages); ui.conversationRevision = 0; ui.operationRevision = 0;
+ const first = ui.visibleEmails(), initialReads = reads;
+ for (let i = 0; i < 100; i++) assert.strictEqual(ui.visibleEmails(), first);
+ assert.equal(reads, initialReads);
+ ui.operationRevision++; assert.notStrictEqual(ui.visibleEmails(), first);
+ const second = ui.visibleEmails(); ui.conversationRevision++;
+ assert.notStrictEqual(ui.visibleEmails(), second);
+ const third = ui.visibleEmails(); ui.emails = messages.slice();
+ assert.notStrictEqual(ui.visibleEmails(), third);
+ ui.mailboxId = 'sent'; assert.deepEqual(ui.visibleEmails(), []);
+});

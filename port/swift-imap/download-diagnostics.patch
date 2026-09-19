@@ -1,0 +1,66 @@
+--- a/Sources/IMAP/IMAPClient.swift
++++ b/Sources/IMAP/IMAPClient.swift
+@@ -327,8 +327,12 @@
+         let tag: String = UUID().uuidString(1)  // Hold onto specific auto-generated tag
+         let handler: T.Handler = command.makeHandler(tag: tag, promise: promise)
+         let seconds: Int64 = max(min(command.timeout, commandTimeout), 1)
++        let downloadTrace = MailDownloadTrace.current
++        let commandKind = ["capability", "login", "authenticate", "list", "status", "select", "examine", "fetch", "uid fetch", "logout"].firstIndex(of: command.name.lowercased()).map { $0 + 1 } ?? 0
++        downloadTrace?.mark(.commandStart, values: [commandKind, Int(seconds)])
+         let task: Scheduled = group.next().scheduleTask(in: .seconds(seconds)) {
+             let error: IMAPError = .timedOut(seconds: seconds)
++            downloadTrace?.mark(.commandFailed, error: error, values: [commandKind])
+             logger?.error("\(error)")
+             promise.fail(error)
+         }
+@@ -346,12 +350,14 @@
+             } onCancel: {
+                 channel.close(promise: nil)
+             }
++            downloadTrace?.mark(.commandDone, values: [commandKind])
+             logger?.debug("\(command.description.capitalized(.sentence)) succeeded")
+             if let clientBug = handler.clientBug {
+                 logger?.debug("CLIENTBUG: \(clientBug)")
+             }
+             return result
+         } catch {
++            downloadTrace?.mark(.commandFailed, error: error, values: [commandKind])
+             promise.fail(error)
+             logger?.error("\(error)")
+             // A timed-out or failed exchange cannot be reused with late replies.
+--- a/Sources/IMAP/FetchCommand.swift
++++ b/Sources/IMAP/FetchCommand.swift
+@@ -28,6 +28,7 @@
+ }
+ 
+ class FetchHandler: IMAPCommandHandler, @unchecked Sendable {
++    private let downloadTrace = MailDownloadTrace.current
+     var messages: Result = [:]
+     var isStreaming: Bool { streaming != nil }
+ 
+@@ -59,6 +60,7 @@
+                 context.close(promise: nil)
+                 return
+             }
++            downloadTrace?.response(taggedResponse.state)
+             switch taggedResponse.state {
+             case .bad(let text), .no(let text):
+                 promise.fail(IMAPError.commandFailed(text.text))
+@@ -73,6 +75,7 @@
+                 guard let component: Message.Component = Message.Component(attribute) else { break }
+                 components.append(component)
+             case .streamingBegin(let kind, let byteCount):
++                if case .body(let section, _) = kind { downloadTrace?.mark(.literalStart, bytes: byteCount, section: Array(section.part)) }
+                 streaming = (kind, Data(), byteCount)
+             case .streamingBytes(let bytes):
+                 streaming?.data.append(Data(bytes.readableBytesView))
+@@ -80,6 +83,9 @@
+                 if let streaming {
+                     switch streaming.kind {
+                     case .body(let section, _):
++                        downloadTrace?.mark(.literalDone, bytes: streaming.data.count,
++                            reason: streaming.data.count == streaming.byteCount ? .none : .literalMismatch,
++                            values: [streaming.byteCount], section: Array(section.part))
+                         guard streaming.data.count == streaming.byteCount else { break }
+                         components.append(.bodyPart(section, streaming.data))
+                     default:

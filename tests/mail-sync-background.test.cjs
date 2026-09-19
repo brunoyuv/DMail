@@ -28,10 +28,10 @@ function fixture(jmap=false){
   const environment=new module.exports.CheckEnvironment({},store,[account],true,()=>state.stopped);
   return {state,page,cached,settings,environment,automatic,check:()=>automatic.settle(environment.check(settings))};
 }
-test('Scheduled IMAP checks preserve one header page and cached tail without creating bulk body/picture work',async()=>{
+test('Scheduled IMAP checks pass one header page to the retaining cache without creating bulk body/picture work',async()=>{
   const f=fixture();const result=await f.check();
   assert.equal(result.newMessages,1);assert.equal(f.state.pageCalls,1);assert.equal(f.state.writes.length,1);
-  assert.deepEqual(f.state.writes[0][2].map(mail=>mail.id),['new','overlap','tail']);
+  assert.deepEqual(f.state.writes[0][2].map(mail=>mail.id),['new','overlap']);
   assert.equal(f.state.writes[0][5],17);assert.equal(f.state.starts[1].at-f.state.starts[0].at,3000);
   assert.equal(f.automatic.timers.size,0);assert.doesNotMatch(source,/MailBodySync|enqueuePage|enqueueCached|whenIdle/);
 });

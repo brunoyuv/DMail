@@ -42,6 +42,7 @@ final class XOAuth2Handler: IMAPCommandHandler, @unchecked Sendable {
     private enum Phase { case initial, sent, rejected }
     private var phase: Phase = .initial
     private var finished = false
+    private let downloadTrace = MailDownloadTrace.current
 
     required init(tag: String, promise: EventLoopPromise<Void>) { self.tag = tag; self.promise = promise }
     convenience init(tag: String, promise: EventLoopPromise<Void>, payload: ByteBuffer, initialSent: Bool) {
@@ -50,6 +51,7 @@ final class XOAuth2Handler: IMAPCommandHandler, @unchecked Sendable {
     }
     private func fail(_ context: ChannelHandlerContext, error: Error = IMAPError.commandFailed("OAuth exchange failed")) {
         guard !finished else { return }; finished = true; payload.clear()
+        downloadTrace?.mark(.commandFailed, error: error)
         promise.fail(error)
         context.close(promise: nil)
     }
@@ -72,6 +74,7 @@ final class XOAuth2Handler: IMAPCommandHandler, @unchecked Sendable {
             context.writeAndFlush(wrapOutboundOut(.part(.continuationResponse(reply)))).whenFailure { error in self.fail(context, error: error) }
         case .tagged(let response):
             guard response.tag == tag else { fail(context); return }
+            downloadTrace?.response(response.state)
             if authenticationRejected(response.state) { fail(context, error: AuthenticationFailure.rejected); return }
             guard phase == .sent, case .ok = response.state else { fail(context); return }
             finished = true; payload.clear(); promise.succeed(())

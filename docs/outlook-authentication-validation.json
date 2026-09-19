@@ -1,0 +1,45 @@
+{
+  "versionName": "1.0.4",
+  "versionCode": 1000004,
+  "branch": "main",
+  "build": "1.0.4-outlook-auth-details",
+  "reportedFailure": {
+    "firstAdd": true,
+    "savedAccount": true,
+    "debugAndAppGallery": true,
+    "intermittent": true,
+    "liveCauseConfirmed": false
+  },
+  "changes": {
+    "explicitMicrosoftTokenScopes": true,
+    "scopeOmissionProvenCause": false,
+    "authenticationStages": [
+      "credentials",
+      "server",
+      "refresh"
+    ],
+    "loggingRequiredForStage": false,
+    "supersededRefreshPreservesNewCredentials": true,
+    "supersededRefreshError": "network",
+    "automaticAuthenticationRetry": false
+  },
+  "validation": {
+    "javaScriptTests": 828,
+    "pythonTests": 44,
+    "focusedSwiftTests": 37,
+    "arm64NativeBuild": true,
+    "signedHapBuild": true,
+    "shippingSourceParity": true,
+    "syntheticTestsOnly": true
+  },
+  "artifact": {
+    "path": ".tools/outlook-auth-details-104/D-Mail-1.0.4-outlook-auth-details-signed.hap",
+    "sha256": "edb5174ebad8cf71281446ba42b94fddee929bdeb5db97e03ddf9d44696b6c36",
+    "bundleName": "org.thunderbird.harmony.dev"
+  },
+  "installed": false,
+  "productionLaunched": false,
+  "publicPackageBuilt": false,
+  "commitCreated": false,
+  "remotePush": false
+}

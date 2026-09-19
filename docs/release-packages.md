@@ -38,10 +38,10 @@ owner's exact spelling and case. `packaging/appgallery.json` records it;
 `--appgallery` applies it only in the generated ARM64 release project. The
 ordinary development identity stays `org.thunderbird.harmony.dev` for existing
 test installations. These identities are separate apps with separate saved data.
-Both display **D-Mail**. The current version is **1.0.4**, code **1000004**.
+Both display **D-Mail**. The current version is **1.0.5**, code **1000005**.
 
 Run `./scripts/build-release --appgallery --no-zip` to produce
-`dist/D-Mail-1.0.4-arm64-v8a-appgallery-unsigned.app` and a companion directory
+`dist/D-Mail-1.0.5-arm64-v8a-appgallery-unsigned.app` and a companion directory
 with source, licenses and checksums. The builder verifies the bundle ID and
 version in both APP and HAP, and checks that the APP embeds the inspected HAP.
 The store listing icon is `docs/images/d-mail-icon.png` (1024 × 1024).
@@ -54,15 +54,15 @@ a Huawei release certificate and matching `app_gallery` release profile on
 under ignored `.tools/signing/appgallery/`; none is committed to source control.
 The certificate is valid through 2029-09-14 and matches the generated release key.
 
-For 1.0.4, the signed upload file is
-`dist/D-Mail-1.0.4-arm64-v8a-appgallery-signed.app`, with SHA-256 and
+For 1.0.5, the signed upload file is
+`dist/D-Mail-1.0.5-arm64-v8a-appgallery-signed.app`, with SHA-256 and
 `*-signed-verification.json` sidecars identifying the exact source commit and
 verified signatures. The matching unsigned artifact directory retains source and notices.
 Signing uses the same release key, certificate and profile described below.
 
 The previously completed 0.1.11 local upload file is:
 `dist/D-Mail-0.1.11-arm64-v8a-appgallery-signed.app`.
-This is a historical artifact; use the current 1.0.4 APP for a new upload.
+This is a historical artifact; use the current 1.0.5 APP for a new upload.
 A SHA-256 sidecar and `*-signed-verification.json` record are beside it.
 Huawei's CLI 26 signing tool verified the APP and separate signed HAP signatures,
 including the matching profile. All original ZIP member payloads remain unchanged;

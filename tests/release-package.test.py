@@ -48,15 +48,16 @@ class ReleasePackageTests(unittest.TestCase):
             'client_secret': 'synthetic-local-only', 'token_uri': 'https://oauth2.googleapis.com/token'}}))
         self.assertIn('synthetic-local-only', self.generate(False).read_text())
 
-    def hap(self, *, debug=False, machine=183, secret=b''):
+    def hap(self, *, debug=False, machine=183, secret=b'', vm='ark13.0.1.0',
+            bytecode=b'PANDA\0\0\0' + bytes(4) + bytes([13, 0, 1, 0])):
         path = self.root/'synthetic.hap'
         metadata = {**EXPECTED, 'debug': debug, 'buildMode': 'debug' if debug else 'release',
                     'minAPIVersion': 60002022, 'targetAPIVersion': 60002022}
         elf = bytearray(64); elf[:6] = b'\x7fELF\x02\x01'; struct.pack_into('<H', elf, 18, machine)
         with zipfile.ZipFile(path, 'w') as archive:
-            archive.writestr('module.json', json.dumps({'app': metadata}))
+            archive.writestr('module.json', json.dumps({'app': metadata, 'module': {'virtualMachine': vm}}))
             archive.writestr('pack.info', json.dumps({'synthetic': True}))
-            archive.writestr('ets/modules.abc', b'synthetic-arkts')
+            archive.writestr('ets/modules.abc', bytecode)
             archive.writestr('resources/rawfile/legal/LICENSE', b'synthetic-license')
             for name in ['libThunderbirdCore.so', 'libthunderbird.so']:
                 archive.writestr('libs/arm64-v8a/'+name, bytes(elf)+secret)
@@ -71,6 +72,20 @@ class ReleasePackageTests(unittest.TestCase):
     def test_rejects_debug_build(self):
         with self.assertRaisesRegex(ValueError, 'non-debug release'):
             release['inspect_hap'](self.hap(debug=True), 'arm64-v8a', 183, EXPECTED)
+
+    def test_rejects_missing_or_malformed_vm_version(self):
+        for vm in ['ark', '', None, 'ark13.0.1', 'ark13.0.1.0.0', '13.0.1.0']:
+            with self.subTest(vm=vm), self.assertRaisesRegex(ValueError, 'Invalid virtualMachine'):
+                release['inspect_hap'](self.hap(vm=vm), 'arm64-v8a', 183, EXPECTED)
+
+    def test_rejects_vm_version_mismatching_bytecode(self):
+        with self.assertRaisesRegex(ValueError, 'does not match compiled bytecode'):
+            release['inspect_hap'](self.hap(vm='ark24.0.0.0'), 'arm64-v8a', 183, EXPECTED)
+
+    def test_rejects_truncated_or_non_ark_bytecode(self):
+        for bytecode in [b'PANDA\0\0\0', bytes(16)]:
+            with self.subTest(bytecode=bytecode), self.assertRaisesRegex(ValueError, 'Invalid Ark bytecode'):
+                release['inspect_hap'](self.hap(bytecode=bytecode), 'arm64-v8a', 183, EXPECTED)
 
     def test_rejects_wrong_architecture(self):
         with self.assertRaisesRegex(ValueError, 'architecture'):

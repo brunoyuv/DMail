@@ -1,5 +1,6 @@
 // The existing presentation DTOs are shared with JMAP. IMAP encoding, sessions,
 // trust, mailbox identity and MIME decoding live in Thunderbird's Swift core.
+import { util } from '@kit.ArkTS';
 import { imapAccountRequest } from 'libthunderbird.so';
 import { JmapService, JmapCredentials, JmapSession, JmapMailbox, JmapEmail, JmapEmailPage,
   JmapError, JmapKeyword, JmapArchiveUndo, validArchiveMailbox, JmapDraft, JmapCreatedDraft, MailAttachmentData } from '../jmap/JmapClient';
@@ -18,6 +19,7 @@ export interface ImapInboxWatch { supported: boolean; changed: boolean; }
 interface Reply {
   session?: JmapSession; mailboxes?: JmapMailbox[]; page?: JmapEmailPage;
   email?: JmapEmail | null; error?: string; state?: string;
+  authenticationStage?: string;
   attachment?: MailAttachmentData;
   inboxCheck?: ImapInboxCheck;
   inboxWatch?: ImapInboxWatch;
@@ -33,6 +35,64 @@ export class NativeImapClient implements JmapService {
   private connecting: Promise<JmapSession> | null = null;
   private syncLeases: Map<string, SyncReadLease> = new Map();
   private watchRequests: Map<string, Request> = new Map();
+  private readTail: Promise<void> = Promise.resolve();
+  private readSessionId: string = '';
+  private readAuthorization: string = '';
+  private readAccount: string = '';
+  private readRevision: number = 0;
+  private readFailure: Error | null = null;
+  private readPending: number = 0;
+  private readClosing: Promise<void> | null = null;
+
+  // Page and body reads share one authenticated original Swift connection.
+  // The native pool retains its 15s idle / 60s age / 16-read limits. Mutations,
+  // IDLE and SMTP never enter this read-only session.
+  private readRequest(input: Request, beforeRequest?: () => void): Promise<Reply> {
+    const revision = this.readRevision;
+    ++this.readPending;
+    const work = this.readTail.then(async (): Promise<Reply> => {
+      beforeRequest?.();
+      if (revision !== this.readRevision) { throw this.readFailure || new JmapError('network'); }
+      const authorization = await this.authorization();
+      beforeRequest?.();
+      if (revision !== this.readRevision) { throw this.readFailure || new JmapError('network'); }
+      if (this.readSessionId && (this.readAuthorization !== authorization || this.readAccount !== input.accountId)) {
+        await this.releaseReadSession(); beforeRequest?.();
+        if (revision !== this.readRevision) { throw this.readFailure || new JmapError('network'); }
+      }
+      if (!this.readSessionId) {
+        this.readSessionId = util.generateRandomUUID(); this.readAuthorization = authorization; this.readAccount = input.accountId || '';
+      }
+      input.authorization = authorization; input.syncSessionId = this.readSessionId;
+      try { return await this.request(input); }
+      catch (error) {
+        // A rejected connection is discarded, never replayed. Retire the
+        // already-queued cohort too; a later explicit call can try afresh.
+        if (revision === this.readRevision) { ++this.readRevision; this.readFailure = error as Error; }
+        await this.releaseReadSession(); throw error as Error;
+      }
+    });
+    this.readTail = work.then(() => {}, () => {});
+    this.readTail.then(() => { --this.readPending; });
+    return work;
+  }
+  private async releaseReadSession(): Promise<void> {
+    const id = this.readSessionId;
+    this.readSessionId = ''; this.readAuthorization = ''; this.readAccount = '';
+    if (id) { await this.closeSyncSession(id).catch(() => {}); }
+  }
+  closeReadSession(): Promise<void> {
+    if (this.readClosing) { return this.readClosing; }
+    if (!this.readSessionId && this.readPending === 0) { return Promise.resolve(); }
+    ++this.readRevision; this.readFailure = new JmapError('network') as Error;
+    // Drain an accepted read before release. Queued old reads cannot start
+    // sockets after a lifecycle change or after a newer account takes over.
+    const work = this.readTail.then(() => this.releaseReadSession());
+    this.readTail = work.then(() => {}, () => {}); this.readClosing = work;
+    work.then(() => { if (this.readClosing === work) { this.readClosing = null; } });
+    return work;
+  }
+
   constructor(sessionUrl: string, credentials: JmapCredentials, username: string = '') {
     this.sessionUrl = sessionUrl; this.credentials = credentials; this.username = username;
   }
@@ -41,8 +101,14 @@ export class NativeImapClient implements JmapService {
     let reply: Reply;
     try { reply = JSON.parse(await imapAccountRequest(JSON.stringify(input))) as Reply; }
     catch (_) { throw new JmapError('network'); }
-    if (reply.error !== undefined) { throw new JmapError(reply.error); }
+    if (reply.error !== undefined) {
+      const stage = reply.authenticationStage === 'credentials' || reply.authenticationStage === 'server' ? reply.authenticationStage : undefined;
+      throw new JmapError(reply.error, 0, stage);
+    }
     return reply;
+  }
+  private authorization(): Promise<string> {
+    return this.credentials.authorization();
   }
   async connect(): Promise<JmapSession> {
     if (!this.session) {
@@ -54,19 +120,19 @@ export class NativeImapClient implements JmapService {
   }
   private async discover(): Promise<JmapSession> {
     const reply = await this.request({ operation: 'connect', sessionUrl: this.sessionUrl,
-      authorization: await this.credentials.authorization() });
+      authorization: await this.authorization() });
     if (!reply.session) { throw new JmapError('invalidResponse'); }
     return reply.session;
   }
   async mailboxes(accountId: string): Promise<JmapMailbox[]> {
     const reply = await this.request({ operation: 'mailboxes', sessionUrl: this.sessionUrl,
-      authorization: await this.credentials.authorization(), accountId });
+      authorization: await this.authorization(), accountId });
     if (!reply.mailboxes) { throw new JmapError('invalidResponse'); }
     return reply.mailboxes;
   }
   async checkInbox(accountId: string, queryState?: string): Promise<ImapInboxCheck> {
     const reply = await this.request({ operation: 'checkInbox', sessionUrl: this.sessionUrl,
-      authorization: await this.credentials.authorization(), accountId, queryState });
+      authorization: await this.authorization(), accountId, queryState });
     const check = reply.inboxCheck;
     if (!check || typeof check.state !== 'string' || check.state.length === 0 ||
       typeof check.mailboxId !== 'string' || check.mailboxId.length === 0 ||
@@ -81,7 +147,7 @@ export class NativeImapClient implements JmapService {
   async watchInbox(watchId: string): Promise<ImapInboxWatch> {
     let input = this.watchRequests.get(watchId);
     if (!input) {
-      input = { operation: 'watchInbox', sessionUrl: this.sessionUrl, authorization: await this.credentials.authorization(),
+      input = { operation: 'watchInbox', sessionUrl: this.sessionUrl, authorization: await this.authorization(),
         accountId: 'default', watchId: watchId };
       this.watchRequests.set(watchId, input);
     }
@@ -94,7 +160,8 @@ export class NativeImapClient implements JmapService {
       this.watchRequests.delete(watchId); throw error as Error;
     }
   }
-  async emailPage(accountId: string, mailboxId: string, position = 0, queryState?: string, previewKnownIds?: string[]): Promise<JmapEmailPage> {
+  async emailPage(accountId: string, mailboxId: string, position = 0, queryState?: string, previewKnownIds?: string[], beforeRequest?: () => void): Promise<JmapEmailPage> {
+    beforeRequest?.();
     // Opaque IMAP IDs include the mailbox name. A paginated cache can otherwise
     // make these optional hints exceed the bridge's 128 KiB request limit.
     // Reserve space for the credential envelope and required request fields.
@@ -107,15 +174,16 @@ export class NativeImapClient implements JmapService {
       if (bytes > remaining) { continue; }
       hints.push(id); seen.add(id); remaining -= bytes;
     }
-    const reply = await this.request({ operation: 'emailPage', sessionUrl: this.sessionUrl,
-      authorization: await this.credentials.authorization(), accountId, mailboxId, position, queryState,
-      previewKnownIds: hints.length > 0 ? hints : undefined });
+    const reply = await this.readRequest({ operation: 'emailPage', sessionUrl: this.sessionUrl,
+      authorization: '', accountId, mailboxId, position, queryState,
+      previewKnownIds: hints.length > 0 ? hints : undefined }, beforeRequest);
     if (!reply.page) { throw new JmapError('invalidResponse'); }
     return reply.page;
   }
-  async readEmail(accountId: string, emailId: string): Promise<JmapEmail | null> {
-    const reply = await this.request({ operation: 'readEmail', sessionUrl: this.sessionUrl,
-      authorization: await this.credentials.authorization(), accountId, emailId });
+  async readEmail(accountId: string, emailId: string, beforeRequest?: () => void): Promise<JmapEmail | null> {
+    beforeRequest?.();
+    const reply = await this.readRequest({ operation: 'readEmail', sessionUrl: this.sessionUrl,
+      authorization: '', accountId, emailId }, beforeRequest);
     if (reply.email === undefined) { throw new JmapError('invalidResponse'); }
     return reply.email;
   }
@@ -127,7 +195,7 @@ export class NativeImapClient implements JmapService {
     try {
       // Refresh credentials normally; a reused native connection remains bound
       // to the exact current authorization, endpoint and login.
-      const authorization = await this.credentials.authorization();
+      const authorization = await this.authorization();
       if (lease.closed) { throw new JmapError('network'); }
       const reply = await this.request({ operation: 'readEmail', sessionUrl: this.sessionUrl,
         authorization, accountId, emailId, syncSessionId });
@@ -149,13 +217,13 @@ export class NativeImapClient implements JmapService {
   async createDraft(accountId: string, draft: JmapDraft): Promise<JmapCreatedDraft> { throw new JmapError('unsupported'); }
   async readAttachment(accountId: string, emailId: string, attachmentId: string): Promise<MailAttachmentData> {
     const reply = await this.request({ operation: 'readAttachment', sessionUrl: this.sessionUrl,
-      authorization: await this.credentials.authorization(), accountId, emailId, attachmentId });
+      authorization: await this.authorization(), accountId, emailId, attachmentId });
     if (!reply.attachment) { throw new JmapError('invalidResponse'); }
     return reply.attachment;
   }
   async setKeyword(accountId: string, emailId: string, keyword: JmapKeyword, enabled: boolean): Promise<string> {
     const reply = await this.request({ operation: 'setKeyword', sessionUrl: this.sessionUrl,
-      authorization: await this.credentials.authorization(), accountId, emailId, keyword, enabled });
+      authorization: await this.authorization(), accountId, emailId, keyword, enabled });
     if (!reply.state) { throw new JmapError('changeUnconfirmed'); }
     return reply.state;
   }
@@ -167,7 +235,7 @@ export class NativeImapClient implements JmapService {
   }
   private async moveEmail(accountId: string, emailId: string, deleting: boolean): Promise<JmapArchiveUndo> {
     const reply = await this.request({ operation: deleting ? 'deleteEmail' : 'archiveEmail', sessionUrl: this.sessionUrl,
-      authorization: await this.credentials.authorization(), accountId, emailId });
+      authorization: await this.authorization(), accountId, emailId });
     const undo = reply.archive;
     if (!undo || (deleting ? undo.action !== 'delete' : undo.action !== undefined && undo.action !== 'archive') || undo.accountId !== accountId || undo.emailId !== emailId || undo.imap !== true ||
       typeof undo.inboxId !== 'string' || !undo.inboxId || typeof undo.archiveId !== 'string' || !undo.archiveId ||
@@ -186,7 +254,7 @@ export class NativeImapClient implements JmapService {
     const accountId = undo.accountId, emailId = undo.emailId, mailboxId = undo.inboxId;
     const operation = undo.action === 'delete' ? 'undoDelete' : 'undoArchive';
     const reply = await this.request({ operation, sessionUrl: this.sessionUrl,
-      authorization: await this.credentials.authorization(), accountId, emailId, mailboxId });
+      authorization: await this.authorization(), accountId, emailId, mailboxId });
     if (reply.state !== 'moved' || (reply.movedEmailId !== undefined &&
       (typeof reply.movedEmailId !== 'string' || !reply.movedEmailId))) { throw new JmapError('changeUnconfirmed'); }
     return reply.movedEmailId;

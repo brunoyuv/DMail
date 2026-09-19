@@ -301,12 +301,13 @@ private final class AttachmentFetchPeer: ChannelInboundHandler {
                     if scenario == .unrelatedStructureFlags { send("* 2 FETCH (UID 8 FLAGS (\\Seen))\r\n* 3 FETCH (FLAGS ())\r\n", context) }
                     if scenario == .duplicateStructureTarget { send("* 2 FETCH (UID 7 FLAGS ())\r\n", context) }
                 } else {
+                    let section = line.components(separatedBy: "BODY.PEEK[").dropFirst().first?.components(separatedBy: "]").first ?? "1.MIME"
                     if scenario == .emptyTextPDF || scenario == .emptyTextCID || scenario == .missingTextPDF {
                         send("* 1 FETCH (UID 7 BODY[1.MIME] \(literal("Content-Type: text/plain\r\n\r\n")) BODY[1] \(literal("")))\r\n", context)
                     } else if scenario == .missingPartHeader {
-                        send("* 1 FETCH (UID 7 BODY[1] \(literal(payload)))\r\n* 2 FETCH (UID 8 BODY[1.MIME] \(literal(headers)))\r\n", context)
+                        send("* 1 FETCH (UID 7 BODY[1] \(literal(payload)))\r\n* 2 FETCH (UID 8 BODY[\(section)] \(literal(headers)))\r\n", context)
                     } else {
-                        send("* 1 FETCH (UID 7 BODY[1.MIME] \(literal(headers)))\r\n* 1 FETCH (UID 7 BODY[1] \(literal(payload)))\r\n", context)
+                        send("* 1 FETCH (UID 7 BODY[\(section)] \(literal(headers)))\r\n* 1 FETCH (UID 7 BODY[1] \(literal(payload)))\r\n", context)
                     }
                     if scenario == .unrelatedPartFlags { send("* 2 FETCH (UID 8 FLAGS (\\Seen))\r\n* 3 FETCH (FLAGS ())\r\n", context) }
                 }
@@ -387,6 +388,129 @@ struct AttachmentFetchTests {
                         #expect(Data(base64Encoded: part.data) == Data("%PDF-1.4\nSynthetic attachment\n%%EOF".utf8))
                     } catch { #expect(!success, "\(scenario): \(error)") }
                     #expect(trace.count() == (scenario == .missingStructureTarget || scenario == .duplicateStructureTarget ? 1 : 2))
+                    try await client.shutdown(); #expect(!client.isConnected)
+                } catch { try? await client.shutdown(); try? await server.close().get(); throw error }
+                try await server.close().get()
+            }
+            try await group.shutdownGracefully()
+        } catch { try? await group.shutdownGracefully(); throw error }
+    }
+}
+
+struct ReadableFetchBatchPlanTests {
+    private func batches(_ sizes: [Int]) -> [Range<Int>] {
+        readableFetchBatches(sizes.enumerated().map { ReadablePart(section: .init(part: .init([$0.offset + 1])), octets: $0.element) })
+    }
+    @Test func pairsKeepOrderAndRespectHeaderAndContentBudget() {
+        #expect(batches([]).isEmpty)
+        #expect(batches([1]) == [0..<1])
+        #expect(batches([1, 2, 3, 4, 5]) == [0..<2, 2..<4, 4..<5])
+        #expect(batches([0, 384 * 1024]) == [0..<2])
+        #expect(batches([1, 384 * 1024]) == [0..<1, 1..<2])
+        #expect(batches([4 * 1024 * 1024, 1, 2]) == [0..<1, 1..<3])
+        #expect(batches([Int.max, Int.max, -1, 0]) == [0..<1, 1..<2, 2..<3, 3..<4])
+    }
+}
+
+private enum BatchedBodyScenario: Sendable {
+    case combined, splitReversed, missingHeader, missingContent, malformedHeader, oversizedHeader
+    case foreignHeader, wrongUID, duplicateUID, conflictingUID, rejected
+}
+private final class BatchedBodyPeer: ChannelInboundHandler {
+    typealias InboundIn = ByteBuffer
+    typealias OutboundOut = ByteBuffer
+    let scenario: BatchedBodyScenario, trace: AttachmentFetchTrace
+    var input = ""
+    init(_ scenario: BatchedBodyScenario, _ trace: AttachmentFetchTrace) { self.scenario = scenario; self.trace = trace }
+    func send(_ value: String, _ context: ChannelHandlerContext) { context.writeAndFlush(wrapOutboundOut(ByteBuffer(string: value)), promise: nil) }
+    func literal(_ value: String) -> String { "{\(value.utf8.count)}\r\n\(value)" }
+    func channelActive(context: ChannelHandlerContext) { send("* OK Synthetic MIME batch peer\r\n", context) }
+    func channelRead(context: ChannelHandlerContext, data: NIOAny) {
+        input += String(buffer: unwrapInboundIn(data))
+        while let end = input.range(of: "\r\n") {
+            let line = String(input[..<end.lowerBound]); input.removeSubrange(..<end.upperBound)
+            let fields = line.split(separator: " ", maxSplits: 2)
+            guard fields.count >= 2 else { context.close(promise: nil); return }
+            let tag = String(fields[0]), command = String(fields[1]).uppercased()
+            switch command {
+            case "CAPABILITY": send("* CAPABILITY IMAP4rev1\r\n\(tag) OK Capabilities\r\n", context)
+            case "LOGIN": send("\(tag) OK Logged in\r\n", context)
+            case "UID":
+                trace.fetched()
+                if line.contains("BODYSTRUCTURE") {
+                    send("* 1 FETCH (UID 7 BODYSTRUCTURE ((\"TEXT\" \"PLAIN\" NIL NIL NIL \"7BIT\" 5 1)(\"TEXT\" \"HTML\" NIL NIL NIL \"7BIT\" 12 1) \"ALTERNATIVE\"))\r\n", context)
+                } else {
+                    // A single part at a time is deliberately refused: this
+                    // fixture verifies the actual request, not just the planner.
+                    guard ["BODY.PEEK[1.MIME]", "BODY.PEEK[1]", "BODY.PEEK[2.MIME]", "BODY.PEEK[2]"].allSatisfy(line.contains) else {
+                        send("\(tag) BAD Expected paired PEEK\r\n", context); continue
+                    }
+                    if scenario == .rejected { send("\(tag) NO Synthetic refusal\r\n", context); continue }
+                    let plainHeader = "Content-Type: text/plain; charset=utf-8\r\n\r\n"
+                    var htmlHeader = "Content-Type: text/html; charset=utf-8\r\n\r\n"
+                    if scenario == .malformedHeader { htmlHeader = "Content-Type: impossible\r\n\r\n" }
+                    if scenario == .oversizedHeader { htmlHeader += String(repeating: "x", count: 65537) }
+                    let plain = "BODY[1.MIME] \(literal(plainHeader)) BODY[1] \(literal("hello"))"
+                    var html = ""
+                    if scenario != .missingHeader && scenario != .foreignHeader { html += "BODY[2.MIME] \(literal(htmlHeader)) " }
+                    if scenario != .missingContent { html += "BODY[2] \(literal("<p>hello</p>"))" }
+                    let uid = scenario == .wrongUID ? 8 : 7
+                    if scenario == .splitReversed {
+                        send("* 1 FETCH (UID 7 \(html))\r\n* 2 FETCH (UID 8 FLAGS (\\Seen))\r\n* 1 FETCH (FLAGS ())\r\n* 1 FETCH (UID 7 \(plain))\r\n", context)
+                    } else {
+                        send("* 1 FETCH (UID \(uid) \(plain) \(html))\r\n", context)
+                    }
+                    if scenario == .foreignHeader { send("* 2 FETCH (UID 8 BODY[2.MIME] \(literal(htmlHeader)))\r\n", context) }
+                    if scenario == .duplicateUID { send("* 2 FETCH (UID 7 FLAGS ())\r\n", context) }
+                    if scenario == .conflictingUID { send("* 1 FETCH (UID 8 FLAGS ())\r\n", context) }
+                }
+                send("\(tag) OK Fetched\r\n", context)
+            default: send("\(tag) BAD Unexpected command\r\n", context)
+            }
+        }
+    }
+    func errorCaught(context: ChannelHandlerContext, error: Error) { context.close(promise: nil) }
+}
+
+struct BatchedReadableFetchTests {
+    @Test func combinedAndSplitReversedResponsesPreserveBothAlternatives() async throws {
+        try await run([.combined, .splitReversed], partial: false, fails: false)
+    }
+    @Test func missingOrInvalidSiblingPreservesUsablePlainText() async throws {
+        try await run([.missingHeader, .missingContent, .malformedHeader, .oversizedHeader, .foreignHeader], partial: true, fails: false)
+    }
+    @Test func ambiguousTargetsAndRejectedBatchFailWithoutReplay() async throws {
+        try await run([.wrongUID, .duplicateUID, .conflictingUID, .rejected], partial: false, fails: true)
+    }
+    private func run(_ scenarios: [BatchedBodyScenario], partial: Bool, fails: Bool) async throws {
+        let directory = FileManager.default.temporaryDirectory.appendingPathComponent("dmail-mime-batch-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: directory) }
+        let context = try NIOSSLContext(configuration: fixtureTLSConfiguration(in: directory))
+        let group = MultiThreadedEventLoopGroup(numberOfThreads: 1)
+        do {
+            for scenario in scenarios {
+                let trace = AttachmentFetchTrace()
+                let server = try await ServerBootstrap(group: group).childChannelInitializer { channel in
+                    channel.pipeline.addHandlers([NIOSSLServerHandler(context: context), BatchedBodyPeer(scenario, trace)])
+                }.bind(host: "127.0.0.1", port: 0).get()
+                guard let port = server.localAddress?.port else { throw IMAPError.notConnected }
+                var tls = TLSConfiguration.makeClientConfiguration(); tls.certificateVerification = .none
+                let client = IMAPClient(Server(hostname: "127.0.0.1", username: "synthetic", password: "synthetic", port: port),
+                    logger: nil, tlsConfiguration: tls, connectionTimeout: .seconds(2), commandTimeout: 2)
+                do {
+                    try await client.connect(); try await client.login()
+                    do {
+                        let readable = try #require(try await client.fetchReadable(uid: 7))
+                        #expect(!fails, "\(scenario)")
+                        #expect(readable.partial == partial, "\(scenario)")
+                        let body = try #require(readable.body)
+                        let children = try body.part.parts
+                        #expect(children.count == 2)
+                        #expect(String(decoding: children[0].data, as: UTF8.self).hasPrefix("hello"))
+                        if partial { #expect(children[1].contentType.subtype == "x-dmail-omitted") }
+                        else { #expect(String(decoding: children[1].data, as: UTF8.self).hasPrefix("<p>hello</p>")) }
+                    } catch { #expect(fails, "\(scenario): \(error)") }
+                    #expect(trace.count() == 2, "\(scenario): no individual retry")
                     try await client.shutdown(); #expect(!client.isConnected)
                 } catch { try? await client.shutdown(); try? await server.close().get(); throw error }
                 try await server.close().get()

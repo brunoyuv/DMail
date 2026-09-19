@@ -1,0 +1,40 @@
+{
+  "versionName": "1.0.4",
+  "versionCode": 1000004,
+  "branch": "main",
+  "build": "1.0.4-outlook-auth-gmail-smtp",
+  "reportedAccountType": "Gmail app password",
+  "previouslySentSuccessfully": true,
+  "causeOfMissingDeviceRecordConfirmed": false,
+  "changes": {
+    "distinguishMissingAndUnreadableSmtp": true,
+    "localGmailRecovery": true,
+    "preserveExistingSmtp": true,
+    "explicitSaveRequired": true,
+    "accountOwnershipGuards": true,
+    "googleBrowserSignInEnabled": false
+  },
+  "validation": {
+    "javaScriptTests": 853,
+    "pythonTests": 44,
+    "newStorageTests": 10,
+    "newComposerTests": 15,
+    "signedArm64HapBuild": true,
+    "sourceAndNativeLibraryParity": true,
+    "syntheticGmailTestsOnly": true
+  },
+  "artifact": {
+    "path": ".tools/gmail-smtp-recovery-104/D-Mail-1.0.4-auth-smtp-signed.hap",
+    "sha256": "874e32b4a2c73ca5c70e073c5c9fae76aa5463d9bbfa9dd0dbc98b2c0a182130",
+    "bundleName": "org.thunderbird.harmony.dev"
+  },
+  "installed": false,
+  "deviceLaunched": false,
+  "mailSent": false,
+  "commitCreated": false,
+  "remotePush": false,
+  "publicRelease": false,
+  "newerCombinedBuild": "docs/imap-greeting-validation.json",
+  "installedInNewerCombinedBuild": true,
+  "installationRecord": "docs/imap-greeting-installation.json"
+}

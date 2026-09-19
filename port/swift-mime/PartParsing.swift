@@ -2,6 +2,15 @@
 // Byte-preserving parsing adapter for Thunderbird's MIME Part model.
 import Foundation
 
+// Diagnostic callback carries only fixed categories and numeric structural data.
+// It never changes parsing behavior or exposes field values/body bytes.
+public enum MimeDiagnosticReason: String, Sendable {
+    case inputTooLarge, separatorMissing, headerTooLarge, duplicateHeader, contentTypeInvalid, parsed
+}
+public enum MimeDiagnostics {
+    @TaskLocal public static var sink: (@Sendable (MimeDiagnosticReason, Int, Int) -> Void)?
+}
+
 struct ParsedPart {
     let data: Data
     let disposition: ContentDisposition?
@@ -12,9 +21,10 @@ struct ParsedPart {
     let parameters: [String: String]
 }
 func parsePart(_ data: Data) throws -> ParsedPart {
-    guard data.count <= 8 * 1024 * 1024 else { throw MIMEError.dataNotFound }
+    guard data.count <= 8 * 1024 * 1024 else { MimeDiagnostics.sink?(.inputTooLarge, data.count, 0); throw MIMEError.dataNotFound }
     let separator = data.range(of: Data([13, 10, 13, 10])) ?? data.range(of: Data([10, 10]))
-    guard let separator, separator.lowerBound - data.startIndex <= 65536 else { throw MIMEError.dataNotFound }
+    guard let separator else { MimeDiagnostics.sink?(.separatorMissing, data.count, 0); throw MIMEError.dataNotFound }
+    guard separator.lowerBound - data.startIndex <= 65536 else { MimeDiagnostics.sink?(.headerTooLarge, separator.lowerBound - data.startIndex, 0); throw MIMEError.dataNotFound }
     let text = String(decoding: data[..<separator.lowerBound], as: UTF8.self).replacingOccurrences(of: "\r\n", with: "\n")
     var unfolded: [String] = []
     for line in text.components(separatedBy: "\n") {
@@ -27,10 +37,18 @@ func parsePart(_ data: Data) throws -> ParsedPart {
         guard let colon = line.firstIndex(of: ":") else { continue }
         let name = line[..<colon].lowercased()
         guard ["content-type", "content-transfer-encoding", "content-disposition", "content-id", "content-location"].contains(name) else { continue }
-        guard fields[name] == nil else { throw MIMEError.dataNotFound }
+        guard fields[name] == nil else {
+            let index = ["content-type", "content-transfer-encoding", "content-disposition", "content-id", "content-location"].firstIndex(of: name) ?? 5
+            MimeDiagnostics.sink?(.duplicateHeader, index + 1, unfolded.count); throw MIMEError.dataNotFound
+        }
         fields[name] = line[line.index(after: colon)...].trimmingCharacters(in: .whitespaces)
     }
-    let type = try fields["content-type"].map { try ContentType($0) } ?? .text(.plain, .ascii)
+    let type: ContentType
+    do { type = try fields["content-type"].map { try ContentType($0) } ?? .text(.plain, .ascii) }
+    catch { MimeDiagnostics.sink?(.contentTypeInvalid, fields["content-type"]?.utf8.count ?? 0, 0); throw error }
+    let flags = (fields["content-type"] != nil ? 1 : 0) | (fields["content-transfer-encoding"] != nil ? 2 : 0) |
+        (fields["content-id"] != nil ? 4 : 0) | (fields["content-disposition"] != nil ? 8 : 0) | (fields["content-location"] != nil ? 16 : 0)
+    MimeDiagnostics.sink?(.parsed, separator.lowerBound - data.startIndex, flags)
     return ParsedPart(data: Data(data[separator.upperBound...]),
                       disposition: AttachmentFilename.disposition(fields["content-disposition"], contentType: fields["content-type"]),
                       transfer: fields["content-transfer-encoding"].flatMap { ContentTransferEncoding(rawValue: $0.lowercased()) },

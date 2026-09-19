@@ -156,4 +156,57 @@ struct BrowserOAuthTests {
         #expect(personal.authURI == "https://login.microsoftonline.com/consumers/oauth2/v2.0/authorize")
         #expect(personal.tokenURI == "https://login.microsoftonline.com/consumers/oauth2/v2.0/token")
     }
+
+    @Test func microsoftCodeAndRefreshFormsExplicitlyRetainTheAuthorizedOutlookResource() throws {
+        for personalOnly in [false, true] {
+            let registration = try MailOAuthProvider.microsoft.registration(clientID: "synthetic+client",
+                redirectURI: "http://127.0.0.1:49152/oauth2redirect", microsoftPersonalOnly: personalOnly)
+            let sessions = BrowserOAuthSessions()
+            let authorization = try sessions.begin(registration, now: now)
+            let authorized = query(authorization.url)
+            let callback = "\(registration.redirectURI)?state=\(authorized["state"]!)&code=one%2Btime%26code"
+            let exchange = try sessions.consume(id: authorization.id, callback: callback, now: now)
+            let refresh = try BrowserOAuthSessions.refresh(registration, token: "refresh+token&value")
+            for request in [exchange, refresh] {
+                #expect(request.url?.absoluteString == registration.tokenURI)
+                #expect(request.url?.query == nil)
+                #expect(request.httpMethod == "POST")
+                #expect(request.value(forHTTPHeaderField: "Content-Type") == "application/x-www-form-urlencoded")
+                let fields = query("https://example.test/?" + String(decoding: request.httpBody!, as: UTF8.self))
+                #expect(fields["scope"] == authorized["scope"])
+                #expect(fields["client_id"] == "synthetic+client")
+                #expect(fields["client_secret"] == nil)
+                if fields["grant_type"] == "authorization_code" {
+                    #expect(fields["code"] == "one+time&code")
+                    #expect(fields["redirect_uri"] == registration.redirectURI)
+                    #expect(OAuth2.PKCE(codeVerifier: fields["code_verifier"]!).codeChallenge == authorized["code_challenge"])
+                } else {
+                    #expect(fields["grant_type"] == "refresh_token")
+                    #expect(fields["refresh_token"] == "refresh+token&value")
+                }
+            }
+            #expect(throws: BrowserOAuthError.expiredSession) { try sessions.consume(id: authorization.id, callback: callback, now: now) }
+        }
+    }
+
+    @Test func explicitOutlookTokenScopesDoNotChangeGoogleOrOtherRegistrations() throws {
+        let google = try MailOAuthProvider.google.registration(clientID: "synthetic-google", redirectURI: "http://127.0.0.1:49152/oauth2redirect")
+        let microsoft = try MailOAuthProvider.microsoft.registration(clientID: "synthetic", redirectURI: google.redirectURI)
+        let registrations = [google,
+            try OAuth2.Request(authURI: microsoft.authURI, tokenURI: "https://login.microsoftonline.com.example.test/common/oauth2/v2.0/token",
+                redirectURI: google.redirectURI, responseType: "code", scope: microsoft.scope, clientID: "synthetic"),
+            try OAuth2.Request(authURI: microsoft.authURI, tokenURI: microsoft.tokenURI,
+                redirectURI: google.redirectURI, responseType: "code", scope: ["https://graph.microsoft.com/Mail.Read", "offline_access"], clientID: "synthetic")]
+        for registration in registrations {
+            let sessions = BrowserOAuthSessions()
+            let authorization = try sessions.begin(registration, now: now)
+            let callback = "\(registration.redirectURI)?state=\(query(authorization.url)["state"]!)&code=synthetic"
+            for request in [try sessions.consume(id: authorization.id, callback: callback, now: now),
+                            try BrowserOAuthSessions.refresh(registration, token: "refresh+token")] {
+                let fields = query("https://example.test/?" + String(decoding: request.httpBody!, as: UTF8.self))
+                #expect(fields["scope"] == nil)
+                #expect(fields["client_secret"] == nil)
+            }
+        }
+    }
 }

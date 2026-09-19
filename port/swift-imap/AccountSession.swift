@@ -32,7 +32,12 @@ public struct OptionalMailboxCounts {
 /// Failed operations never add LOGOUT or get reclassified by cleanup errors.
 public func finishIMAPOperation<Value>(_ outcome: Result<Value, Error>,
     logout: () async throws -> Void, shutdown: () async throws -> Void) async throws -> Value {
-    if case .success = outcome { try? await logout() }
-    try? await shutdown()
+    let trace = MailDownloadTrace.current
+    if case .success = outcome {
+        trace?.mark(.logout)
+        do { try await logout(); trace?.mark(.logoutDone) } catch { trace?.mark(.cleanupFailed, error: error, values: [1]) }
+    }
+    trace?.mark(.shutdown)
+    do { try await shutdown(); trace?.mark(.shutdownDone) } catch { trace?.mark(.cleanupFailed, error: error, values: [2]) }
     return try outcome.get()
 }

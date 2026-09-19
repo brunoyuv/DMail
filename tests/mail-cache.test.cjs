@@ -19,7 +19,7 @@ test('Fresh summary updates mutable headers and flags while preserving a downloa
   const summary = { ...mail(), textBody: null, keywords: ['$seen'], mailboxIds: ['archive', 'label'] };
   const after = cacheEmail(summary, false, before, 200);
   assert.equal(after.mail.textBody, before.mail.textBody);
-  assert.equal(after.bodySavedAt, 100); assert.equal(after.savedAt, 200);
+  assert.equal(after.bodySavedAt, 100); assert.equal(after.savedAt, 100);
   assert.deepEqual(after.mail.keywords, ['$seen']); assert.deepEqual(after.mail.mailboxIds, ['archive', 'label']);
   assert.equal(before.mail.keywords.length, 0);
 });

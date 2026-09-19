@@ -2,6 +2,16 @@ import Foundation
 import IMAP
 
 enum ImapFailure: String, Error { case archiveUnavailable, forbidden, accountReadOnly, messageNotFound, changeUnconfirmed, invalidArgument, unsafeEndpoint, authenticationRequired, certificate, network, watchRestart, queryChanged, invalidResponse, unsupported, messageTooLarge }
+// Fixed failure categories, never provider response text. These annotate the
+// existing public error without changing credential/session or retry behavior.
+enum ImapAuthenticationStage: String, Error { case credentials, server }
+func imapFailureReply(_ error: any Error) -> ImapReply {
+    if let stage = error as? ImapAuthenticationStage {
+        return ImapReply(error: ImapFailure.authenticationRequired.rawValue,
+            authenticationStage: stage.rawValue)
+    }
+    return ImapReply(error: (error as? ImapFailure ?? .network).rawValue)
+}
 struct ImapRequest: Decodable, Sendable {
     let operation: String, sessionUrl: String, authorization: String
     var username: String? = nil
@@ -16,6 +26,8 @@ struct ImapRequest: Decodable, Sendable {
     var watchId: String? = nil
     var syncSessionId: String? = nil
     var previewKnownIds: [String]? = nil
+    var downloadDiagnostics: Bool? = nil
+    var diagnosticAttempt: Int? = nil
 }
 struct ImapNullable<T: Encodable & Sendable>: Encodable, Sendable {
     let value: T?
@@ -77,11 +89,14 @@ struct ImapArchiveUndo: Encodable, Sendable {
     let imap = true
 }
 struct ImapReply: Encodable, Sendable {
+    var downloadTrace: [IMAP.MailDownloadEvent]? = nil
+    var lateDownloadCompletions: [IMAP.LateDownloadCompletion]? = nil
     var session: ImapSession?
     var mailboxes: [ImapMailbox]?
     var page: ImapPage?
     var email: ImapNullable<ImapEmail>?
     var error: String?
+    var authenticationStage: String? = nil
     var state: String?
     var attachment: ImapAttachmentData?
     var inboxCheck: ImapInboxCheck?

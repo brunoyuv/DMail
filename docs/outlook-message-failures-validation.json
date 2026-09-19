@@ -1,0 +1,82 @@
+{
+  "device": "Pura X",
+  "model": "VDE-AL00",
+  "bundleName": "org.thunderbird.harmony.dev",
+  "previousVersionName": "1.0.3",
+  "previousVersionCode": 1000003,
+  "versionName": "1.0.4",
+  "versionCode": 1000004,
+  "upgradeOnly": true,
+  "storageIdentityPreserved": true,
+  "artifactHashVerified": true,
+  "hapSha256": "5ad2379b55d718860508dddf53e424802b688e38c8d74971eee8c93f730aa3ea",
+  "productionLaunched": false,
+  "productionProcessAbsentAfterInstall": true,
+  "installedHashVerified": false,
+  "installedHashCheck": "Not attempted; prior OS reads denied",
+  "sourceBranch": "main",
+  "sourceBaseRevision": "c21edcea3143b97c8e7818bc983b00125b18cf4e",
+  "scope": "Transient OAuth token failures retain network classification; message-failure cause unresolved",
+  "validation": {
+    "javascript": 787,
+    "python": 40,
+    "swiftOAuth": 47,
+    "failures": 0,
+    "passed": true,
+    "arm64SignedPackageVerified": true,
+    "freshDeviceVersionCheck": true,
+    "realMailTested": false,
+    "matepadChanged": false
+  },
+  "supersededInstallation": {
+    "versionName": "1.0.3",
+    "versionCode": 1000003,
+    "previousVersionName": "1.0.2",
+    "previousVersionCode": 1000002,
+    "hapSha256": "86340219de50dcbf4d9c45df2ca52ff616cde7c35c8e2d105ba47d5910c46b37",
+    "storageIdentityPreserved": true,
+    "productionLaunched": false,
+    "reason": "The earlier build mistakenly used the OpenHarmony branch at 1.0.3 instead of main at 1.0.4."
+  },
+  "senderIsolationValidation": {
+    "sourceBranch": "main",
+    "sourceBaseRevision": "c21edcea3143b97c8e7818bc983b00125b18cf4e",
+    "versionName": "1.0.4",
+    "workingChangesUncommitted": true,
+    "openHarmonyChangesPreservedAndCompared": true,
+    "senderDomains": [
+      "microsoft.com",
+      "email.microsoft.com",
+      "accountprotection.microsoft.com",
+      "outlook.com",
+      "microsoft.com.example.test",
+      "control.example.test"
+    ],
+    "authenticationModes": [
+      "LOGIN",
+      "XOAUTH2"
+    ],
+    "matrixCases": 12,
+    "failureScenarios": [
+      "rejected FETCH",
+      "truncated literal timeout",
+      "conflicting UID"
+    ],
+    "repetitionsPerScenario": 3,
+    "successfulHeaderReads": 216,
+    "expectedBodyFailures": 108,
+    "successfulFollowingBodyReads": 108,
+    "everyConnectionClosed": true,
+    "messageFailuresClassifiedAsAuthenticationFailure": 0,
+    "swiftImapTests": 42,
+    "swiftPreviewTests": 11,
+    "javascriptReconnectTests": 8,
+    "passed": true,
+    "realMailTested": false,
+    "harmonyEndToEndTested": false,
+    "providerServiceTested": false,
+    "emulatorProcessAbsent": true,
+    "deviceChanged": false,
+    "conclusion": "Sender domain alone did not reproduce inbox failure in the synthetic matrix; actual reported failure remains unresolved."
+  }
+}

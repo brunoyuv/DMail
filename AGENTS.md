@@ -12,6 +12,208 @@ only in generated staging. Preserve its exact case/spelling. It is a separate
 app identity. Use the existing matching AppGallery release key/profile under
 ignored .tools/signing/appgallery/; never use device debug signing for it.
 
+## Updated 1.0.5 upload package and publication
+
+The user requested rebuilding the uploadable AppGallery release, folding the
+scrolling changes into the existing 1.0.5 commit, and pushing main. Retain version
+1000005 and all pre-1.0.5 history, with Codex/AI port attribution. Recovery bundle,
+working source and previous signed artifacts are under .tools/release-105-scroll/.
+Build from the clean consolidated commit using --appgallery --no-zip and release
+sign with the matching app_gallery profile for some.DMail.hamorny. Keep the signed
+verification sidecar tied to that exact commit. Push only with an exact lease
+against the checked prior tip; no store upload or further device install is part
+of this request. Earlier no-commit/no-push/no-rebuild notes are historical.
+
+## Scrolling lag follow-up
+
+The user clarified that Inbox scrolling stutters and unchanged downloaded content
+should not be repeatedly computed. MailListItem now owns each row's measured
+height, marker and swipe panels; never restore the list-wide observed height map.
+Row text is prepared on creation, not during layout; language changes may update
+the date. Preserve content/action-based row keys, reactive action permissions,
+parent-owned operation guards and swipe-close behavior. InboxPrefetch reuses the
+unchanged immutable source array for admission while still checking permissions
+and waking/pausing on every callback; a new query state resets admission.
+All 869 JavaScript and 44 Python tests pass and the signed ARM build is verified.
+These are synthetic work-count checks; native frame timing is unmeasured. The
+candidate was subsequently installed in place on Pura X at the user’s request,
+with installer success and app/storage identities verified. The app remained
+closed; user scrolling validation is pending. No commit or push was requested.
+See docs/inbox-scroll-work.md.
+
+## Consolidated 1.0.5 publication
+
+The user requested folding the tested Outlook, cleanup and incremental mailbox
+changes into the existing 1.0.5 commit and pushing main to GitHub. Preserve all
+parents before 1.0.5, version 1000005, identities and Codex coauthor attribution.
+Recovery history and the complete working-source snapshot are under ignored
+.tools/consolidate-105/. Replace only the prior 1.0.5 tip using an exact remote
+lease; do not overwrite intervening remote work. This publication request does
+not rebuild AppGallery artifacts or authorize another device installation.
+
+## Incremental mailbox refresh and retention
+
+The user requested preserving loaded pages, seven-day local entries and less
+computation during refresh. Cache view saves now retain absent entries until
+expiry, including after an empty response; explicit confirmed moves/deletions
+remain effective. savedAt is the entry arrival timestamp within its seven-day
+lifetime, not the latest refresh time. Only an actual download after expiry can
+admit it again. Do not renew retained tails or rewrite/refetch their bodies.
+Apply fetched headers separately from retained view IDs and skip unchanged row
+writes. Preserve pagination for unchanged server query state; do not guess offsets
+when it changes. Visible rows are cached by array/account/folder/filter and
+operation/conversation revisions. Keep these invalidations and immutable-array
+updates. See docs/incremental-mailbox-refresh.md for scope and measured checks.
+At the user’s subsequent request, the latest signed 1.0.5 build is installed
+in place on Pura X, with app/storage identity and installer success verified.
+The app remained closed; no mailbox access or functional device test occurred.
+MatePad and AppGallery are unchanged; no commit or publication was requested.
+
+## Current Outlook investigation and cleanup
+
+Work on main, retaining 1.0.5 (1000005), app/storage identities and saved accounts.
+The user is testing the latest signed development build on Pura X, installed in
+place over 1.0.4 with identity/hash verification. Its process was stopped after
+installation; the agent did not launch it or inspect mail. Cleanup was followed by the explicitly requested incremental-refresh installation
+on Pura X, recorded above. No commit, push, publication, AppGallery update or
+MatePad installation is authorized for this round.
+
+Keep the complete OAuth-request shutdown barrier, token rotation/refresh leases,
+endpoint/account binding, and protection against an obsolete refresh overwriting
+or invalidating a newer reconnect. Only known credential/grant rejections request
+reauthentication; local/unknown failures remain connection errors. Preserve safe
+credentials/server/refresh stages and the bounded Swift distinction for Outlook's
+"User is authenticated but not connected" response. Do not expose provider text,
+restore shipping debug logging, or add automatic token/SMTP replay. The Inbox
+notification prompt is removed; per-account Settings and preferences remain.
+
+The test mailbox's reverting IMAP setting is separate from the reported D-Mail
+restart failure. Do not repeat live authentication loops against that blocked
+mailbox or claim the overall issue resolved. Synthetic tests reproduced and cover
+the shutdown race, refresh error handling and stale rejection; device OAuth
+connectivity remains unconfirmed. Prior isolated MatePad tests passed and the
+fixture was uninstalled. Keep the emulator stopped. Tests use synthetic accounts;
+provider sign-in and consent remain user-operated. Details, historical test counts
+and installed artifact hashes live in docs/outlook-reopen-investigation.md and
+docs/outlook-reopen-validation.json.
+
+## Current 1.0.5 release
+
+The user approved the installed MIME fetch optimization and requested a local
+1.0.5 (1000005) commit and an uploadable AppGallery release APP, without a ZIP.
+This supersedes the historical 1.0.4 version freeze and no-commit scope below.
+Keep main and prior history, use the matching AppGallery release signing materials,
+and include Codex coauthor / AI-assisted port-rework attribution. No new push,
+store upload or device installation is requested for this release.
+
+The user also requested removal of the debug feature. The shipping Settings
+controls, log export, logger initialization and ArkTS diagnostic collection are
+removed, including for upgrades that previously enabled logging. The optional
+native trace hooks remain for isolated synthetic tests but shipping requests do
+not enable them. Preserve safe ordinary error messages and mail ownership,
+timeouts, cancellation and draining. Earlier diagnostic documents are historical.
+See docs/release-1.0.5.md.
+
+## Current 1.0.4 Outlook and foreground Inbox cache follow-up
+
+Work on main at the user's request; preserve version 1.0.4 (1000004), identity
+and saved accounts. The detailed uploaded log proved that a complete singlepart
+HTML transfer was rejected because BODY[1.MIME] was absent. ReadableBody now
+requests the root HEADER alongside BODY[1], including standalone attachments;
+multipart child MIME requests remain unchanged. The user confirmed this fixes
+the email problem. Detailed diagnostics were used for that investigation; the
+1.0.5 release removes the in-app debug feature at the user’s request.
+
+The user subsequently explicitly chose to download the active Inbox's emails
+ahead of opening them while the app is in the foreground. This supersedes the
+historical selected-message-only policy for this narrow scope. InboxPrefetch
+uses the existing loader and durable body/prepared-document cache, traverses
+later Inbox pages without replacing the visible list, and shares the automatic
+serial lane with its three-second completion gap. Pause on background, hidden
+mail views, composition, interactions and thermal limits. Preserve reader
+priority, original-account completion saves and draining underlying work after
+cancellation. Recheck ownership after credential waits before native requests.
+Do not revive the legacy all-account/background MailBodySync worker. Pictures
+and attachment files remain on demand; seven-day body retention is unchanged.
+Failed bodies are not automatically repeated in the same context; later work
+backs off, and an authentication rejection stops that context until reconnection.
+
+Latest login follow-up: foreground IMAP pages and bodies share a serial,
+credential-bound original Swift read session (15s idle / 60s age / 16 reads).
+Retire queued reads after native failure without replay; rotate on credentials
+and close on background/account changes/teardown. Preserve successful headers
+but discard a socket closed by an optional preview timeout. No HTML gating was
+added. The latest upload had logging disabled; respect its saved preference.
+See docs/imap-read-session-follow-up.md and its validation record.
+
+Current authentication follow-up: intermittent failures affect both first-time
+Outlook setup and saved accounts in debug and AppGallery builds. Explicit Outlook
+scopes now accompany Microsoft token exchange/refresh; omission was not proven
+to cause the live failure. Fixed error stages distinguish credentials/server/
+refresh without enabling logs. A refresh superseded by newer reconnect credentials
+keeps them intact and reports network instead of a false authentication failure.
+No authentication retry was added. These changes are included in the combined greeting/SMTP 1.0.4 build now
+installed on Pura X; see docs/outlook-authentication-follow-up.md.
+
+Current follow-up adds local Gmail SMTP recovery for a missing password-account
+record: **Use saved Gmail login** proposes the exact Gmail SMTPS465 endpoint and
+bound incoming login, then requires explicit Save. Existing/custom SMTP settings
+are preserved; malformed/unavailable Asset records fail instead of appearing
+blank. Preserve account/lifecycle guards. See docs/gmail-smtp-recovery.md. Its
+combined 1.0.4 greeting/auth/SMTP development HAP is installed on Pura X. The user supplied
+a dedicated Outlook test account but chose to operate Microsoft sign-in/consent
+personally. The earlier isolated host probe checked authentication and token
+refresh only. The newer explicitly authorized HTML-mail round below supersedes
+that auth-only scope for this dedicated account.
+
+The user subsequently authorized saving and reusing that dedicated Outlook test
+account and related email snapshots for future D-Mail tests. Its local identifier
+and scope are recorded under ignored `.tools/test-accounts/outlook/`. Its OAuth
+login is now saved in the desktop Secret Service under an exact account-scoped
+D-Mail test item. No password is stored; tokens never belong in files or output. This exception applies only to the named
+test mailbox, not personal or production accounts. Keep mailbox snapshots local
+and ignored and use synthetic test content; public records remain redacted.
+Retain credentials only in an OS-protected or encrypted local store if needed.
+The current browser sign-in/consent round remains user-operated.
+
+The user explicitly authorized sending/receiving batches of synthetic HTML mail
+with this account to investigate Outlook authentication and loading speed. Send
+only to the same dedicated account, preserve the durable local send ledger, and
+never replay interrupted/uncertain sends. Snapshots, credentials, fixture servers
+and live-test tools stay ignored. The protected credential lease serializes
+refresh; save token rotation before use. This permission does not extend to
+personal/production mail or production UI. See docs/outlook-html-mail-tests.md
+for results and the uncompleted live-receive test; do not claim that browser
+success or SMTP success establishes IMAP access.
+
+The current synthetic connection follow-up reproduced CAPABILITY sent before
+the server greeting. `initial-greeting.patch` and `InitialGreeting.swift` now
+wait for an OK greeting before any command, reject unbound PREAUTH/BYE/invalid
+or missing greetings, and close on the existing deadline or cancellation.
+Preserve TLS trust, CancellationError, one attempt and timer cleanup. This is a
+confirmed protocol-sequencing defect, not proof of every reported Outlook
+authentication refusal. All 147 Swift, 853 JavaScript and 44 Python tests pass; the signed ARM64
+development HAP is installed in place on Pura X at the user’s request, with
+version/hash and app/storage identities verified and no production launch.
+MatePad and AppGallery are unchanged. See docs/imap-greeting-fix.md and
+docs/imap-greeting-installation.json.
+
+The user then requested the measured MIME fetch optimization. ReadableBody now
+pairs at most two adjacent selected parts when advertised content plus two
+64 KiB header allowances fits 512 KiB. Larger parts retain separate commands.
+Keep actual section/aggregate limits, root HEADER handling, exact UID validation,
+partial sibling preservation and original-client cancellation/timeout behavior.
+Never replay a rejected batch as individual requests. At the user's subsequent
+request, the signed 1.0.4-mime-batching development HAP is installed in place on
+Pura X, with signed input hash/version and app/storage identities verified.
+Production was not launched. See docs/mime-fetch-batching.md and its installation
+and validation records.
+
+The user authorized in-place Pura X updates; keep production closed and use
+synthetic tests. No MatePad update, commit, push or public release is authorized
+for this round. See docs/outlook-singlepart-header-fix.md and
+docs/foreground-inbox-cache.md for evidence and installation results.
+
 ## Current package and publication scope
 
 Google browser sign-in and reconnect are disabled by default using the build

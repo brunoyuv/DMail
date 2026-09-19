@@ -1,0 +1,104 @@
+{
+  "sourceBranch": "main",
+  "sourceBaseRevision": "c21edcea3143b97c8e7818bc983b00125b18cf4e",
+  "versionName": "1.0.4",
+  "versionCode": 1000004,
+  "build": "1.0.4-download-log-5-read-sessions",
+  "uploadedEvidence": {
+    "build": "1.0.4-download-log-4-inbox-cache",
+    "loggingEnabledAtExport": false,
+    "newCompletedNativeReads": 9,
+    "authenticationRejections": 2,
+    "uncodedTaggedNO": true,
+    "postAuthenticationPageTimeouts": 1,
+    "successfulBodyReads": 3,
+    "peakOverlappingNativeReads": 3,
+    "prefetchEventsPresent": false,
+    "providerThrottlingProved": false
+  },
+  "behavior": {
+    "serialPagesAndBodiesPerClient": true,
+    "credentialsResolvedOnAdmission": true,
+    "credentialRotationClosesOldLease": true,
+    "failureRetiresQueuedGeneration": true,
+    "failedNativeReadAutomaticallyReplayed": false,
+    "lifecycleClosesAfterDrain": true,
+    "optionalPreviewFailureClosesSocket": true,
+    "htmlAcceptanceRulesTightened": false,
+    "foregroundInboxPrefetchPreserved": true,
+    "idleLimitSeconds": 15,
+    "ageLimitSeconds": 60,
+    "maxReadsPerConnection": 16,
+    "maxPooledConnections": 4,
+    "savedLoggingPreferencePreserved": true
+  },
+  "validation": {
+    "javaScriptTests": 817,
+    "pythonTests": 40,
+    "focusedSwiftTests": 56,
+    "mixedPageBodyFixture": {
+      "reads": 6,
+      "connections": 1,
+      "authentications": 1,
+      "authenticationModes": [
+        "LOGIN",
+        "XOAUTH2"
+      ],
+      "singlepartHTMLBytes": 97088
+    },
+    "nativeSourceParity": [
+      {
+        "source": "port/swift-imap/ImapAccountCore.swift",
+        "sha256": "ec4cbe384c0a16049f63179a0d2093f21995b21bae977588ebecc2fdaad800fb",
+        "nativeStageMatches": true
+      },
+      {
+        "source": "port/swift-imap/SyncReadSession.swift",
+        "sha256": "9ccb6d78f29de7ca833bc7e2a572c384a0d9e2f080d2457f4279dc1cb4402ae8",
+        "nativeStageMatches": true
+      },
+      {
+        "source": "port/swift-imap/ReadableBody.swift",
+        "sha256": "5f649a10912173f43eb688b4d721fe240d4707522d6ad142c287ae8c35c18dcc",
+        "nativeStageMatches": true
+      }
+    ],
+    "arm64NativeBuild": true,
+    "signedHAPBuild": true,
+    "shippingSourceParityVerified": true,
+    "signedMarkerVerified": true,
+    "emulatorUsed": false,
+    "productionMailAccess": false,
+    "productionUIAutomation": false
+  },
+  "installation": {
+    "device": "Pura X",
+    "model": "VDE-AL00",
+    "bundleName": "org.thunderbird.harmony.dev",
+    "previousVersionName": "1.0.4",
+    "previousVersionCode": 1000004,
+    "versionName": "1.0.4",
+    "versionCode": 1000004,
+    "upgradeOnly": true,
+    "storageIdentityPreserved": true,
+    "artifactHashVerified": true,
+    "hapSha256": "5420cde5f1c5bba718529b0436df4d9b9b0691a7dbb77a6c97a5fa7ba1300841",
+    "productionLaunched": false,
+    "productionProcessAbsentAfterInstall": true,
+    "installedHashVerified": false,
+    "installedHashCheck": "Not attempted; prior OS reads denied",
+    "sourceBranch": "main",
+    "sourceBaseRevision": "c21edcea3143b97c8e7818bc983b00125b18cf4e",
+    "scope": "Serial reusable Inbox page and body read sessions with detailed diagnostics; 1.0.4-download-log-5-read-sessions"
+  },
+  "matePadChanged": false,
+  "commitCreated": false,
+  "remotePush": false,
+  "publicRelease": false,
+  "limitations": [
+    "The uncoded Microsoft login rejection does not establish its server-side cause.",
+    "Logging was disabled at export; the retained sample cannot establish an overall rejection rate or implicate prefetch.",
+    "Synthetic tests prove connection reuse and cleanup; acceptance by the real provider remains unverified.",
+    "The installer and signed input hash are verified; installed HAP bytes were not read."
+  ]
+}

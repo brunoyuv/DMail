@@ -434,7 +434,7 @@ test('Reconnect rejects another account, provider, server or removed identity be
   } finally { f.sqlite.close(); }
 });
 
-test('A late token refresh cannot overwrite a successfully reconnected account', async () => {
+test('A superseded token refresh preserves the reconnected account without requesting another sign-in', async () => {
   const f = fixture();
   try {
     await f.NotificationStore.initialize(f.db); const a = f.account('oauth', true), oldStore = f.store(), reconnect = f.store();
@@ -444,8 +444,190 @@ test('A late token refresh cannot overwrite a successfully reconnected account',
     const old = oldStore.oauthAccessToken(a); const observed = old.then(value => ({ value }), error => ({ error })); await entered.promise;
     login.tokens = { accessToken: 'new-sign-in', refreshToken: 'new-sign-in-refresh', expiresAt: Date.now() / 1000 + 3600 };
     await reconnect.replaceOAuth(a, { id: a.serverId }, login);
-    gate.resolve(); assert.equal((await observed).error?.code, 'authenticationRequired');
+    gate.resolve(); assert.equal((await observed).error?.code, 'network');
     assert.equal(await reconnect.oauthAccessToken(a), 'new-sign-in');
     assert.equal(f.sqlite.prepare('SELECT count(*) AS n FROM oauth_refresh_lease').get().n, 0);
   } finally { f.sqlite.close(); }
+});
+
+
+test('Cold reopen restores the saved login and refreshes expired credentials once before another restart', async () => {
+  const f = fixture({ committedReads: true, fastTime: true });
+  try {
+    const original = f.account('cold-reopen', true), first = f.store();
+    await f.seedOAuth(original, f.state.now / 1000 + 120);
+    assert.equal(await first.credentials(original).authorization(), 'Bearer synthetic-old-access');
+    await first.close();
+    const second = f.store(), restored = (await second.list())[0];
+    assert.equal(restored.username, original.username); assert.equal(restored.authentication, 'oauth');
+    assert.equal(await second.credentials(restored).authorization(), 'Bearer synthetic-old-access');
+    await second.close();
+    f.state.now += 3600000;
+    const third = f.store(), expired = (await third.list())[0]; let refreshes = 0;
+    third.oauthService = { refresh: async (_registration, token) => {
+      refreshes++; assert.equal(token, 'synthetic-old-refresh');
+      return { accessToken: 'synthetic-restored-access', refreshToken: 'synthetic-rotated-refresh', expiresAt: f.state.now / 1000 + 3600 };
+    } };
+    assert.deepEqual(await Promise.all([third.credentials(expired).authorization(), third.credentials(expired).authorization()]),
+      ['Bearer synthetic-restored-access', 'Bearer synthetic-restored-access']);
+    assert.equal(refreshes, 1); await third.close();
+    const fourth = f.store(), next = (await fourth.list())[0];
+    fourth.oauthService = { refresh: async () => assert.fail('A persisted fresh token must not refresh again') };
+    assert.equal(await fourth.credentials(next).authorization(), 'Bearer synthetic-restored-access');
+    const row = f.sqlite.prepare('SELECT envelope FROM oauth_credentials WHERE account_id = ?').get(original.id);
+    const saved = JSON.parse(await f.OAuthSecretBox.open(f.aliases(original.id).oauth, row.envelope));
+    assert.equal(saved.tokens.refreshToken, 'synthetic-rotated-refresh');
+    assert.equal(f.sqlite.prepare('SELECT count(*) AS n FROM oauth_refresh_lease').get().n, 0);
+    await fourth.close();
+  } finally { f.close(); }
+});
+
+test('Closing during initial OAuth key restoration must drain it before the database closes', async () => {
+  const f = fixture({ committedReads: true });
+  const gate = deferred(), entered = deferred();
+  try {
+    const account = f.account('restoring-close', true), store = f.store(); await f.seedOAuth(account);
+    const original = f.OAuthSecretBox.open;
+    f.OAuthSecretBox.open = async (...args) => { entered.resolve(); await gate.promise; return original(...args); };
+    store.oauthService = { refresh: async () => ({ accessToken: 'restored-during-close', refreshToken: 'rotated', expiresAt: Date.now() / 1000 + 3600 }) };
+    const reading = store.credentials(account).authorization(); reading.catch(() => {});
+    await entered.promise;
+    const closing = store.close();
+    await new Promise(resolve => setImmediate(resolve));
+    const closedEarly = f.counts.closed;
+    gate.resolve();
+    const result = await reading.then(value => value, error => error.code);
+    await closing;
+    assert.equal(closedEarly, 0, 'The key read was still owned by this account store');
+    assert.equal(result, 'Bearer restored-during-close');
+    assert.equal(await f.store().credentials(account).authorization(), 'Bearer restored-during-close');
+  } finally { gate.resolve(); f.close(); }
+});
+
+test('Repeated concurrent credential reads drain across close, including a failed key read', async () => {
+  const f = fixture({ committedReads: true });
+  const original = f.OAuthSecretBox.open;
+  try {
+    for (let cycle = 0; cycle < 20; cycle++) {
+      const account = f.account('close-stress-' + cycle, true);
+      await f.seedOAuth(account);
+      const store = f.store(), gate = deferred(), entered = deferred();
+      const failKey = cycle % 4 === 3;
+      let refreshes = 0;
+      f.OAuthSecretBox.open = async (...args) => {
+        entered.resolve(); await gate.promise;
+        if (failKey) { throw { code: 'authenticationRequired' }; }
+        return original(...args);
+      };
+      store.oauthService = { refresh: async () => {
+        refreshes++;
+        return { accessToken: 'rotated-' + cycle, refreshToken: 'refresh-' + cycle, expiresAt: Date.now() / 1000 + 3600 };
+      } };
+      const reads = Promise.allSettled(Array.from({ length: 8 }, () => store.oauthAccessToken(account)));
+      await entered.promise;
+      const before = f.counts.closed, closing = store.close();
+      const late = store.oauthAccessToken(account).then(() => 'unexpected-success', error => error.code);
+      await new Promise(resolve => setImmediate(resolve));
+      const early = f.counts.closed;
+      gate.resolve();
+      const results = await reads; await closing;
+      assert.equal(early, before);
+      assert.equal(await late, 'network');
+      assert.equal(f.counts.closed, before + 1);
+      assert.equal(refreshes, failKey ? 0 : 1);
+      for (const result of results) {
+        assert.equal(result.status, failKey ? 'rejected' : 'fulfilled');
+        if (!failKey) { assert.equal(result.value, 'rotated-' + cycle); }
+      }
+      assert.equal(f.sqlite.prepare('SELECT count(*) AS n FROM oauth_refresh_lease').get().n, 0);
+      f.OAuthSecretBox.open = original;
+      const reopened = f.store();
+      if (!failKey) { assert.equal(await reopened.oauthAccessToken(account), 'rotated-' + cycle); }
+      else {
+        const row = f.sqlite.prepare('SELECT envelope FROM oauth_credentials WHERE account_id = ?').get(account.id);
+        assert.equal(JSON.parse(await original(f.aliases(account.id).oauth, row.envelope)).tokens.refreshToken, 'synthetic-old-refresh');
+      }
+      await reopened.close();
+    }
+  } finally { f.OAuthSecretBox.open = original; f.close(); }
+});
+
+
+test('Refresh storage failures do not accuse a saved login and a later reopen can recover', async () => {
+  for (const stage of ['retain', 'lease', 'seal', 'persist']) {
+    const f = fixture({ committedReads: true });
+    try {
+      const a = f.account('storage-failure', true), store = f.store(); await f.seedOAuth(a);
+      const envelope = f.sqlite.prepare('SELECT envelope FROM oauth_credentials').get().envelope;
+      let requests = 0;
+      store.oauthService = { refresh: async () => {
+        requests++; return { accessToken: 'next-access', refreshToken: 'next-refresh', expiresAt: Date.now() / 1000 + 3600 };
+      } };
+      const retain = f.OAuthSecretBox.retain, execute = f.db.executeSql;
+      f.OAuthSecretBox.retain = async (...args) => {
+        // The first retain belongs to the initial read; fail only the refresh retain.
+        const key = await retain(...args);
+        if (stage === 'retain' && f.counts.assetQueries >= 2) { key.close(); throw new Error('private asset failure'); }
+        if (stage === 'seal') key.seal = async () => { throw new Error('private encryption failure'); };
+        return key;
+      };
+      f.db.executeSql = async (sql, args) => {
+        if ((stage === 'lease' && sql.startsWith('INSERT OR IGNORE INTO oauth_refresh_lease')) ||
+            (stage === 'persist' && sql.startsWith('UPDATE oauth_credentials'))) throw new Error('private database failure');
+        return execute(sql, args);
+      };
+      await assert.rejects(store.oauthAccessToken(a), error => error.code === 'network' && !error.message.includes('private'));
+      assert.equal(requests, ['retain', 'lease'].includes(stage) ? 0 : 1);
+      assert.equal(f.sqlite.prepare('SELECT envelope FROM oauth_credentials').get().envelope, envelope);
+      assert.equal(f.sqlite.prepare('SELECT count(*) AS n FROM oauth_refresh_lease').get().n, 0);
+      f.OAuthSecretBox.retain = retain; f.db.executeSql = execute;
+      await store.close();
+      const reopened = f.store(); reopened.oauthService = store.oauthService;
+      assert.equal(await reopened.oauthAccessToken(a), 'next-access');
+      await reopened.close();
+    } finally { f.close(); }
+  }
+});
+
+test('A late rejected refresh cannot accuse credentials saved by a newer reconnect', async () => {
+  const f = fixture({ committedReads: true });
+  try {
+    const a = f.account('late-rejection', true), oldStore = f.store(), reconnect = f.store();
+    const login = await f.seedOAuth(a), entered = deferred(), gate = deferred(); let requests = 0;
+    oldStore.oauthService = { refresh: async () => {
+      requests++; entered.resolve(); await gate.promise; throw { code: 'invalid_grant' };
+    } };
+    const outcome = oldStore.oauthAccessToken(a).then(value => ({ value }), error => ({ error }));
+    await entered.promise;
+    login.tokens = { accessToken: 'new-login-access', refreshToken: 'new-login-refresh', expiresAt: Date.now() / 1000 + 3600 };
+    await reconnect.replaceOAuth(a, { id: a.serverId }, login);
+    gate.resolve();
+    assert.equal((await outcome).error?.code, 'network');
+    assert.equal(await reconnect.oauthAccessToken(a), 'new-login-access');
+    assert.equal(requests, 1);
+    assert.equal(f.sqlite.prepare('SELECT count(*) AS n FROM oauth_refresh_lease').get().n, 0);
+  } finally { f.close(); }
+});
+
+
+test('A cold reopen behind a crashed refresh lease fails temporarily then recovers after expiry', async () => {
+  const f = fixture({ committedReads: true, fastTime: true });
+  try {
+    const a = f.account('crashed-owner', true), store = f.store(); await f.seedOAuth(a);
+    const started = f.state.now; let requests = 0;
+    f.sqlite.prepare('INSERT INTO oauth_refresh_lease VALUES (?, ?, ?)').run(a.id, 'stopped-process', started + 60000);
+    store.oauthService = { refresh: async () => {
+      requests++; return { accessToken: 'recovered-access', refreshToken: 'recovered-refresh', expiresAt: f.state.now / 1000 + 3600 };
+    } };
+    const results = await Promise.allSettled(Array.from({ length: 8 }, () => store.oauthAccessToken(a)));
+    for (const result of results) {
+      assert.equal(result.status, 'rejected'); assert.equal(result.reason.code, 'network');
+    }
+    assert.equal(requests, 0); assert.equal(f.state.now - started, 20000);
+    assert.equal(f.sqlite.prepare('SELECT owner FROM oauth_refresh_lease').get().owner, 'stopped-process');
+    f.state.now = started + 60001;
+    assert.equal(await store.oauthAccessToken(a), 'recovered-access');
+    assert.equal(requests, 1);
+    assert.equal(f.sqlite.prepare('SELECT count(*) AS n FROM oauth_refresh_lease').get().n, 0);
+  } finally { f.close(); }
 });

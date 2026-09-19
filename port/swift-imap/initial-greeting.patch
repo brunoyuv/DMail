@@ -1,0 +1,36 @@
+--- a/Sources/IMAP/IMAPClient.swift
++++ b/Sources/IMAP/IMAPClient.swift
+@@ -47,12 +47,23 @@
+                 .bootstrap(server: server, context: tlsContext, group: group, timeout: connectionTimeout, verifyPeer: additionalPeerVerification)
+                 .connect(host: server.hostname, port: server.port)
+                 .get()
++            guard let connectedChannel = self.channel else { throw IMAPError.notConnected }
++            try await withTaskCancellationHandler {
++                try Task.checkCancellation()
++                let greeting = try await connectedChannel.pipeline.handler(type: InitialGreetingHandler.self).get()
++                try await greeting.ready.get()
++                try await connectedChannel.pipeline.removeHandler(greeting).get()
++                try Task.checkCancellation()
++            } onCancel: {
++                connectedChannel.close(promise: nil)
++            }
+             logger?.info("Connected to \(self.server)")
+             try Task.checkCancellation()
+             try await refreshCapabilities()
+         } catch {
+             if let channel { try? await channel.close().get() }
+             self.channel = nil
++            if Task.isCancelled { throw CancellationError() }
+             logger?.error("\(error)")
+             throw error
+         }
+@@ -472,7 +483,8 @@
+                 } else { tls = try NIOSSLClientHandler(context: context, serverHostname: hostname) }
+                 try channel.pipeline.syncOperations.addHandlers([
+                     tls,
+-                    IMAPClientHandler(parserOptions: .max)
++                    IMAPClientHandler(parserOptions: .max),
++                    InitialGreetingHandler(eventLoop: channel.eventLoop, timeout: timeout)
+                 ])
+                 return channel.eventLoop.makeSucceededFuture(())
+             } catch { return channel.eventLoop.makeFailedFuture(error) }

@@ -126,8 +126,9 @@ private final class SyncReadSessionEntry: @unchecked Sendable {
                 guard !self.lock.withLock({ self.closed }) else { throw SyncReadSessionError.closed }
                 let existing = self.lock.withLock { self.client }
                 let active: IMAPClient
-                if let existing { active = existing }
+                if let existing { MailDownloadTrace.current?.mark(.connect, reason: .sessionReused); active = existing }
                 else {
+                    MailDownloadTrace.current?.mark(.connect, reason: .sessionCreated)
                     active = try create()
                     self.lock.withLock { self.client = active }
                     try Task.checkCancellation()
@@ -158,13 +159,17 @@ private final class SyncReadSessionEntry: @unchecked Sendable {
     private func finish(success: Bool) async {
         let discarded = lock.withLock { () -> IMAPClient? in
             if success { reads += 1 }
-            if !success || closed || reads >= maxReads || ContinuousClock.now >= created.advanced(by: age) {
+            if !success || closed || client?.isConnected == false || reads >= maxReads || ContinuousClock.now >= created.advanced(by: age) {
                 closed = true; generation += 1; expiry?.cancel(); expiry = nil
                 let value = client; client = nil; return value
             }
             return nil
         }
-        if let discarded { try? await discarded.shutdown() }
+        if let discarded {
+            MailDownloadTrace.current?.mark(.shutdown, reason: .sessionDiscarded)
+            do { try await discarded.shutdown(); MailDownloadTrace.current?.mark(.shutdownDone) }
+            catch { MailDownloadTrace.current?.mark(.cleanupFailed, error: error) }
+        }
         let completed = lock.withLock { () -> [CheckedContinuation<Void, Never>] in
             // stop() may arrive during shutdown or between the two locks.
             // If it closed a retained client, let stop() own that shutdown.

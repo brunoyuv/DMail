@@ -186,6 +186,29 @@ struct SyncReadSessionTests {
         }
     }
 
+    @Test func successfulHeadersWithAnOptionalTimeoutDoNotRetainAClosedSocket() async throws {
+        let f = try await SyncFixture.start(stall: true), pool = SyncReadSessionPool(), id = UUID().uuidString
+        do {
+            let value = try await pool.read(id: id, owner: ["synthetic"], create: { f.create() },
+                authenticate: { try await $0.login() }, operation: { client in
+                    _ = try await client.examine(mailbox: "INBOX")
+                    do { _ = try await client.fetch(uid: UIDSet(UID(rawValue: 1)), attributes: [.uid, .flags]) }
+                    catch { try? await client.shutdown(); #expect(!client.isConnected) }
+                    return 2 // Already accepted headers survive optional preview failure.
+                })
+            #expect(value == 2)
+            let count = try await pool.read(id: id, owner: ["synthetic"], create: { f.create() },
+                authenticate: { try await $0.login() }, operation: { client in
+                    (try await client.examine(mailbox: "INBOX")).messageCount ?? 0
+                })
+            #expect(count == 3)
+            #expect(f.trace.count("CLIENT") == 2 && f.trace.count("LOGIN") == 2)
+            #expect(f.trace.count("UID") == 1) // No replay of the timed-out optional fetch.
+            try await pool.close(id: id)
+        } catch { try? await pool.close(id: id); await f.stop(); throw error }
+        await f.stop()
+    }
+
     @Test func invalidIdentifiersAndRepeatedClosedRequestsNeverConstructClients() async throws {
         let pool = SyncReadSessionPool(), id = UUID().uuidString
         let create: @Sendable () throws -> IMAPClient = { Issue.record("Invalid/closed request created a client"); throw SyncReadSessionError.invalidArgument }

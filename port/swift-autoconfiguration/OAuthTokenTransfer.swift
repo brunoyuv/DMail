@@ -11,8 +11,12 @@ public enum OAuthTransferError: String, Error {
     // or arbitrary response text (which can include credentials or account data).
     static func rejection(_ data: Data) -> OAuthTransferError {
         struct Rejection: Decodable { let error: String }
-        guard let value = try? JSONDecoder().decode(Rejection.self, from: data),
-              let code = OAuthTransferError(rawValue: value.error),
+        guard let value = try? JSONDecoder().decode(Rejection.self, from: data) else { return .rejected }
+        // These standard failures describe a temporary provider condition,
+        // not an invalid refresh token. Keep the saved credentials and do not
+        // turn them into a browser reconnect prompt or replay this POST.
+        if ["server_error", "temporarily_unavailable"].contains(value.error) { return .network }
+        guard let code = OAuthTransferError(rawValue: value.error),
               [Self.invalid_client, .invalid_grant, .invalid_request, .unauthorized_client,
                .invalid_scope, .access_denied].contains(code) else { return .rejected }
         return code
@@ -48,6 +52,7 @@ final class OAuthTokenTransfer: NSObject, URLSessionDataDelegate, @unchecked Sen
         if done.wait(timeout: .now() + 15) == .timedOut { finish(OAuthTransferError.network) }
         lock.lock(); defer { lock.unlock() }
         if let error { throw error }
+        if status == 429 || (500...599).contains(status) { throw OAuthTransferError.network }
         guard status == 200 else { throw OAuthTransferError.rejection(data) }
         return data
     }

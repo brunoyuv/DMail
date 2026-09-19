@@ -4,11 +4,13 @@ import Testing
 import NIOCore
 import NIOPosix
 import NIOSSL
+import NIOIMAPCore
 @testable import IMAP
 
 private enum AuthScenario: String, CaseIterable, Sendable {
     case passwordRejected, passwordUncoded, passwordTemporary, passwordBad, passwordDrop, passwordStall
     case oauthRejected, oauthTemporary, oauthDrop, oauthStall, oauthChallengeRejected, oauthChallengeDrop
+    case passwordMailboxUnavailable, oauthMailboxUnavailable, oauthMailboxUnavailableAlert
     case passwordCapabilityRejected, passwordCapabilityDrop, oauthCapabilityRejected, oauthCapabilityDrop, oauthCapabilityStall
     case passwordAccepted, oauthAccepted
 
@@ -68,6 +70,9 @@ private final class AuthPeer: ChannelInboundHandler {
                     send("\(tag) NO \(code)synthetic-private-response\r\n", context)
                 } else if scenario == .passwordTemporary || scenario == .oauthTemporary {
                     send("\(tag) NO [UNAVAILABLE] synthetic temporary outage\r\n", context)
+                } else if [.passwordMailboxUnavailable, .oauthMailboxUnavailable, .oauthMailboxUnavailableAlert].contains(scenario) {
+                    let code = scenario == .oauthMailboxUnavailableAlert ? "[ALERT] " : ""
+                    send("\(tag) NO \(code)User is authenticated but not connected. [synthetic-private-response]\r\n", context)
                 } else if scenario == .passwordBad { send("\(tag) BAD synthetic-private-response\r\n", context) }
                 else { authenticated = true; send("\(tag) OK Authenticated\r\n", context) }
             } else { send("\(tag) BAD Unexpected command\r\n", context) }
@@ -78,6 +83,21 @@ private final class AuthPeer: ChannelInboundHandler {
 
 
 struct AuthenticationTests {
+    @Test func mailboxConnectionHintCannotOverrideExplicitCredentialFailureOrUnrelatedText() {
+        let message = "User is authenticated but not connected."
+        for code: ResponseTextCode in [.authenticationFailed, .authorizationFailed, .expired] {
+            #expect(authenticationRejected(.no(ResponseText(code: code, text: message))))
+        }
+        for text in ["AUTHENTICATE failed.", "Invalid user: " + message,
+                     "User is authenticated but not connectedness", "User is authenticated but not connected: invalid password"] {
+            #expect(authenticationRejected(.no(ResponseText(text: text))))
+        }
+        for text in [message, "USER IS AUTHENTICATED BUT NOT CONNECTED", message + " [private-server-details]",
+                     "User is authenticated but not connected [private-server-details]"] {
+            #expect(!authenticationRejected(.no(ResponseText(text: text))))
+        }
+    }
+
     @Test func actualTLSLoginAndOAuthSeparateRejectionFromTransportAndPostLoginCapabilityFailure() async throws {
         let directory = FileManager.default.temporaryDirectory.appendingPathComponent("dmail-auth-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: directory) }
@@ -113,6 +133,7 @@ struct AuthenticationTests {
                     #expect(!text.contains("synthetic-private-response"))
                     #expect(!text.contains("synthetic-password"))
                     #expect(!text.contains("synthetic-token"))
+                    #expect(!text.contains("User is authenticated"))
                 }
                 let names = commands.snapshot()
                 #expect(names.filter { $0 == "LOGIN" }.count == (scenario.oauth ? 0 : 1))

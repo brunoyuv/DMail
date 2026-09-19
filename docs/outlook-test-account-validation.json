@@ -1,0 +1,75 @@
+{
+  "date": "2026-09-19",
+  "account": "dedicated personal Outlook test mailbox (identifier omitted)",
+  "providerSignIn": "user-operated",
+  "hostProbe": "production Swift OAuth and original Swift IMAP client",
+  "scope": [
+    "token exchange",
+    "IMAP authentication",
+    "refresh only after successful initial authentication"
+  ],
+  "runs": [
+    {
+      "imapEnabledByUser": false,
+      "tokenExchange": "success",
+      "imapAuthentication": "authenticationRequired/server",
+      "refresh": "not attempted"
+    },
+    {
+      "imapEnabledByUser": true,
+      "tokenExchange": "success",
+      "imapAuthentication": "authenticationRequired/server",
+      "refresh": "not attempted"
+    }
+  ],
+  "mailAccessed": false,
+  "mailSent": false,
+  "passwordUsedByProbe": false,
+  "tokensPersisted": false,
+  "automaticRetry": false,
+  "listenerAndChildStopped": true,
+  "originalIntermittentCauseConfirmed": false,
+  "comparisonSetup": {
+    "firstAttempt": "listener expired before callback; neither client authenticated",
+    "restart": "fresh authorization state and PKCE; user-operated sign-in",
+    "listenerMaximumSeconds": 1800,
+    "oauthSessionSeconds": 600,
+    "productionOAuthExpiryUnchanged": true
+  },
+  "comparison": {
+    "imapEnabledByUser": true,
+    "tokenExchange": "success",
+    "recognizedImapScope": true,
+    "recognizedSmtpScope": true,
+    "sameTokenForBothClients": true,
+    "originalSwift": "networkOrProtocol",
+    "independentPythonImaplib": "timeout",
+    "exactFailureSubstages": "not retained by this controller version",
+    "attemptsPerClient": 1,
+    "refresh": "not attempted",
+    "interpretation": "Neither client completed authentication. This does not establish the cause of the original intermittent server rejection."
+  },
+  "credentialFreeConnectivity": {
+    "afterComparison": true,
+    "dns": "success",
+    "tcp": "success",
+    "tlsCertificateAndHostname": "success",
+    "serverGreeting": "success",
+    "capability": "success",
+    "totalElapsedMs": 132,
+    "authenticationAttempted": false,
+    "limitation": "A separate later connection; not evidence that the failed authenticated connections reached the same stages."
+  },
+  "sharedTokenPathAudit": {
+    "syntheticFixturesOnly": true,
+    "compiledSwiftTokenParsingAndBridgeRoundtrip": "passed",
+    "printableAsciiPunctuation": "passed",
+    "maximumAccessTokenBytes": 32768,
+    "maximumAccessTokenRoundtrip": "passed",
+    "refreshFormRoundtrip": "passed",
+    "independentPythonSaslBytes": "passed with injected client",
+    "stagedOAuthSourceParity": true,
+    "sharedTokenMutationDefectFound": false,
+    "actualNativeNapiExecutionCovered": false
+  }
+}

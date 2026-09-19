@@ -1,0 +1,72 @@
+{
+  "sourceBranch": "main",
+  "sourceBaseRevision": "c21edcea3143b97c8e7818bc983b00125b18cf4e",
+  "versionName": "1.0.4",
+  "versionCode": 1000004,
+  "build": "1.0.4-download-log-4-inbox-cache",
+  "scope": "Foreground prefetch of active Inbox bodies and prepared HTML, including later pages",
+  "includedOutlookFixUserConfirmed": true,
+  "behavior": {
+    "activeInboxOnly": true,
+    "foregroundOnly": true,
+    "sharedAutomaticLane": true,
+    "minimumGapMs": 3000,
+    "readerSharesBodyLane": true,
+    "existingBodyCacheReused": true,
+    "sevenDayRetentionUnchanged": true,
+    "picturesAndAttachmentBytesOnDemand": true,
+    "lateNativeWorkDrained": true,
+    "credentialWaitOwnershipRechecked": true,
+    "failedMessageOncePerContext": true,
+    "authenticationFailureStopsContext": true,
+    "emptyQueuePolling": false
+  },
+  "validation": {
+    "javaScriptTests": 812,
+    "pythonTests": 40,
+    "prefetchTests": 14,
+    "syntheticPagedBodies": 105,
+    "shippingUIOwnershipTest": true,
+    "credentialWaitTests": [
+      "IMAP body/page",
+      "JMAP body/page"
+    ],
+    "arm64NativeBuild": true,
+    "signedHAPBuild": true,
+    "sourceParityVerified": true,
+    "signedMarkerAndPrefetchCodeVerified": true,
+    "emulatorUsed": false,
+    "productionMailAccess": false,
+    "productionUIAutomation": false
+  },
+  "installation": {
+    "device": "Pura X",
+    "model": "VDE-AL00",
+    "bundleName": "org.thunderbird.harmony.dev",
+    "previousVersionName": "1.0.4",
+    "previousVersionCode": 1000004,
+    "versionName": "1.0.4",
+    "versionCode": 1000004,
+    "upgradeOnly": true,
+    "storageIdentityPreserved": true,
+    "artifactHashVerified": true,
+    "hapSha256": "5c8675a1d39c1492dee4159fcefbc8f8227bd837415250a0094c05db036108f3",
+    "productionLaunched": false,
+    "productionProcessAbsentAfterInstall": true,
+    "installedHashVerified": false,
+    "installedHashCheck": "Not attempted; prior OS reads denied",
+    "sourceBranch": "main",
+    "sourceBaseRevision": "c21edcea3143b97c8e7818bc983b00125b18cf4e",
+    "scope": "Foreground active Inbox body prefetch with detailed diagnostics; 1.0.4-download-log-4-inbox-cache"
+  },
+  "matePadChanged": false,
+  "commitCreated": false,
+  "remotePush": false,
+  "publicRelease": false,
+  "limitations": [
+    "Device installation is verified; real-mail prefetch behavior was not driven through production UI.",
+    "In-flight reads may finish and save to their captured account after foreground work pauses.",
+    "Remote images and attachment bytes remain on demand.",
+    "Installer success and signed input hash are verified; installed HAP bytes were not read."
+  ]
+}

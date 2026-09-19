@@ -685,3 +685,78 @@ test('Mailbox count boundaries through 5000 rows preserve exact message bodies a
     assert.equal(f.sqlite.prepare("SELECT COUNT(*) AS n FROM mail_cache WHERE account_id='a' AND kind='email'").get().n, 5000);
   } finally { f.close(); }
 });
+
+test('Refresh retains downloaded entries for seven days without renewing their first-save time', async t => {
+  const f = await fixture();
+  let now = Date.now(); t.mock.method(Date, 'now', () => now);
+  try {
+    const firstSavedAt = now;
+    await f.cache.saveView('a', 'inbox', [mail({ id: 'older' })], 50, 'initial');
+    await f.cache.saveEmail('a', mail({ id: 'older' }));
+    now += model.MAIL_RETENTION_MS - 1;
+    await f.cache.saveView('a', 'inbox', [mail({ id: 'new', textBody: null, htmlBody: null })], null, 'changed');
+    const reopened = f.reopen();
+    assert.deepEqual((await reopened.view('a', 'inbox', true, false)).emails.map(value => value.id), ['new', 'older']);
+    assert.equal(JSON.parse(f.row('older').payload).savedAt, firstSavedAt);
+    assert.equal((await reopened.email('a', 'older')).mail.textBody, mail().textBody);
+    // Even a retained summary being saved again must not renew its age.
+    await reopened.saveView('a', 'inbox', (await reopened.view('a', 'inbox', true, false)).emails, null, 'changed');
+    assert.equal(JSON.parse(f.row('older').payload).savedAt, firstSavedAt);
+    now++;
+    assert.deepEqual((await reopened.view('a', 'inbox', true, false)).emails.map(value => value.id), ['new']);
+    await MailCache.initialize(f.db);
+    assert.equal(f.row('older'), undefined); assert.ok(f.row('new'));
+  } finally { f.close(); }
+});
+
+test('An empty refresh keeps retained entries and explicit removal still removes their membership', async () => {
+  const f = await fixture();
+  try {
+    await f.cache.saveView('a', 'inbox', [mail()], 50, 'original');
+    await f.cache.saveView('a', 'inbox', [], null, 'empty');
+    assert.deepEqual((await f.reopen().view('a', 'inbox', true, false)).emails.map(value => value.id), ['one']);
+    await f.cache.updateMailboxes('a', 'one', ['archive']);
+    await f.cache.saveView('a', 'inbox', [], null, 'empty');
+    assert.deepEqual((await f.cache.view('a', 'inbox', true, false)).emails, []);
+  } finally { f.close(); }
+});
+
+test('A refresh writes only new or changed headers and never rewrites the retained body files', async () => {
+  const f = await fixture();
+  try {
+    const loaded = Array.from({ length: 300 }, (_, i) => mail({ id: `entry_${i}`, textBody: null, htmlBody: null }));
+    await f.cache.saveView('a', 'inbox', loaded, 300, 'stable');
+    await f.cache.saveEmail('a', mail({ id: 'entry_299' }));
+    const oldBody = f.row('entry_299').payload, fileWrites = f.state.writes;
+    const execute = f.db.executeSql; let writes = 0;
+    f.db.executeSql = async (sql, args = []) => {
+      if (sql.startsWith('INSERT OR REPLACE INTO mail_cache') && args[1] === 'email') writes++;
+      return execute(sql, args);
+    };
+    const changed = { ...loaded[0], keywords: ['$seen'] }, added = mail({ id: 'new', textBody: null, htmlBody: null });
+    const fetched = [added, changed, ...loaded.slice(1, 50)];
+    const visible = fetched.concat(loaded.slice(50));
+    await f.cache.saveView('a', 'inbox', visible, 50, 'new-state', MailCache.mutationRevision(), fetched);
+    assert.equal(writes, 2, 'One new header and one changed flag; the other 299 entries remain untouched');
+    assert.equal(f.row('entry_299').payload, oldBody); assert.equal(f.state.writes, fileWrites);
+    writes = 0;
+    await f.cache.saveView('a', 'inbox', visible, 50, 'new-state', MailCache.mutationRevision(), fetched);
+    assert.equal(writes, 0, 'Identical headers do not cause database writes');
+    assert.equal((await f.cache.view('a', 'inbox', true, false)).emails.length, 301);
+  } finally { f.close(); }
+});
+
+test('Fetching an expired entry again admits it as a new download instead of leaving it unreadable', async t => {
+  const f = await fixture(); let now = Date.now(); t.mock.method(Date, 'now', () => now);
+  try {
+    await f.cache.saveView('a', 'inbox', [mail()], null, 'before');
+    await f.cache.saveEmail('a', mail());
+    now += model.MAIL_RETENTION_MS;
+    assert.equal(await f.cache.view('a', 'inbox', true, false), null);
+    assert.equal(await f.cache.email('a', 'one'), null);
+    await f.cache.saveView('a', 'inbox', [mail({ textBody: null, htmlBody: null })], null, 'after');
+    assert.equal(JSON.parse(f.row().payload).savedAt, now);
+    await f.cache.saveEmail('a', mail());
+    assert.equal((await f.cache.email('a', 'one')).mail.textBody, mail().textBody);
+  } finally { f.close(); }
+});

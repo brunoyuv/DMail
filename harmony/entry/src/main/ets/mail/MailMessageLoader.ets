@@ -32,7 +32,7 @@ export class MailMessageLoader {
   constructor(store: AccountStore) { this.store = store; }
 
   open(client: JmapService, account: SavedAccount, header: JmapEmail, show: string, hide: string,
-    active: () => boolean): Promise<MailMessageResult> {
+    active: () => boolean, prefetch: boolean = false): Promise<MailMessageResult> {
     const previous = this.current;
     if (previous && this.owns(previous) && previous.client === client && previous.accountId === account.id &&
       previous.serverId === account.serverId && previous.emailId === header.id && previous.task) { return previous.task; }
@@ -97,10 +97,12 @@ export class MailMessageLoader {
       if (this.usable(cached, request.emailId)) { return cached!; }
       const revision = MailCache.mutationRevision();
       let mail: JmapEmail | null;
-      try { mail = await request.client.readEmail(request.serverId, request.emailId); }
+      try { mail = await request.client.readEmail(request.serverId, request.emailId, () => this.requireActive(request)); }
       catch (error) {
+        if (error instanceof MailMessageLoadCancelled) { throw error; }
         const code = (error as JmapError)?.code;
-        throw new JmapError(code === 'authenticationRequired' ? code : code === 'invalidResponse' ? code : 'network');
+        throw new JmapError(code === 'authenticationRequired' || code === 'invalidResponse' ? code : 'network',
+          0, (error as JmapError)?.authenticationStage);
       }
       if (!mail) { throw new JmapError('notFound'); }
       if (mail.id !== request.emailId || failedEmptyMailBody(mail)) { throw new JmapError('invalidResponse'); }

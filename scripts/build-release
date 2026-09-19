@@ -90,7 +90,8 @@ def add_notices(root, app, revision):
 def inspect_hap(hap, abi, machine, expected_app):
     libraries = {}
     with zipfile.ZipFile(hap) as archive:
-        app = json.loads(archive.read('module.json'))['app']
+        profile = json.loads(archive.read('module.json'))
+        app = profile['app']
         if app.get('debug') is not False or app.get('buildMode') != 'release':
             raise ValueError('HAP is not a non-debug release build')
         for name in ['bundleName', 'versionName', 'versionCode', 'vendor']:
@@ -101,6 +102,20 @@ def inspect_hap(hap, abi, machine, expected_app):
         names = archive.namelist()
         if not any(n.endswith('/modules.abc') for n in names):
             raise ValueError('Missing compiled ArkTS')
+        vm = profile.get('module', {}).get('virtualMachine', '')
+        if not isinstance(vm, str) or not re.fullmatch(r'ark[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+', vm):
+            raise ValueError('Invalid virtualMachine: expected ark plus four bytecode-version segments; '
+                             'check Hvigor compiler-version subprocess errors and rerun without incremental caching')
+        for name in names:
+            if not name.endswith('.abc'):
+                continue
+            with archive.open(name) as bytecode:
+                header = bytecode.read(16)
+            if len(header) != 16 or header[:8] != b'PANDA\0\0\0':
+                raise ValueError(f'Invalid Ark bytecode header: {name}')
+            expected_vm = 'ark' + '.'.join(str(part) for part in header[12:16])
+            if vm != expected_vm:
+                raise ValueError(f'virtualMachine does not match compiled bytecode: {name}')
         if not any(n.endswith('/legal/LICENSE') for n in names):
             raise ValueError('Missing packaged license notices')
         for name in names:

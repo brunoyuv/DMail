@@ -1,0 +1,98 @@
+{
+  "versionName": "1.0.4",
+  "versionCode": 1000004,
+  "branch": "main",
+  "build": "1.0.4-imap-greeting-smtp",
+  "defect": {
+    "earlyCapabilityBeforeGreeting": true,
+    "strictDelayedGreetingFailureReproduced": true,
+    "missingGreetingPreviouslyAllowedAuthentication": true,
+    "outlookIntermittentCauseConfirmed": false
+  },
+  "changes": {
+    "greetingRequiredBeforeCommands": true,
+    "acceptedGreeting": "OK",
+    "preauthenticatedConnection": "reject without credentials; account identity is unbound",
+    "existingConnectionDeadline": true,
+    "cancellationPreservesCancellationError": true,
+    "tlsVerificationUnchanged": true,
+    "automaticRetry": false,
+    "upstreamOriginalFilesUnchanged": true
+  },
+  "validation": {
+    "syntheticFixturesOnly": true,
+    "focusedSwiftTests": 20,
+    "javascriptTests": 853,
+    "pythonTests": 44,
+    "fullSwiftSuite": {
+      "tests": 147,
+      "suites": 37,
+      "passed": true
+    },
+    "signedArm64HapBuild": true,
+    "beforeAfterLoopbackCases": 7,
+    "sourceAndNativeLibraryParity": true
+  },
+  "installed": true,
+  "deviceLaunched": false,
+  "commitCreated": false,
+  "remotePush": false,
+  "publicRelease": false,
+  "syntheticBeforeAfter": [
+    {
+      "scenario": "immediate-ir",
+      "beforeCommandsPrecededGreeting": false,
+      "afterCommandsPrecededGreeting": false,
+      "beforeSucceeded": true,
+      "afterSucceeded": true
+    },
+    {
+      "scenario": "immediate-challenge",
+      "beforeCommandsPrecededGreeting": false,
+      "afterCommandsPrecededGreeting": false,
+      "beforeSucceeded": true,
+      "afterSucceeded": true
+    },
+    {
+      "scenario": "delayed-ok",
+      "beforeCommandsPrecededGreeting": true,
+      "afterCommandsPrecededGreeting": false,
+      "beforeSucceeded": true,
+      "afterSucceeded": true
+    },
+    {
+      "scenario": "delayed-reject-early",
+      "beforeCommandsPrecededGreeting": true,
+      "afterCommandsPrecededGreeting": false,
+      "beforeSucceeded": false,
+      "afterSucceeded": true
+    },
+    {
+      "scenario": "delayed-bye",
+      "beforeCommandsPrecededGreeting": true,
+      "afterCommandsPrecededGreeting": false,
+      "beforeSucceeded": false,
+      "afterSucceeded": false
+    },
+    {
+      "scenario": "preauth",
+      "beforeCommandsPrecededGreeting": false,
+      "afterCommandsPrecededGreeting": false,
+      "beforeSucceeded": false,
+      "afterSucceeded": false
+    },
+    {
+      "scenario": "missing-greeting",
+      "beforeCommandsPrecededGreeting": true,
+      "afterCommandsPrecededGreeting": false,
+      "beforeSucceeded": true,
+      "afterSucceeded": false
+    }
+  ],
+  "artifact": {
+    "path": ".tools/imap-greeting-104/D-Mail-1.0.4-imap-greeting-smtp-signed.hap",
+    "sha256": "6867b18d7b5e70110568f8b9cd853fe27c3ec71dffc9f70350e318c549aad6a7",
+    "bundleName": "org.thunderbird.harmony.dev"
+  },
+  "installationRecord": "docs/imap-greeting-installation.json"
+}

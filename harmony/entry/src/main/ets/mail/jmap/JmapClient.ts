@@ -23,10 +23,14 @@ export interface JmapCredentials {
 }
 
 export class JmapError extends Error {
-  constructor(public readonly code: string, public readonly status: number = 0) {
+  readonly authenticationStage?: string;
+  constructor(public readonly code: string, public readonly status: number = 0, authenticationStage?: string) {
     // Never include server descriptions, URLs, tokens or mail contents in errors.
     super(`JMAP: ${code}`);
     this.name = 'JmapError';
+    if (code === 'authenticationRequired' && (authenticationStage === 'credentials' || authenticationStage === 'server' || authenticationStage === 'refresh')) {
+      this.authenticationStage = authenticationStage;
+    }
   }
 }
 
@@ -251,8 +255,9 @@ export interface JmapService {
   readAttachment?(accountId: string, emailId: string, attachmentId: string): Promise<MailAttachmentData>;
   connect(): Promise<JmapSession>;
   mailboxes(accountId: string): Promise<JmapMailbox[]>;
-  emailPage(accountId: string, mailboxId: string, position?: number, queryState?: string, previewKnownIds?: string[]): Promise<JmapEmailPage>;
-  readEmail(accountId: string, emailId: string): Promise<JmapEmail | null>;
+  emailPage(accountId: string, mailboxId: string, position?: number, queryState?: string, previewKnownIds?: string[], beforeRequest?: () => void): Promise<JmapEmailPage>;
+  readEmail(accountId: string, emailId: string, beforeRequest?: () => void): Promise<JmapEmail | null>;
+  closeReadSession?(): Promise<void>;
   createDraft(accountId: string, draft: JmapDraft): Promise<JmapCreatedDraft>;
   setKeyword(accountId: string, emailId: string, keyword: JmapKeyword, enabled: boolean): Promise<string>;
   archiveEmail(accountId: string, emailId: string): Promise<JmapArchiveUndo>;
@@ -300,12 +305,17 @@ export class JmapClient implements JmapService {
     return this.core.mailboxes(this.sessionUrl, await this.credentials.authorization(), accountId);
   }
 
-  async emailPage(accountId: string, mailboxId: string, position = 0, queryState?: string): Promise<JmapEmailPage> {
-    return this.core.emailPage(this.sessionUrl, await this.credentials.authorization(), accountId, mailboxId, position, queryState);
+  async emailPage(accountId: string, mailboxId: string, position = 0, queryState?: string,
+    previewKnownIds?: string[], beforeRequest?: () => void): Promise<JmapEmailPage> {
+    beforeRequest?.();
+    const authorization = await this.credentials.authorization(); beforeRequest?.();
+    return this.core.emailPage(this.sessionUrl, authorization, accountId, mailboxId, position, queryState);
   }
 
-  async readEmail(accountId: string, emailId: string): Promise<JmapEmail | null> {
-    const result = await this.core.getEmails(this.sessionUrl, await this.credentials.authorization(), accountId, [emailId], true);
+  async readEmail(accountId: string, emailId: string, beforeRequest?: () => void): Promise<JmapEmail | null> {
+    beforeRequest?.();
+    const authorization = await this.credentials.authorization(); beforeRequest?.();
+    const result = await this.core.getEmails(this.sessionUrl, authorization, accountId, [emailId], true);
     return result.emails[0] ?? null;
   }
 

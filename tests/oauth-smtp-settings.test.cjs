@@ -30,7 +30,7 @@ function fixture(provider = 'google') {
     compile(`class Host { ${methods} }; return Host;`))(RegisteredMailOAuth,
     { open: async (_alias, envelope) => envelope }, JmapError, util, asset);
   const store = new Host();
-  store.pending = Promise.resolve(); store.refreshing = new Map();
+  store.pending = Promise.resolve(); store.refreshing = new Map(); store.oauthRequests = new Set();
   store.oauthAlias = () => 'synthetic-oauth'; store.smtpAlias = () => 'synthetic-smtp';
   store.oauthEnvelope = async () => { state.envelopes++; return JSON.stringify(login); };
   store.enqueue = task => { const next = store.pending.then(task); store.pending = next.catch(() => {}); return next; };

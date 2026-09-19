@@ -34,6 +34,10 @@ export struct ComposeMail {
   @State private username: string = '';
   @State private password: string = '';
   @State private setup: boolean = false;
+  @State private smtpMissing: boolean = false;
+  @State private smtpLoadFailed: boolean = false;
+  @State private smtpRestoring: boolean = false;
+  @State private smtpRecovered: boolean = false;
   @State private previewing: boolean = false;
   @State private previewDocument: PreparedMailDocument | undefined = undefined;
   @State private previewBusy: boolean = false;
@@ -73,23 +77,33 @@ export struct ComposeMail {
     const revision = ++this.initializeRevision, account = this.account;
     ++this.previewRevision; this.previewing = false; this.previewBusy = false; this.previewDocument = undefined;
     ++this.attachmentRevision; this.attachmentPicking = false; this.attachmentNotice = '';
-    this.ready = false;
+    this.ready = false; this.busy = false; this.setup = false; this.smtpMissing = false; this.smtpLoadFailed = false;
+    this.smtpRestoring = false; this.smtpRecovered = false;
+    this.host = ''; this.port = '587'; this.tls = false; this.username = ''; this.password = '';
+    let loadingSmtp = false;
     this.loadRecipients();
     try {
       const saved = await this.store.outgoing(account.id, BackgroundSend.isSending(account.id));
-      if (!this.active || revision !== this.initializeRevision) { return; }
+      if (!this.active || revision !== this.initializeRevision || account.id !== this.account.id) { return; }
       const retained = saved && saved.state !== 'sent' && !BackgroundSend.wasAccepted(account.id, saved.id);
       const draft = retained ? saved! : await this.newDraft();
-      if (!this.active || revision !== this.initializeRevision) { return; }
+      if (!this.active || revision !== this.initializeRevision || account.id !== this.account.id) { return; }
+      loadingSmtp = true;
       const settings = await this.store.smtp(account);
-      if (!this.active || revision !== this.initializeRevision) { return; }
+      if (!this.active || revision !== this.initializeRevision || account.id !== this.account.id) { return; }
       this.draft = draft; this.initialText = retained ? '' : draft.text;
       const match = /^(smtps?):\/\/([^/:]+):(\d+)$/.exec(settings.endpoint);
       if (match) { this.tls = match[1] === 'smtps'; this.host = match[2]; this.port = match[3]; }
       this.username = settings.username; this.password = settings.password;
+      this.smtpMissing = settings.endpoint === '';
       this.setup = false; this.expandedAddresses = this.draft.cc !== '' || this.draft.bcc !== ''; this.ready = true;
       this.notice = this.draft.state === 'sending' ? this.label('send_in_progress') : this.savedFailureNotice();
-    } catch (_) { if (this.active && revision === this.initializeRevision) { this.notice = this.label('draft_load_error'); } }
+    } catch (_) {
+      if (this.active && revision === this.initializeRevision && account.id === this.account.id) {
+        this.smtpLoadFailed = loadingSmtp;
+        this.notice = this.label(loadingSmtp ? 'smtp_load_error' : 'draft_load_error');
+      }
+    }
   }
   private savedFailureNotice(): string {
     const diagnostic = sendFailureDiagnostic(this.draft);
@@ -181,23 +195,40 @@ export struct ComposeMail {
     value.username = this.username.trim(); value.password = this.password; return value;
   }
   private async saveSettings(): Promise<void> {
-    if (this.busy) { return; }
+    if (!this.ready || this.busy || this.smtpRestoring) { return; }
+    const account = this.account, revision = this.initializeRevision;
+    const current = (): boolean => this.active && revision === this.initializeRevision && account.id === this.account.id;
     this.busy = true;
     try {
       const settings = this.settings();
-      if (!settings.username || (!settings.password && this.account.authentication !== 'oauth')) { throw new Error('Missing login'); }
-      await this.store.saveSmtp(this.account, settings);
-      if (this.active) {
-        this.setup = false; this.notice = '';
+      if (!settings.username || (!settings.password && account.authentication !== 'oauth')) { throw new Error('Missing login'); }
+      await this.store.saveSmtp(account, settings);
+      if (current()) {
+        this.setup = false; this.notice = ''; this.smtpMissing = false; this.smtpRecovered = false;
         this.getUIContext().getPromptAction().showToast({ message: this.label('smtp_saved') });
       }
     } catch (_) {
-      if (this.active) { this.notice = this.label('smtp_settings_error'); }
-      else { BackgroundSend.publish(this.account.id, 'smtp_settings_error'); }
+      if (current()) { this.notice = this.label('smtp_settings_error'); }
+      else { BackgroundSend.publish(account.id, 'smtp_settings_error'); }
     }
-    finally { this.busy = false; }
+    finally { if (current()) { this.busy = false; } }
   }
-  private editable(): boolean { return this.ready && !this.busy && !this.attachmentPicking && this.draft.state === 'draft' && !BackgroundSend.isSending(this.account.id); }
+  private async restoreGmailSmtp(): Promise<void> {
+    if (!this.active || !this.ready || this.busy || this.smtpRestoring || !this.smtpMissing ||
+      this.account.authentication !== '' || this.account.sessionUrl !== 'imaps://imap.gmail.com:993') { return; }
+    const account = this.account, revision = this.initializeRevision;
+    const current = (): boolean => this.active && revision === this.initializeRevision && account.id === this.account.id;
+    this.smtpRestoring = true; this.notice = '';
+    try {
+      const settings = await this.store.gmailSmtpDefaults(account);
+      if (!current()) { return; }
+      this.host = 'smtp.gmail.com'; this.port = '465'; this.tls = true;
+      this.username = settings.username; this.password = settings.password; this.smtpRecovered = true;
+      // Proposed settings remain local to this sheet until the user presses Save.
+    } catch (_) { if (current()) { this.notice = this.label('gmail_smtp_recovery_error'); } }
+    finally { if (current()) { this.smtpRestoring = false; } }
+  }
+  private editable(): boolean { return this.ready && !this.busy && !this.smtpRestoring && !this.attachmentPicking && this.draft.state === 'draft' && !BackgroundSend.isSending(this.account.id); }
   private attachmentSize(size: number): string {
     return size >= 1048576 ? `${(size / 1048576).toFixed(1)} MB` : `${Math.ceil(size / 1024)} KB`;
   }
@@ -275,7 +306,7 @@ export struct ComposeMail {
   }
   private async send(): Promise<void> {
     if (!this.editable()) { return; }
-    if (!this.host || !this.username || (!this.password && this.account.authentication !== 'oauth')) { this.setup = true; return; }
+    if (this.smtpMissing || !this.host || !this.username || (!this.password && this.account.authentication !== 'oauth')) { this.setup = true; return; }
     this.busy = true; this.notice = '';
     this.draft.failureStage = ''; this.draft.failureCode = '';
     try {
@@ -351,19 +382,26 @@ export struct ComposeMail {
       Column({ space: 16 }) {
         Text(this.label('outgoing_server')).fontSize(22).fontWeight(FontWeight.Medium).width('100%')
         Text(this.label('smtp_setup_help')).fontSize(14)
-        TextInput({ text: this.host, placeholder: this.label('smtp_server') }).id('smtp-host').enabled(!this.busy).onChange(value => this.host = value)
+        if (this.smtpMissing) {
+          Text(this.label(this.smtpRecovered ? 'gmail_smtp_recovered' : 'smtp_settings_missing')).fontSize(14).width('100%')
+          if (!this.smtpRecovered && this.account.authentication === '' && this.account.sessionUrl === 'imaps://imap.gmail.com:993') {
+            Button(this.label('gmail_smtp_recover')).id('restore-gmail-smtp').width('100%')
+              .enabled(this.ready && !this.busy && !this.smtpRestoring).onClick(() => this.restoreGmailSmtp())
+          }
+        }
+        TextInput({ text: this.host, placeholder: this.label('smtp_server') }).id('smtp-host').enabled(!this.busy && !this.smtpRestoring).onChange(value => this.host = value)
         Select([{ value: 'STARTTLS' }, { value: 'SSL/TLS' }]).selected(this.tls ? 1 : 0).value(this.tls ? 'SSL/TLS' : 'STARTTLS')
-          .enabled(!this.busy).onSelect(index => { this.tls = index === 1; this.port = this.tls ? '465' : '587'; })
+          .enabled(!this.busy && !this.smtpRestoring).onSelect(index => { this.tls = index === 1; this.port = this.tls ? '465' : '587'; })
         TextInput({ text: this.port, placeholder: this.label('port') }).id('smtp-port').type(InputType.Number)
-          .enabled(!this.busy).onChange(value => this.port = value)
+          .enabled(!this.busy && !this.smtpRestoring).onChange(value => this.port = value)
         TextInput({ text: this.username, placeholder: this.label('smtp_username') }).id('smtp-username').enableAutoFill(false)
-          .enabled(!this.busy).onChange(value => this.username = value)
+          .enabled(!this.busy && !this.smtpRestoring).onChange(value => this.username = value)
         if (this.account.authentication !== 'oauth') {
           TextInput({ text: this.password, placeholder: this.label('smtp_password') }).id('smtp-password').type(InputType.Password).enableAutoFill(false)
-            .enabled(!this.busy).onChange(value => this.password = value)
+            .enabled(!this.busy && !this.smtpRestoring).onChange(value => this.password = value)
         }
         if (this.notice) { Text(this.notice).fontSize(14).width('100%') }
-        Button(this.label('save')).id('save-smtp').width('100%').enabled(!this.busy).onClick(() => this.saveSettings())
+        Button(this.label('save')).id('save-smtp').width('100%').enabled(this.ready && !this.busy && !this.smtpRestoring).onClick(() => this.saveSettings())
       }.padding(24).width('100%').constraintSize({ maxWidth: 640 })
     }.width('100%').height('100%').align(Alignment.Top)
   }
@@ -406,6 +444,9 @@ export struct ComposeMail {
           }))
         }
         if (this.notice) { Text(this.notice).id('send-notice').fontSize(14).width('100%').padding({ top: 12, bottom: 12 }) }
+        if (this.smtpLoadFailed) {
+          Button(this.label('retry')).id('retry-smtp-load').enabled(!this.busy).onClick(() => this.initialize())
+        }
         if (this.saveFailed) { Text(this.label('draft_save_error')).id('draft-save-error').fontSize(14).padding(8) }
         Row({ space: 12 }) {
           Text(this.label('to_field')).fontSize(17).fontColor($r('app.color.mail_text_secondary')).constraintSize({ minWidth: 44 }).maxLines(1)

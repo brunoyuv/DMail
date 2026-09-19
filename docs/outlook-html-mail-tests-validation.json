@@ -1,0 +1,869 @@
+{
+  "date": "2026-09-19",
+  "version": "1.0.4",
+  "completeLiveRoundTrip": false,
+  "shippingCodeChangedInThisRound": false,
+  "credentials": {
+    "storage": "desktop Secret Service",
+    "oauthSaved": true,
+    "passwordSaved": false,
+    "secretsInRepository": false
+  },
+  "live": {
+    "plannedMessages": 12,
+    "attemptedMessages": 6,
+    "acceptedBySmtp": 3,
+    "failedAtAuthentication": 3,
+    "unattemptedMessages": 6,
+    "replayedSubmissions": 0,
+    "receivedBodies": 0,
+    "latestReceive": {
+      "code": "authenticationRequired/server",
+      "elapsedMs": 885.1442337036133,
+      "ok": false,
+      "stage": "authenticate",
+      "testedAt": 1789789647.9320915
+    },
+    "sends": [
+      {
+        "fixture": "01-short-singlepart",
+        "state": "stopped",
+        "result": {
+          "code": "authenticationRequired",
+          "elapsedMs": 8827.218651771545,
+          "ok": false,
+          "stage": "smtp"
+        }
+      },
+      {
+        "fixture": "02-short-alternative",
+        "state": "accepted",
+        "result": {
+          "elapsedMs": 14303.192257881165,
+          "ok": true,
+          "parseMs": 0.38230419158935547,
+          "smtpTrace": [
+            {
+              "code": "220",
+              "stage": "greeting"
+            },
+            {
+              "code": "250",
+              "stage": "hello"
+            },
+            {
+              "code": "220",
+              "stage": "startTLS"
+            },
+            {
+              "code": "250",
+              "stage": "hello"
+            },
+            {
+              "code": "1",
+              "stage": "xoauth2-advertised"
+            },
+            {
+              "code": "235",
+              "stage": "oauth"
+            },
+            {
+              "code": "250",
+              "stage": "mailFrom"
+            },
+            {
+              "code": "250",
+              "stage": "recipient"
+            },
+            {
+              "code": "354",
+              "stage": "data"
+            },
+            {
+              "code": "250",
+              "stage": "transfer"
+            }
+          ],
+          "stage": "accepted"
+        }
+      },
+      {
+        "fixture": "03-newsletter-singlepart",
+        "state": "stopped",
+        "result": {
+          "code": "authenticationRequired",
+          "elapsedMs": 9129.040479660034,
+          "ok": false,
+          "smtpTrace": [
+            {
+              "code": "220",
+              "stage": "greeting"
+            },
+            {
+              "code": "250",
+              "stage": "hello"
+            },
+            {
+              "code": "220",
+              "stage": "startTLS"
+            },
+            {
+              "code": "250",
+              "stage": "hello"
+            },
+            {
+              "code": "1",
+              "stage": "xoauth2-advertised"
+            },
+            {
+              "code": "535",
+              "stage": "oauth"
+            }
+          ],
+          "stage": "smtp"
+        }
+      },
+      {
+        "fixture": "04-newsletter-alternative",
+        "state": "accepted",
+        "result": {
+          "elapsedMs": 4383.168935775757,
+          "ok": true,
+          "parseMs": 2.058267593383789,
+          "smtpTrace": [
+            {
+              "code": "220",
+              "ms": "50",
+              "stage": "greeting"
+            },
+            {
+              "code": "250",
+              "ms": "57",
+              "stage": "hello"
+            },
+            {
+              "code": "220",
+              "ms": "64",
+              "stage": "startTLS"
+            },
+            {
+              "code": "250",
+              "ms": "139",
+              "stage": "hello"
+            },
+            {
+              "code": "1",
+              "ms": "139",
+              "stage": "xoauth2-advertised"
+            },
+            {
+              "code": "235",
+              "ms": "2247",
+              "stage": "oauth"
+            },
+            {
+              "code": "250",
+              "ms": "2363",
+              "stage": "mailFrom"
+            },
+            {
+              "code": "250",
+              "ms": "2479",
+              "stage": "recipient"
+            },
+            {
+              "code": "354",
+              "ms": "2592",
+              "stage": "data"
+            },
+            {
+              "code": "250",
+              "ms": "4373",
+              "stage": "transfer"
+            }
+          ],
+          "stage": "accepted"
+        }
+      },
+      {
+        "fixture": "05-tables-singlepart",
+        "state": "accepted",
+        "result": {
+          "elapsedMs": 5135.280728340149,
+          "ok": true,
+          "parseMs": 0.16546249389648438,
+          "smtpTrace": [
+            {
+              "code": "220",
+              "ms": "36",
+              "stage": "greeting"
+            },
+            {
+              "code": "250",
+              "ms": "63",
+              "stage": "hello"
+            },
+            {
+              "code": "220",
+              "ms": "71",
+              "stage": "startTLS"
+            },
+            {
+              "code": "250",
+              "ms": "147",
+              "stage": "hello"
+            },
+            {
+              "code": "1",
+              "ms": "147",
+              "stage": "xoauth2-advertised"
+            },
+            {
+              "code": "235",
+              "ms": "2274",
+              "stage": "oauth"
+            },
+            {
+              "code": "250",
+              "ms": "2392",
+              "stage": "mailFrom"
+            },
+            {
+              "code": "250",
+              "ms": "2504",
+              "stage": "recipient"
+            },
+            {
+              "code": "354",
+              "ms": "2617",
+              "stage": "data"
+            },
+            {
+              "code": "250",
+              "ms": "5126",
+              "stage": "transfer"
+            }
+          ],
+          "stage": "accepted"
+        }
+      },
+      {
+        "fixture": "06-tables-alternative",
+        "state": "stopped",
+        "result": {
+          "code": "authenticationRequired",
+          "elapsedMs": 11297.57821559906,
+          "ok": false,
+          "smtpTrace": [
+            {
+              "code": "220",
+              "ms": "55",
+              "stage": "greeting"
+            },
+            {
+              "code": "250",
+              "ms": "63",
+              "stage": "hello"
+            },
+            {
+              "code": "220",
+              "ms": "70",
+              "stage": "startTLS"
+            },
+            {
+              "code": "250",
+              "ms": "176",
+              "stage": "hello"
+            },
+            {
+              "code": "1",
+              "ms": "176",
+              "stage": "xoauth2-advertised"
+            },
+            {
+              "code": "535",
+              "ms": "11285",
+              "stage": "oauth"
+            }
+          ],
+          "stage": "smtp"
+        }
+      }
+    ],
+    "matchedAddressAuthControls": [
+      {
+        "client": "swift",
+        "deliveryAttempted": false,
+        "elapsedMs": 2239.7714853286743,
+        "ok": true,
+        "smtpTrace": [
+          {
+            "code": "220",
+            "ms": "32",
+            "stage": "greeting"
+          },
+          {
+            "code": "250",
+            "ms": "39",
+            "stage": "hello"
+          },
+          {
+            "code": "220",
+            "ms": "46",
+            "stage": "startTLS"
+          },
+          {
+            "code": "250",
+            "ms": "122",
+            "stage": "hello"
+          },
+          {
+            "code": "1",
+            "ms": "122",
+            "stage": "xoauth2-advertised"
+          },
+          {
+            "code": "235",
+            "ms": "2229",
+            "stage": "oauth"
+          }
+        ],
+        "stage": "authenticated"
+      },
+      {
+        "client": "python",
+        "deliveryAttempted": false,
+        "ok": true,
+        "code": 235,
+        "stage": "authenticated",
+        "elapsedMs": 2260
+      },
+      {
+        "client": "python",
+        "deliveryAttempted": false,
+        "ok": true,
+        "code": 235,
+        "stage": "authenticated",
+        "elapsedMs": 2191
+      },
+      {
+        "client": "swift",
+        "deliveryAttempted": false,
+        "elapsedMs": 2557.180881500244,
+        "ok": true,
+        "smtpTrace": [
+          {
+            "code": "220",
+            "ms": "42",
+            "stage": "greeting"
+          },
+          {
+            "code": "250",
+            "ms": "50",
+            "stage": "hello"
+          },
+          {
+            "code": "220",
+            "ms": "57",
+            "stage": "startTLS"
+          },
+          {
+            "code": "250",
+            "ms": "133",
+            "stage": "hello"
+          },
+          {
+            "code": "1",
+            "ms": "133",
+            "stage": "xoauth2-advertised"
+          },
+          {
+            "code": "235",
+            "ms": "2547",
+            "stage": "oauth"
+          }
+        ],
+        "stage": "authenticated"
+      }
+    ],
+    "userReportedBlockedActivity": false
+  },
+  "loopback": [
+    {
+      "responseDelayMs": 0,
+      "passed": 12,
+      "exactHtmlMatch": true,
+      "singlepartMedianDownloadMs": 2.4372339248657227,
+      "alternativeMedianDownloadMs": 3.494143486022949,
+      "messages": [
+        {
+          "decodeMs": 0.04029273986816406,
+          "decodingHadErrors": false,
+          "downloadMs": 6.6127777099609375,
+          "index": 1,
+          "partial": false,
+          "key": "01-short-singlepart",
+          "fetchCommands": 2
+        },
+        {
+          "decodeMs": 0.38504600524902344,
+          "decodingHadErrors": false,
+          "downloadMs": 3.5649538040161133,
+          "index": 2,
+          "partial": false,
+          "key": "02-short-alternative",
+          "fetchCommands": 3
+        },
+        {
+          "decodeMs": 0.0476837158203125,
+          "decodingHadErrors": false,
+          "downloadMs": 2.572298049926758,
+          "index": 3,
+          "partial": false,
+          "key": "03-newsletter-singlepart",
+          "fetchCommands": 2
+        },
+        {
+          "decodeMs": 1.911163330078125,
+          "decodingHadErrors": false,
+          "downloadMs": 3.974318504333496,
+          "index": 4,
+          "partial": false,
+          "key": "04-newsletter-alternative",
+          "fetchCommands": 3
+        },
+        {
+          "decodeMs": 0.02396106719970703,
+          "decodingHadErrors": false,
+          "downloadMs": 2.3021697998046875,
+          "index": 5,
+          "partial": false,
+          "key": "05-tables-singlepart",
+          "fetchCommands": 2
+        },
+        {
+          "decodeMs": 1.0536909103393555,
+          "decodingHadErrors": false,
+          "downloadMs": 3.3593177795410156,
+          "index": 6,
+          "partial": false,
+          "key": "06-tables-alternative",
+          "fetchCommands": 3
+        },
+        {
+          "decodeMs": 0.015020370483398438,
+          "decodingHadErrors": false,
+          "downloadMs": 2.2612810134887695,
+          "index": 7,
+          "partial": false,
+          "key": "07-unicode-singlepart",
+          "fetchCommands": 2
+        },
+        {
+          "decodeMs": 0.5462169647216797,
+          "decodingHadErrors": false,
+          "downloadMs": 3.360629081726074,
+          "index": 8,
+          "partial": false,
+          "key": "08-unicode-alternative",
+          "fetchCommands": 3
+        },
+        {
+          "decodeMs": 0.008702278137207031,
+          "decodingHadErrors": false,
+          "downloadMs": 2.2045373916625977,
+          "index": 9,
+          "partial": false,
+          "key": "09-quotes-singlepart",
+          "fetchCommands": 2
+        },
+        {
+          "decodeMs": 0.25653839111328125,
+          "decodingHadErrors": false,
+          "downloadMs": 3.423333168029785,
+          "index": 10,
+          "partial": false,
+          "key": "10-quotes-alternative",
+          "fetchCommands": 3
+        },
+        {
+          "decodeMs": 0.4979372024536133,
+          "decodingHadErrors": false,
+          "downloadMs": 6.454825401306152,
+          "index": 11,
+          "partial": false,
+          "key": "11-large-singlepart",
+          "fetchCommands": 2
+        },
+        {
+          "decodeMs": 16.325712203979492,
+          "decodingHadErrors": false,
+          "downloadMs": 4.671692848205566,
+          "index": 12,
+          "partial": false,
+          "key": "12-large-alternative",
+          "fetchCommands": 3
+        }
+      ]
+    },
+    {
+      "responseDelayMs": 50.0,
+      "passed": 12,
+      "exactHtmlMatch": true,
+      "singlepartMedianDownloadMs": 102.80108451843262,
+      "alternativeMedianDownloadMs": 154.25169467926025,
+      "messages": [
+        {
+          "decodeMs": 0.042319297790527344,
+          "decodingHadErrors": false,
+          "downloadMs": 107.01477527618408,
+          "index": 1,
+          "partial": false,
+          "key": "01-short-singlepart",
+          "fetchCommands": 2
+        },
+        {
+          "decodeMs": 0.41413307189941406,
+          "decodingHadErrors": false,
+          "downloadMs": 154.51514720916748,
+          "index": 2,
+          "partial": false,
+          "key": "02-short-alternative",
+          "fetchCommands": 3
+        },
+        {
+          "decodeMs": 0.06794929504394531,
+          "decodingHadErrors": false,
+          "downloadMs": 102.82158851623535,
+          "index": 3,
+          "partial": false,
+          "key": "03-newsletter-singlepart",
+          "fetchCommands": 2
+        },
+        {
+          "decodeMs": 1.7464160919189453,
+          "decodingHadErrors": false,
+          "downloadMs": 154.31225299835205,
+          "index": 4,
+          "partial": false,
+          "key": "04-newsletter-alternative",
+          "fetchCommands": 3
+        },
+        {
+          "decodeMs": 0.026941299438476562,
+          "decodingHadErrors": false,
+          "downloadMs": 102.78058052062988,
+          "index": 5,
+          "partial": false,
+          "key": "05-tables-singlepart",
+          "fetchCommands": 2
+        },
+        {
+          "decodeMs": 1.0786056518554688,
+          "decodingHadErrors": false,
+          "downloadMs": 154.19113636016846,
+          "index": 6,
+          "partial": false,
+          "key": "06-tables-alternative",
+          "fetchCommands": 3
+        },
+        {
+          "decodeMs": 0.021457672119140625,
+          "decodingHadErrors": false,
+          "downloadMs": 102.6914119720459,
+          "index": 7,
+          "partial": false,
+          "key": "07-unicode-singlepart",
+          "fetchCommands": 2
+        },
+        {
+          "decodeMs": 0.5511045455932617,
+          "decodingHadErrors": false,
+          "downloadMs": 154.15680408477783,
+          "index": 8,
+          "partial": false,
+          "key": "08-unicode-alternative",
+          "fetchCommands": 3
+        },
+        {
+          "decodeMs": 0.01049041748046875,
+          "decodingHadErrors": false,
+          "downloadMs": 102.7301549911499,
+          "index": 9,
+          "partial": false,
+          "key": "09-quotes-singlepart",
+          "fetchCommands": 2
+        },
+        {
+          "decodeMs": 0.25177001953125,
+          "decodingHadErrors": false,
+          "downloadMs": 153.84769439697266,
+          "index": 10,
+          "partial": false,
+          "key": "10-quotes-alternative",
+          "fetchCommands": 3
+        },
+        {
+          "decodeMs": 0.5035400390625,
+          "decodingHadErrors": false,
+          "downloadMs": 104.5902967453003,
+          "index": 11,
+          "partial": false,
+          "key": "11-large-singlepart",
+          "fetchCommands": 2
+        },
+        {
+          "decodeMs": 16.7694091796875,
+          "decodingHadErrors": false,
+          "downloadMs": 155.40838241577148,
+          "index": 12,
+          "partial": false,
+          "key": "12-large-alternative",
+          "fetchCommands": 3
+        }
+      ]
+    }
+  ],
+  "render": {
+    "runtime": "v22.23.2",
+    "platform": "linux",
+    "samples": 30,
+    "warmup": 5,
+    "notes": "Host JavaScript and warm local file reads; excludes ArkWeb paint, HarmonyOS RDB/Asset and network. Not phone load latency.",
+    "results": [
+      {
+        "key": "01-short-singlepart",
+        "inputBytes": 523,
+        "preparedBytes": 2865,
+        "prepare": {
+          "medianMs": 0.058,
+          "p95Ms": 0.262
+        },
+        "wrap": {
+          "medianMs": 0,
+          "p95Ms": 0.002
+        },
+        "warmFileReopen": {
+          "medianMs": 0.008,
+          "p95Ms": 0.034
+        },
+        "quoteFolding": false
+      },
+      {
+        "key": "02-short-alternative",
+        "inputBytes": 523,
+        "preparedBytes": 2865,
+        "prepare": {
+          "medianMs": 0.036,
+          "p95Ms": 0.055
+        },
+        "wrap": {
+          "medianMs": 0,
+          "p95Ms": 0
+        },
+        "warmFileReopen": {
+          "medianMs": 0.006,
+          "p95Ms": 0.009
+        },
+        "quoteFolding": false
+      },
+      {
+        "key": "03-newsletter-singlepart",
+        "inputBytes": 25165,
+        "preparedBytes": 27492,
+        "prepare": {
+          "medianMs": 0.138,
+          "p95Ms": 0.306
+        },
+        "wrap": {
+          "medianMs": 0.001,
+          "p95Ms": 0.002
+        },
+        "warmFileReopen": {
+          "medianMs": 0.041,
+          "p95Ms": 0.06
+        },
+        "quoteFolding": false
+      },
+      {
+        "key": "04-newsletter-alternative",
+        "inputBytes": 25165,
+        "preparedBytes": 27492,
+        "prepare": {
+          "medianMs": 0.101,
+          "p95Ms": 0.186
+        },
+        "wrap": {
+          "medianMs": 0,
+          "p95Ms": 0.001
+        },
+        "warmFileReopen": {
+          "medianMs": 0.033,
+          "p95Ms": 0.077
+        },
+        "quoteFolding": false
+      },
+      {
+        "key": "05-tables-singlepart",
+        "inputBytes": 13764,
+        "preparedBytes": 16123,
+        "prepare": {
+          "medianMs": 0.363,
+          "p95Ms": 0.826
+        },
+        "wrap": {
+          "medianMs": 0,
+          "p95Ms": 0.001
+        },
+        "warmFileReopen": {
+          "medianMs": 0.023,
+          "p95Ms": 0.041
+        },
+        "quoteFolding": false
+      },
+      {
+        "key": "06-tables-alternative",
+        "inputBytes": 13764,
+        "preparedBytes": 16123,
+        "prepare": {
+          "medianMs": 0.342,
+          "p95Ms": 0.487
+        },
+        "wrap": {
+          "medianMs": 0.001,
+          "p95Ms": 0.001
+        },
+        "warmFileReopen": {
+          "medianMs": 0.023,
+          "p95Ms": 0.039
+        },
+        "quoteFolding": false
+      },
+      {
+        "key": "07-unicode-singlepart",
+        "inputBytes": 5391,
+        "preparedBytes": 7718,
+        "prepare": {
+          "medianMs": 0.01,
+          "p95Ms": 0.013
+        },
+        "wrap": {
+          "medianMs": 0,
+          "p95Ms": 0
+        },
+        "warmFileReopen": {
+          "medianMs": 0.016,
+          "p95Ms": 0.019
+        },
+        "quoteFolding": false
+      },
+      {
+        "key": "08-unicode-alternative",
+        "inputBytes": 5391,
+        "preparedBytes": 7718,
+        "prepare": {
+          "medianMs": 0.01,
+          "p95Ms": 0.011
+        },
+        "wrap": {
+          "medianMs": 0,
+          "p95Ms": 0
+        },
+        "warmFileReopen": {
+          "medianMs": 0.016,
+          "p95Ms": 0.019
+        },
+        "quoteFolding": false
+      },
+      {
+        "key": "09-quotes-singlepart",
+        "inputBytes": 525,
+        "preparedBytes": 3062,
+        "prepare": {
+          "medianMs": 0.016,
+          "p95Ms": 0.018
+        },
+        "wrap": {
+          "medianMs": 0,
+          "p95Ms": 0
+        },
+        "warmFileReopen": {
+          "medianMs": 0.006,
+          "p95Ms": 0.006
+        },
+        "quoteFolding": true
+      },
+      {
+        "key": "10-quotes-alternative",
+        "inputBytes": 525,
+        "preparedBytes": 3062,
+        "prepare": {
+          "medianMs": 0.016,
+          "p95Ms": 0.024
+        },
+        "wrap": {
+          "medianMs": 0,
+          "p95Ms": 0
+        },
+        "warmFileReopen": {
+          "medianMs": 0.006,
+          "p95Ms": 0.006
+        },
+        "quoteFolding": true
+      },
+      {
+        "key": "11-large-singlepart",
+        "inputBytes": 263040,
+        "preparedBytes": 265367,
+        "prepare": {
+          "medianMs": 0.592,
+          "p95Ms": 1.11
+        },
+        "wrap": {
+          "medianMs": 0.001,
+          "p95Ms": 0.001
+        },
+        "warmFileReopen": {
+          "medianMs": 0.594,
+          "p95Ms": 0.853
+        },
+        "quoteFolding": false
+      },
+      {
+        "key": "12-large-alternative",
+        "inputBytes": 263040,
+        "preparedBytes": 265367,
+        "prepare": {
+          "medianMs": 0.578,
+          "p95Ms": 1.742
+        },
+        "wrap": {
+          "medianMs": 0.001,
+          "p95Ms": 0.001
+        },
+        "warmFileReopen": {
+          "medianMs": 0.585,
+          "p95Ms": 0.634
+        },
+        "quoteFolding": false
+      }
+    ]
+  },
+  "existingHtmlDocumentTests": {
+    "passed": 29,
+    "failed": 0
+  },
+  "limitations": [
+    "Live IMAP authentication rejected; delivery and live received-body performance remain unverified.",
+    "Local Swift objects are debug host builds.",
+    "Host file reopen excludes HarmonyOS storage, ArkWeb paint and remote images.",
+    "MIME request batching is a candidate only, not an implemented optimization."
+  ],
+  "sourceHashes": {
+    "Probe.swift": "a64134c6712256ceabb115d5ff6f97aac049dc5c8d75027af095086cbb165577",
+    "loopback.py": "1752b3b2bcb365123ff8707be5712038a847824a641433cf36b11a2664244382",
+    "bench-render.cjs": "87a0270ad9c90d8e7c0f05a894dbbf6928ff968cba0e97db86dc2530acb3da8b",
+    "run-mail.py": "67f3539be88d9876e90faea1d576b91a2fb7f36c929eb7082fc54da6c256bda9",
+    "paired-smtp.py": "605d6e95df6cec889047d27ab5161b06234508a80beb49f24cbde6b932eecec9"
+  }
+}

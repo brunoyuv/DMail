@@ -14,8 +14,8 @@ function method(name) {
   return found[0];
 }
 const compiled = ts.transpileModule(`export class ConnectedMailHost {
-${['showError', 'showSavedCopy', 'loadPage', 'read', 'applyReaderMetadata', 'applyBoxes', 'operationsChanged', 'loadConversationIndex', 'rowAllows', 'rowArchiveAllows', 'visibleEmails',
-  'closeSwipeAction', 'rowKeyword', 'archive', 'moveTarget', 'loadMailAction', 'serverChecksTrash'].map(method).join('\n')}
+${['showError', 'showSavedCopy', 'refreshedPage', 'loadPage', 'read', 'applyReaderMetadata', 'applyBoxes', 'operationsChanged', 'loadConversationIndex', 'rowAllows', 'rowArchiveAllows', 'visibleEmails',
+  'closeSwipeAction', 'rowKeyword', 'archive', 'moveTarget', 'loadMailAction', 'serverChecksTrash', 'allows', 'changeKeyword', 'applyMessage'].map(method).join('\n')}
 }`, { compilerOptions: { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS } }).outputText;
 const conversationModule = { exports: {} };
 const conversationCode = ts.transpileModule(fs.readFileSync('harmony/entry/src/main/ets/mail/Conversation.ts', 'utf8'),
@@ -593,5 +593,71 @@ test('Explicit IMAP Delete reaches server discovery when cached Trash permission
     assert.equal(state.operationCalls.length, 1);
     assert.equal(state.operationCalls[0].action, 'delete');
     assert.deepEqual(state.operationCalls[0].membership, ['inbox']);
+  }
+});
+
+function enableAutomaticRead(ui, state) {
+  // Exercise the production permission gate and mutation dispatch, rather than
+  // the older fixtures' stub that disables automatic marking altogether.
+  delete ui.allows;
+  state.bodyRead = () => ({ savedAt: Date.now(), bodySavedAt: Date.now(), stateDirty: false,
+    mail: clone(state.view.emails.find(value => value.id === ui.selectedId)) });
+}
+
+test('Manually marked-unread IMAP mail becomes read on reopening despite cached EXAMINE permissions', async () => {
+  const { ui, state } = fixture();
+  const saved = { ...mail(true), maySetSeen: false, maySetKeywords: false };
+  ui.emails = [saved]; state.view.emails = [saved];
+  await ui.rowKeyword(saved, '$seen'); state.closeCallbacks[0]();
+  assert.equal(state.operationCalls.length, 1);
+  assert.deepEqual(state.operationCalls[0].mail.keywords, ['$seen']);
+  // The server acknowledges the explicit mark-unread. A later cached open
+  // still has the permissions from its read-only EXAMINE session.
+  state.view.emails = [{ ...saved, keywords: [] }]; ui.operationRevision++;
+  await ui.operationsChanged();
+  enableAutomaticRead(ui, state);
+  await ui.read(ui.emails[0]);
+  assert.equal(state.operationCalls.length, 2, 'Opening must submit a server-verified mark-read');
+  assert.equal(state.operationCalls[1].mail.id, saved.id);
+  assert.deepEqual(state.operationCalls[1].mail.keywords, []);
+  assert.equal(state.operationCalls[1].keyword, '$seen');
+  await ui.read(ui.emails[0]);
+  assert.equal(state.operationCalls.length, 2, 'Repeated reader taps must not duplicate STORE');
+  state.view.emails = [{ ...saved, keywords: ['$seen'] }]; ui.operationRevision++;
+  await ui.operationsChanged();
+  assert.deepEqual(ui.selected.keywords, ['$seen']);
+  assert.deepEqual(ui.emails[0].keywords, ['$seen']);
+  assert.equal(state.pageCalls, 0);
+});
+
+test('Expanding a combined reply marks that reply read while folded unread replies remain unread', async () => {
+  const messages = [reply('newest', true, 300), reply('middle', false, 200), reply('oldest', false, 100)]
+    .map(value => ({ ...value, maySetSeen: false, maySetKeywords: false }));
+  const { ui, state } = await visibleFixture(messages);
+  ui.unreadOnly = false; enableAutomaticRead(ui, state);
+  await ui.read(ui.visibleEmails()[0]);
+  assert.equal(state.operationCalls.length, 0);
+  await ui.read(ui.conversation.find(value => value.id === 'middle'), true);
+  assert.equal(state.operationCalls.length, 1);
+  assert.equal(state.operationCalls[0].mail.id, 'middle');
+  state.view.emails = messages.map(value => value.id === 'middle' ? { ...value, keywords: ['$seen'] } : value);
+  state.indexRead = async () => state.view.emails.map(mail => ({ mail }));
+  ui.operationRevision++; await ui.operationsChanged();
+  assert.deepEqual(ui.selected.keywords, ['$seen']);
+  assert.deepEqual(ui.conversation.find(value => value.id === 'middle').keywords, ['$seen']);
+  assert.deepEqual(ui.conversation.find(value => value.id === 'oldest').keywords, []);
+  assert.deepEqual(state.paths, ['read']);
+  assert.equal(state.pageCalls, 0);
+});
+
+test('Automatic marking preserves account, dirty-cache, local-copy and pending-operation restrictions', () => {
+  for (const restriction of ['readOnly', 'refreshRequired', 'savedCopyAt', 'busy', 'swipeClosing', 'pending', 'local', 'jmap']) {
+    const { ui, state } = fixture(); delete ui.allows;
+    ui.selected = { ...mail(), maySetSeen: false, maySetKeywords: false };
+    if (restriction === 'pending') state.pending = true;
+    else if (restriction === 'local') ui.selected.id = 'local_sent_synthetic';
+    else if (restriction === 'jmap') ui.account.sessionUrl = 'https://jmap.example.test';
+    else ui[restriction] = restriction === 'savedCopyAt' ? Date.now() : true;
+    assert.equal(ui.allows('$seen'), false, restriction);
   }
 });

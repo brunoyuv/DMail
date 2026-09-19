@@ -12,6 +12,7 @@ function fixture(check) {
   const requests = [], module = { exports: {} };
   class JmapError extends Error { constructor(code) { super(code); this.code = code; } }
   new Function('require', 'module', 'exports', compiled)(name => {
+    if (name === '@kit.ArkTS') return { util: { generateRandomUUID: () => require('node:crypto').randomUUID() } };
     if (name === 'libthunderbird.so') return { imapAccountRequest: async raw => {
       requests.push(JSON.parse(raw)); return JSON.stringify({ inboxCheck: check });
     } };

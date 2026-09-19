@@ -1,0 +1,135 @@
+{
+  "versionName": "1.0.4",
+  "versionCode": 1000004,
+  "change": "Pair adjacent selected MIME parts in one UID FETCH",
+  "batchLimits": {
+    "maximumParts": 2,
+    "advertisedResponseBytes": 524288,
+    "reservedHeaderBytesPerPart": 65536,
+    "largerParts": "separate requests"
+  },
+  "preserved": [
+    "root HEADER handling",
+    "original Swift transport",
+    "UID validation",
+    "actual section and aggregate limits",
+    "partial readable siblings",
+    "existing cancellation and deadlines",
+    "no automatic replay",
+    "saved logging preference"
+  ],
+  "tests": {
+    "swiftPassed": 151,
+    "swiftSuites": 39,
+    "newTlsScenarios": 11,
+    "diagnosticTestsPassed": 6,
+    "syntheticCaseExecutions": 144,
+    "exactDecodedHtmlAcrossBothVariants": true
+  },
+  "benchmark": {
+    "runsPerVariant": 3,
+    "summary": {
+      "before": {
+        "0": {
+          "singlepart": {
+            "samples": 18,
+            "medianDownloadMs": 2.4384260177612305,
+            "fetchCommands": [
+              2
+            ]
+          },
+          "alternative": {
+            "samples": 18,
+            "medianDownloadMs": 3.4837722778320312,
+            "fetchCommands": [
+              3
+            ]
+          }
+        },
+        "50": {
+          "singlepart": {
+            "samples": 18,
+            "medianDownloadMs": 103.33126783370972,
+            "fetchCommands": [
+              2
+            ]
+          },
+          "alternative": {
+            "samples": 18,
+            "medianDownloadMs": 154.72596883773804,
+            "fetchCommands": [
+              3
+            ]
+          }
+        }
+      },
+      "after": {
+        "0": {
+          "singlepart": {
+            "samples": 18,
+            "medianDownloadMs": 2.585887908935547,
+            "fetchCommands": [
+              2
+            ]
+          },
+          "alternative": {
+            "samples": 18,
+            "medianDownloadMs": 3.081202507019043,
+            "fetchCommands": [
+              2
+            ]
+          }
+        },
+        "50": {
+          "singlepart": {
+            "samples": 18,
+            "medianDownloadMs": 103.44988107681274,
+            "fetchCommands": [
+              2
+            ]
+          },
+          "alternative": {
+            "samples": 18,
+            "medianDownloadMs": 104.09879684448242,
+            "fetchCommands": [
+              2
+            ]
+          }
+        }
+      }
+    }
+  },
+  "multipartReductionPercent": 32.72053965701686,
+  "nativeBuilds": {
+    "x86_64": {
+      "compiledAndLinked": true,
+      "coreSha256": "4bca54d216063849c722ebaf965cd5c340f366e3ba8c6c786674b9328ab6ad6a",
+      "objectManifestSha256": "6f7776ebd7265728a13db7c4aab9f4457d4668f01bc5a26042920752cd75bcc4"
+    },
+    "aarch64": {
+      "compiledAndLinked": true,
+      "coreSha256": "f6d322f3799ddc78f8dd0cf417f90826d24487fbede628b983104b2abd80b044",
+      "objectManifestSha256": "934dce563b1ce4f66789b3f7bb567f0d246233c8f35a9c46a32b9282f774bfd8"
+    }
+  },
+  "sources": {
+    "port/swift-imap/ReadableBody.swift": "bad0c951f858e65ba481652c7374c9a312b4495b833a3f3c085abd13d8376ce9",
+    "port/swift-imap/ReadableBodyTests.swift": "2e1eeb17c4de45f51db7da3fadf1ccd30ac73c3b50b7b94d1c93e6a880526bc1"
+  },
+  "baselineSourceSha256": "5f649a10912173f43eb688b4d721fe240d4707522d6ad142c287ae8c35c18dcc",
+  "baselineProbeSha256": "5b3cb1cab629ee7ee0767eaffdc19d08ab41b497d38614580353e8f20aff6944",
+  "updatedProbeSha256": "9fa523f8ed5cdb47bc5c2b4ec18efbfcf4647d0dceb56314708e0a020e204020",
+  "limitations": [
+    "Host localhost TLS fixture with controlled delays, not live Outlook or phone timing.",
+    "No new measurement of ArkWeb paint or device storage.",
+    "Advertised batch budget does not replace existing actual-byte validation."
+  ],
+  "installed": true,
+  "committed": false,
+  "pushed": false,
+  "published": false,
+  "installationRecord": "docs/mime-fetch-batching-installation.json",
+  "signedArm64HapVerified": true,
+  "buildMarker": "1.0.4-mime-batching",
+  "hapSha256": "2f865c2e2442bc431b552afce9d49c5a0956d69fa9a0fcf875cff3edc2a5f39f"
+}

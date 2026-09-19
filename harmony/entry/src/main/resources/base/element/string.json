@@ -849,14 +849,6 @@
       "value": "Dismiss notification"
     },
     {
-      "name": "notification_inbox_offer",
-      "value": "Get banners for new mail"
-    },
-    {
-      "name": "notification_enable",
-      "value": "Enable"
-    },
-    {
       "name": "notification_system_settings",
       "value": "System notification settings"
     },
@@ -937,6 +929,11 @@
     {"name": "math_settings_error", "value": "Could not save Markdown and math settings."},
     {"name": "math_preview", "value": "Preview message"},
     {"name": "math_edit", "value": "Back to editor"},
-    {"name": "math_render_error", "value": "Could not format this message. Your text is unchanged. Shorten the message or reduce the number of equations and try again."}
+    {"name": "math_render_error", "value": "Could not format this message. Your text is unchanged. Shorten the message or reduce the number of equations and try again."},
+    {"name": "smtp_load_error", "value": "Outgoing settings could not be read. Unlock the device and retry; your saved settings have not been changed."},
+    {"name": "smtp_settings_missing", "value": "No outgoing-server settings are saved for this account."},
+    {"name": "gmail_smtp_recover", "value": "Use saved Gmail login"},
+    {"name": "gmail_smtp_recovered", "value": "Gmail settings are filled from the saved incoming login. Review them and tap Save."},
+    {"name": "gmail_smtp_recovery_error", "value": "Gmail settings could not be restored. Reopen this page or enter your SMTP settings and app password."}
   ]
 }

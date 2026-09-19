@@ -11,7 +11,10 @@ export function oauthFailureLabel(stage: string): string {
   return 'oauth_signin_error';
 }
 
-export function oauthFailureCode(code: string): string {
+export function oauthFailureCode(code: string, authenticationStage?: string): string {
+  if (code === 'authenticationRequired' && (authenticationStage === 'credentials' || authenticationStage === 'server' || authenticationStage === 'refresh')) {
+    return `${code}/${authenticationStage}`;
+  }
   const known: string[] = ['network', 'rejected', 'responseTooLarge', 'redirectRejected',
     'invalid_client', 'invalid_grant', 'invalid_request', 'unauthorized_client', 'invalid_scope', 'access_denied',
     'invalidConfiguration', 'invalidCallback', 'stateMismatch', 'expiredSession', 'authorizationDenied',

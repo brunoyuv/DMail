@@ -26,3 +26,39 @@ tests in 1.0.3a, including synthetic connection validation and release-package
 checks. Version 1.0.4 rebuilds and verifies the package with the new name.
 The signed artifact manifest records the completed build and signature checks.
 No store upload, device installation or production launch is part of this change.
+
+
+## Subsequent local Outlook follow-up
+
+The transient OAuth-error classification correction was applied to this `main`
+baseline and installed as an in-place 1.0.4 update on Pura X at the user's request.
+The existing Connect-button changes remain included. See
+[Outlook investigation and corrected installation](outlook-message-failures.md).
+This does not update the previously generated AppGallery release artifacts or
+establish a fix for the reported message-specific download failures.
+
+The subsequent user-requested Pura X diagnostic update remains 1.0.4 and displays
+`1.0.4-download-log-1` in Settings. See [download diagnostics](download-diagnostics.md)
+for bounded private logging, export controls, validation and lifecycle limits.
+
+The comprehensive follow-up replaces that diagnostic variant with
+`1.0.4-download-log-2-detailed`, retaining package version 1.0.4. It adds exact
+rejection conditions, safe parser/transport detail, anonymous retry correlation,
+failure retention and late-cleanup capture. See the same diagnostic record.
+
+## Local Outlook body follow-up
+
+The second detailed diagnostic upload identified complete body transfers rejected
+because `1.MIME` was absent. The local main follow-up requests the message HEADER
+for singlepart roots, retaining version 1.0.4 and detailed logging. See
+[the diagnosis, regression and installation record](outlook-singlepart-header-fix.md).
+
+The user confirmed that correction and then requested active Inbox prefetch
+while the app is open. The current local build is
+`1.0.4-download-log-4-inbox-cache`, still package version 1.0.4. See
+[foreground Inbox caching](foreground-inbox-cache.md).
+
+The subsequent login-rejection follow-up shares a bounded original Swift read
+session between foreground Inbox pages and bodies. It retires queued requests
+after failure without replay and preserves foreground prefetch and HTML behavior.
+See [the read-session evidence](imap-read-session-follow-up.md).

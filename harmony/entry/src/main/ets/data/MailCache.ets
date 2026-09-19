@@ -336,13 +336,19 @@ export class MailCache {
         }
       }
     }
-    let value = cacheEmail(mail, fullBody, previous, Date.now());
+    const now = Date.now();
+    let value = cacheEmail(mail, fullBody, previous, now);
+    // Only an actual download can admit an expired entry again. Retained view
+    // IDs are not passed here. A reused Sent body has its own entry identity.
+    value.savedAt = previousState && cacheIsFresh(previousState.savedAt, now) ? previousState.savedAt : now;
     const key = `${accountId}:${mail.id}`;
     const preserveState = previousState !== null && (MailCache.liveMutations.has(key) || (MailCache.mutationVersions.get(key) || 0) > revision);
     if (preserveState && previousState) { value.mail.keywords = previousState.mail.keywords; value.mail.mailboxIds = previousState.mail.mailboxIds; }
     if (!this.validBodyOwner(accountId, value)) { throw new Error('Invalid body file identity'); }
     if (fullBody) { value = await this.externalize(accountId, value); }
-    await this.put(accountId, 'email', mail.id, JSON.stringify(value));
+    const encoded = JSON.stringify(value);
+    if (!fullBody && !payload?.stateDirty && encoded === payload?.payload) { return; }
+    await this.put(accountId, 'email', mail.id, encoded);
     if (preserveState && payload?.stateDirty) {
       await this.db.executeSql("UPDATE mail_cache SET dirty = 1 WHERE account_id = ? AND kind = 'email' AND cache_key = ?", [accountId, mail.id]);
     }
@@ -420,7 +426,7 @@ export class MailCache {
       const payload = await this.get(accountId, 'email', emailId, includeDirty);
       const cached = payload === null ? null : retainedEmail(decodeCachedEmail(payload.payload));
       if (cached && cached.mail.id !== emailId) { throw new Error('Invalid mail cache'); }
-      if (cached && cacheIsFresh(cached.bodySavedAt)) {
+      if (cached && cacheIsFresh(cached.savedAt) && cacheIsFresh(cached.bodySavedAt)) {
         const migrated = await this.migrateBody(accountId, cached, payload!);
         cached.stateDirty = payload!.stateDirty; result = await this.hydrate(accountId, cached);
         if (this.files && result) {
@@ -478,10 +484,13 @@ export class MailCache {
     return result;
   }
 
-  saveView(accountId: string, mailboxId: string, emails: JmapEmail[], nextPosition: number | null = null, queryState?: string, revision: number = MailCache.mutationRevision()): Promise<void> {
+  saveView(accountId: string, mailboxId: string, emails: JmapEmail[], nextPosition: number | null = null, queryState?: string,
+    revision: number = MailCache.mutationRevision(), updatedEmails: JmapEmail[] = emails): Promise<void> {
     const now = Date.now();
-    const copies = emails.map((mail) => cacheEmail(mail, false, null, now).mail);
-    const view: CachedView = { version: 1, savedAt: now, mailboxId, ids: copies.map((mail) => mail.id), nextPosition, queryState };
+    // The ordered view may contain hundreds of retained rows; only the fetched
+    // page needs validation and a possible metadata update.
+    const copies = updatedEmails.map((mail) => cacheEmail(mail, false, null, now).mail);
+    const view: CachedView = { version: 1, savedAt: now, mailboxId, ids: emails.map(mail => mail.id), nextPosition, queryState };
     const payload = JSON.stringify(view); decodeCachedView(payload);
     return this.queue(async () => {
       this.db.beginTransaction();
@@ -499,22 +508,33 @@ export class MailCache {
         const previousView = previousPayload ? decodeCachedView(previousPayload.payload) : null;
         if (previousView && cacheIsFresh(previousView.savedAt)) {
           const retainedIds: string[] = [];
+          const olderIds: string[] = [];
           const fetchedIds = new Set(view.ids);
           const fetchedMessageIds = new Set(copies.flatMap(mail => mail.messageIds.map(id => id.replace(/^<|>$/g, ''))));
           for (const id of previousView.ids) {
             if (fetchedIds.has(id)) { continue; }
             const key = `${accountId}:${id}`;
-            if (!id.startsWith('local_sent_') && !id.startsWith('local_archive_') && !MailCache.liveMutations.has(key) && (MailCache.mutationVersions.get(key) || 0) <= revision) { continue; }
-            const stored = await this.get(accountId, 'email', id, true);
+            const protectedEntry = id.startsWith('local_sent_') || id.startsWith('local_archive_') ||
+              MailCache.liveMutations.has(key) || (MailCache.mutationVersions.get(key) || 0) > revision;
+            const stored = await this.get(accountId, 'email', id, true, id.startsWith('local_sent_'));
             if (!stored) { continue; }
             const cached = retainedEmail(decodeCachedEmail(stored.payload));
             if (!cached.mail.mailboxIds.includes(mailboxId) || !cacheIsFresh(cached.savedAt)) { continue; }
             if (id.startsWith('local_sent_') && (!cacheReadyForReading(cached) || cached.mail.messageIds.some(value => fetchedMessageIds.has(value.replace(/^<|>$/g, ''))))) { continue; }
             // A same-Message-ID header does not prove a mapped replacement or
             // contain a downloaded body. Keep the explicit archived offline copy.
-            retainedIds.push(id);
+            if (protectedEntry) { retainedIds.push(id); }
+            else { olderIds.push(id); }
           }
-          view.ids = retainedIds.concat(view.ids);
+          // A refresh updates server headers, not the seven-day local history.
+          // Explicit moves/removals are enforced by each record's membership.
+          view.ids = retainedIds.concat(view.ids, olderIds);
+          if (queryState !== undefined && queryState === previousView.queryState) {
+            const previousNext = previousView.nextPosition;
+            if (previousNext !== undefined) {
+              view.nextPosition = nextPosition === null || previousNext === null ? null : Math.max(nextPosition, previousNext);
+            }
+          }
         }
         await this.put(accountId, 'view', mailboxId, JSON.stringify(view));
         this.db.commit();
@@ -553,7 +573,7 @@ export class MailCache {
         }
         for (const emailId of ids) {
           const cached = stored.get(emailId);
-          if (!cached) { continue; }
+          if (!cached || !cacheIsFresh(cached.savedAt)) { continue; }
           stateDirty = stateDirty || cached.stateDirty === true;
           const retained = includeBody ? retainedEmail(cached) : cachedEmailSummary(cached);
           const hydrated = includeBody ? await this.hydrate(accountId, retained) : retained;

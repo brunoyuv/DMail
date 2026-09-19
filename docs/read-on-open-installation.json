@@ -1,0 +1,20 @@
+{
+  "device": "Pura X",
+  "model": "VDE-AL00",
+  "bundleName": "org.thunderbird.harmony.dev",
+  "previousVersionName": "1.0.4",
+  "previousVersionCode": 1000004,
+  "versionName": "1.0.4",
+  "versionCode": 1000004,
+  "upgradeOnly": true,
+  "storageIdentityPreserved": true,
+  "artifactHashVerified": true,
+  "hapSha256": "3719d46b0fbda931ad705ee6a6c833d76f638f3afce1f49e43a54b5e041382ed",
+  "productionLaunched": false,
+  "productionProcessAbsentAfterInstall": true,
+  "installedHashVerified": false,
+  "installedHashCheck": "Not attempted; prior OS reads denied",
+  "sourceBranch": "main",
+  "sourceBaseRevision": "c21edcea3143b97c8e7818bc983b00125b18cf4e",
+  "scope": "Automatic mark-read for reopened unread messages and expanded conversation replies; 1.0.4-read-on-open"
+}

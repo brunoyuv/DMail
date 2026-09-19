@@ -338,3 +338,47 @@ test('Removing the equation cap retries old failed renders locally once in both 
     assert.equal(f.state.reads.length, 0);
   }
 });
+
+
+test('Network, decoding and storage failures expose only safe error codes', async () => {
+  for (const expected of ['read', 'decode', 'save']) {
+    const value = mail('SECRET-id', { subject: 'SECRET-subject', preview: '', from: [{ email: 'SECRET@email.microsoft.com', name: 'SECRET' }] });
+    const f = fixture({ read: async () => {
+      if (expected === 'read') throw new Error('SECRET-provider-response');
+      return expected === 'decode' ? { ...value, textBody: null, htmlBody: null, bodyEncodingProblem: true } : value;
+    } });
+    if (expected === 'save') f.state.failSave = true;
+    await assert.rejects(f.open(value), error => {
+      assert.equal(error.code, expected === 'read' ? 'network' : expected === 'decode' ? 'invalidResponse' : 'storage');
+      assert.ok(!error.message.includes('SECRET')); return true;
+    });
+    await f.loader.whenIdle();
+  }
+});
+test('Reader timeout retains ownership of unfinished work', async t => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const gate = deferred();
+  const f = fixture({ read: async (_server, id) => { await gate.promise; return mail(id); } });
+  const result = f.open().catch(error => error);
+  await tick(); t.mock.timers.tick(45000);
+  assert.equal((await result).code, 'network');
+  assert.equal(f.tracked.size, 1);
+  gate.resolve(); await f.loader.whenIdle();
+  assert.equal(f.state.reads.length, 1); assert.equal(f.tracked.size, 0);
+});
+
+
+test('Message loading preserves safe authentication stages after reopening without retaining provider details', async () => {
+  for (const stage of ['credentials', 'server', 'refresh', 'private-provider-response']) {
+    const f = fixture({ read: async () => { throw Object.assign(new Error('private-provider-response'), {
+      code: 'authenticationRequired', authenticationStage: stage, token: 'private-token'
+    }); } });
+    await assert.rejects(f.open(), error => {
+      assert.equal(error.code, 'authenticationRequired');
+      assert.equal(error.authenticationStage, stage === 'private-provider-response' ? undefined : stage);
+      assert.ok(!JSON.stringify(error).includes('private')); assert.ok(!error.message.includes('private'));
+      return true;
+    });
+    await f.loader.whenIdle(); assert.equal(f.tracked.size, 0); assert.equal(f.state.reads.length, 1);
+  }
+});

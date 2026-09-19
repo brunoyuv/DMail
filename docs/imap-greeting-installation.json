@@ -1,0 +1,20 @@
+{
+  "device": "Pura X",
+  "model": "VDE-AL00",
+  "bundleName": "org.thunderbird.harmony.dev",
+  "previousVersionName": "1.0.4",
+  "previousVersionCode": 1000004,
+  "versionName": "1.0.4",
+  "versionCode": 1000004,
+  "upgradeOnly": true,
+  "storageIdentityPreserved": true,
+  "artifactHashVerified": true,
+  "hapSha256": "6867b18d7b5e70110568f8b9cd853fe27c3ec71dffc9f70350e318c549aad6a7",
+  "productionLaunched": false,
+  "productionProcessAbsentAfterInstall": true,
+  "installedHashVerified": false,
+  "installedHashCheck": "Not attempted; prior OS reads denied",
+  "sourceBranch": "main",
+  "sourceBaseRevision": "c21edcea3143b97c8e7818bc983b00125b18cf4e",
+  "scope": "IMAP greeting ordering, Outlook authentication follow-up and Gmail SMTP recovery; 1.0.4-imap-greeting-smtp"
+}

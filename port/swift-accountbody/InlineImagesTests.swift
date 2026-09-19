@@ -111,4 +111,18 @@ struct InlineImageReferenceTests {
         let unfinished = String(repeating: "<head ", count: 20_000) + "中文"
         #expect(unfinished.removingMailPreviewBlocks() == unfinished)
     }
+
+    @Test func htmlSampleCanLackPreviewWhileTheCompleteBodyIsReadable() {
+        // A successful bounded sample can end entirely inside a marketing
+        // message's head/style preamble. Empty preview is not a body failure.
+        let source = "<html><head><style>" + String(repeating: ".offer{color:red}", count: 200) +
+            "</style></head><body><p>Synthetic offer details</p></body></html>"
+        let sample = String(decoding: source.utf8.prefix(2048), as: UTF8.self)
+        func preview(_ html: String) -> String {
+            (EmailBody(html: html.removingMailPreviewBlocks()).html(.stripped) ?? "")
+                .split(whereSeparator: { $0.isWhitespace }).joined(separator: " ")
+        }
+        #expect(preview(sample).isEmpty)
+        #expect(preview(source) == "Synthetic offer details")
+    }
 }

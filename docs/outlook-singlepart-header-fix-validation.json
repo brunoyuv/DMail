@@ -1,0 +1,76 @@
+{
+  "sourceBranch": "main",
+  "sourceBaseRevision": "c21edcea3143b97c8e7818bc983b00125b18cf4e",
+  "versionName": "1.0.4",
+  "versionCode": 1000004,
+  "build": "1.0.4-download-log-3-singlepart-fix",
+  "evidence": {
+    "completeBodyFailures": 5,
+    "advertisedAndReceivedBytes": 97088,
+    "missingSection": "1.MIME",
+    "singlepart": "text/html",
+    "encoding": "quoted-printable",
+    "charset": "UTF-8",
+    "separateUncodedAuthenticationRejection": 1,
+    "subsequentAuthenticationSucceeded": true,
+    "shutdownCompletedForDetailedFailures": true,
+    "realMailboxAccess": false
+  },
+  "change": {
+    "singlepartRootHeader": "BODY.PEEK[HEADER]",
+    "body": "BODY.PEEK[1]",
+    "extraFetches": 0,
+    "multipartChildMIMEUnchanged": true,
+    "appliesToStandaloneAttachments": true,
+    "detailedLoggingRetained": true
+  },
+  "validation": {
+    "syntheticTLSRegressionBefore": "4/4 cases reproduce MIME omitted-part error",
+    "syntheticTLSRegressionAfter": "4/4 cases pass",
+    "sizes": [
+      80407,
+      97088
+    ],
+    "authenticationModes": [
+      "LOGIN",
+      "XOAUTH2"
+    ],
+    "swiftFocusedTests": 46,
+    "javaScriptTests": 795,
+    "pythonTests": 40,
+    "arm64SignedBuild": true,
+    "signedSourceParity": true,
+    "signedDiagnosticMarkerVerified": true,
+    "emulatorUsed": false,
+    "productionUIAutomation": false
+  },
+  "installation": {
+    "device": "Pura X",
+    "model": "VDE-AL00",
+    "bundleName": "org.thunderbird.harmony.dev",
+    "previousVersionName": "1.0.4",
+    "previousVersionCode": 1000004,
+    "versionName": "1.0.4",
+    "versionCode": 1000004,
+    "upgradeOnly": true,
+    "storageIdentityPreserved": true,
+    "artifactHashVerified": true,
+    "hapSha256": "3a25a6db952923574927b343a9699aaa7e07b790df7cdb7d26c6a984578e34db",
+    "productionLaunched": false,
+    "productionProcessAbsentAfterInstall": true,
+    "installedHashVerified": false,
+    "installedHashCheck": "Not attempted; prior OS reads denied",
+    "sourceBranch": "main",
+    "sourceBaseRevision": "c21edcea3143b97c8e7818bc983b00125b18cf4e",
+    "scope": "Bounded private download diagnostics; 1.0.4-download-log-3-singlepart-fix"
+  },
+  "commitCreated": false,
+  "remotePush": false,
+  "publicRelease": false,
+  "limitations": [
+    "One uncoded login rejection is not enough to identify provider throttling or its cause.",
+    "The body correction is verified with synthetic TLS fixtures; production mail is user-operated.",
+    "Installer success and signed input hash are verified; installed HAP bytes were not read."
+  ],
+  "userConfirmation": "The user confirmed that the email problem is fixed after installation."
+}

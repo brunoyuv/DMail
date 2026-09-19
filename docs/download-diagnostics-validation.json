@@ -1,0 +1,33 @@
+{
+  "device": "Pura X",
+  "model": "VDE-AL00",
+  "bundleName": "org.thunderbird.harmony.dev",
+  "previousVersionName": "1.0.4",
+  "previousVersionCode": 1000004,
+  "versionName": "1.0.4",
+  "versionCode": 1000004,
+  "upgradeOnly": true,
+  "storageIdentityPreserved": true,
+  "artifactHashVerified": true,
+  "hapSha256": "6e022d013c8f9b8e6157dffd3d11e698b1bccfee41631835b4bdf894f66e7635",
+  "productionLaunched": false,
+  "productionProcessAbsentAfterInstall": true,
+  "installedHashVerified": false,
+  "installedHashCheck": "Not attempted; prior OS reads denied",
+  "sourceBranch": "main",
+  "sourceBaseRevision": "c21edcea3143b97c8e7818bc983b00125b18cf4e",
+  "scope": "Bounded private download diagnostics; 1.0.4-download-log-1",
+  "diagnosticBuild": "1.0.4-download-log-1",
+  "validation": {
+    "javascript": 793,
+    "python": 40,
+    "swiftImap": 43,
+    "passed": true,
+    "failures": 0,
+    "signedBytecodeMarkerVerified": true,
+    "productionSourceParityVerified": true,
+    "physicalDiagnosticExportTested": false,
+    "realMailTested": false,
+    "emulatorStarted": false
+  }
+}

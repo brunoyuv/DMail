@@ -44,7 +44,12 @@ async function storedSecret(alias: string): Promise<Uint8Array | undefined> {
   query.set(asset.Tag.ALIAS, new util.TextEncoder().encodeInto(alias));
   query.set(asset.Tag.RETURN_TYPE, asset.ReturnType.ALL);
   const results = await asset.query(query);
-  return results[0]?.get(asset.Tag.SECRET) as Uint8Array | undefined;
+  if (results.length === 0) { return undefined; }
+  const secret = results[0].get(asset.Tag.SECRET);
+  // A present but unreadable record is not an absent credential. In particular,
+  // SMTP must not display an empty editable form after a malformed Asset reply.
+  if (!(secret instanceof Uint8Array) || secret.length === 0) { throw new Error('Credential storage is unavailable'); }
+  return secret;
 }
 
 class OAuthCredentials implements JmapCredentials {
@@ -96,6 +101,7 @@ export class AccountStore {
   private outgoingFiles?: OutgoingAttachmentFiles;
   private contentFiles?: MailContentFiles;
   private refreshing: Map<string, Promise<string>> = new Map();
+  private oauthRequests: Set<Promise<string>> = new Set();
   oauthService: NativeBrowserOAuth = new NativeBrowserOAuth();
   constructor(name: string = 'thunderbird_accounts.db') { this.name = name; }
 
@@ -459,11 +465,14 @@ export class AccountStore {
     finally { result.close(); }
   }
 
-  oauthAccessToken(account: SavedAccount, smtp?: SmtpSettings, background: boolean = false): Promise<string> {
-    if (account.authentication !== 'oauth') { return Promise.reject(new JmapError('authenticationRequired')); }
-    if (background && smtp) { return Promise.reject(new JmapError('authenticationRequired')); }
-    // Validate the outgoing destination before sharing a token with its caller.
-    return this.oauthTokenForEndpoint(account, smtp, background);
+  async oauthAccessToken(account: SavedAccount, smtp?: SmtpSettings, background: boolean = false): Promise<string> {
+    if (account.authentication !== 'oauth' || (background && smtp)) { throw new JmapError('authenticationRequired'); }
+    if (this.closing) { throw new JmapError('network'); }
+    // Keep storage open through credential decryption, refresh and persistence.
+    const request = this.oauthTokenForEndpoint(account, smtp, background);
+    this.oauthRequests.add(request);
+    try { return await request; }
+    finally { this.oauthRequests.delete(request); }
   }
 
   private async oauthTokenForEndpoint(account: SavedAccount, smtp?: SmtpSettings, background: boolean = false): Promise<string> {
@@ -542,13 +551,25 @@ export class AccountStore {
       const next = await key.seal(JSON.stringify(login));
       await this.enqueue(async () => {
         // Removal or another credential write wins over a late network reply.
-        if (await this.oauthEnvelope(account) !== previous) { throw new JmapError('authenticationRequired'); }
+        // A newer envelope is superseded work, not rejected credentials. Stop
+        // without replacing it or requesting another browser sign-in.
+        if (await this.oauthEnvelope(account) !== previous) { throw new JmapError('network'); }
         await this.database().executeSql("UPDATE oauth_credentials SET envelope = ? WHERE account_id = ? AND envelope = ? AND EXISTS (SELECT 1 FROM accounts WHERE id = ? AND status = 'ready')", [next, account.id, previous, account.id]);
-        if (await this.oauthEnvelope(account) !== next) { throw new JmapError('authenticationRequired'); }
+        if (await this.oauthEnvelope(account) !== next) { throw new JmapError('network'); }
       });
       return login.tokens.accessToken;
     } catch (error) {
-      throw new JmapError((error as BrowserOAuthError).code === 'network' ? 'network' : 'authenticationRequired');
+      // Only explicit credential/grant errors offer reconnect, not storage or
+      // malformed-response failures.
+      const failure = (error as BrowserOAuthError).code;
+      let code = ['authenticationRequired', 'invalid_grant', 'access_denied',
+        'invalid_client', 'unauthorized_client', 'invalid_scope', 'invalid_request'].includes(failure) ?
+        'authenticationRequired' : 'network';
+      if (code === 'authenticationRequired' && acquired) {
+        // A late rejection belongs to the old login, not a newer reconnect.
+        try { if (await this.oauthEnvelope(account) !== previous) { code = 'network'; } } catch (_) {}
+      }
+      throw new JmapError(code, 0, code === 'authenticationRequired' ? 'refresh' : undefined);
     } finally {
       key?.close();
       if (acquired) { await this.releaseRefreshLease(account.id, owner).catch(() => {}); }
@@ -557,15 +578,73 @@ export class AccountStore {
 
   async smtp(account: SavedAccount): Promise<SmtpSettings> {
     await this.pending;
+    return await this.readSmtp(account.id) ?? new SmtpSettings();
+  }
+
+  private async readSmtp(accountId: string): Promise<SmtpSettings | undefined> {
     try {
-      const secret = await storedSecret(this.smtpAlias(account.id));
-      if (!secret) { return new SmtpSettings(); }
-      try { return JSON.parse(new util.TextDecoder().decodeToString(secret)) as SmtpSettings; }
+      const secret = await storedSecret(this.smtpAlias(accountId));
+      if (!secret) { return undefined; }
+      try {
+        if (secret.length > 4096) { throw new Error('Invalid outgoing settings'); }
+        const settings = JSON.parse(new util.TextDecoder('utf-8', { fatal: true }).decodeToString(secret)) as SmtpSettings;
+        if (settings === null || typeof settings !== 'object' || Array.isArray(settings) ||
+          typeof settings.endpoint !== 'string' || typeof settings.username !== 'string' || typeof settings.password !== 'string' ||
+          !/^smtps?:\/\//.test(settings.endpoint) || settings.endpoint.length > 1024 || /[\x00-\x20\x7f\\]/.test(settings.endpoint) ||
+          settings.username.length === 0 || settings.username.length > 512 || /[\x00-\x1f\x7f]/.test(settings.username) ||
+          settings.password.length > 1024 || /[\x00\r\n]/.test(settings.password)) {
+          throw new Error('Invalid outgoing settings');
+        }
+        // Storage validation must retain existing native-supported endpoints,
+        // including default ports and IPv6. Swift validates transport syntax
+        // before use; reading saved settings performs no network request.
+        return settings;
+      }
       finally { secret.fill(0); }
     } catch (error) {
-      if ((error as BusinessError).code === asset.ErrorCode.NOT_FOUND) { return new SmtpSettings(); }
+      if ((error as BusinessError).code === asset.ErrorCode.NOT_FOUND) { return undefined; }
       throw new Error('Outgoing settings are unavailable');
     }
+  }
+
+  async gmailSmtpDefaults(account: SavedAccount): Promise<SmtpSettings> {
+    const accountId = account.id, serverId = account.serverId, sessionUrl = account.sessionUrl;
+    const emailAddress = account.emailAddress, username = account.username;
+    if (account.authentication !== '' || sessionUrl !== RegisteredMailOAuth.incoming('google')) {
+      throw new Error('Saved Gmail login is unavailable');
+    }
+    let proposed = new SmtpSettings();
+    await this.enqueue(async () => {
+      const current = async (): Promise<boolean> => {
+        const saved = (await this.rows("SELECT * FROM accounts WHERE status = 'ready'")).find(value => value.id === accountId);
+        return saved !== undefined && saved.authentication === '' && saved.serverId === serverId &&
+          saved.sessionUrl === sessionUrl && saved.emailAddress === emailAddress && saved.username === username;
+      };
+      if (!(await current()) || await this.readSmtp(accountId) !== undefined) { throw new Error('Saved Gmail login is unavailable'); }
+      // This explicit editor action proposes only the exact Gmail destination.
+      // The SMTP password is not stored here; the user reviews and saves it.
+      const secret = await storedSecret(this.alias(accountId));
+      if (!secret) { throw new Error('Saved Gmail login is unavailable'); }
+      let decoded: Uint8Array | undefined;
+      try {
+        if (secret.length > 4090) { throw new Error('Saved Gmail login is unavailable'); }
+        const encoded = new util.TextDecoder().decodeToString(secret);
+        if (!/^[A-Za-z0-9+/]+={0,2}$/.test(encoded) || encoded.length % 4 !== 0) { throw new Error('Saved Gmail login is unavailable'); }
+        decoded = new util.Base64Helper().decodeSync(encoded);
+        const login = new util.TextDecoder('utf-8', { fatal: true }).decodeToString(decoded);
+        const separator = login.indexOf(':');
+        const boundUsername = login.substring(0, separator), password = login.substring(separator + 1);
+        if (separator <= 0 || boundUsername.trim().length === 0 || boundUsername.length > 512 ||
+          /[\x00-\x1f\x7f]/.test(boundUsername) || password.length === 0 || password.length > 1024 || /[\x00\r\n]/.test(password)) {
+          throw new Error('Saved Gmail login is unavailable');
+        }
+        if (!(await current()) || await this.readSmtp(accountId) !== undefined || !(await current())) {
+          throw new Error('Saved Gmail login is unavailable');
+        }
+        proposed.endpoint = 'smtps://smtp.gmail.com:465'; proposed.username = boundUsername; proposed.password = password;
+      } finally { decoded?.fill(0); secret.fill(0); }
+    });
+    return proposed;
   }
 
   async saveSmtp(account: SavedAccount, settings: SmtpSettings): Promise<void> {
@@ -852,7 +931,8 @@ export class AccountStore {
   private async finishClose(): Promise<void> {
     try { await this.opening; } catch (_) {}
     await this.notificationChanges;
-    await Promise.all(Array.from(this.refreshing.values()).map(task => task.catch(() => '')));
+    // Closing rejects new credential requests; this snapshot includes refreshes.
+    await Promise.all(Array.from(this.oauthRequests).map(task => task.catch(() => '')));
     while (this.mailSyncTasks.size > 0) { await Promise.all(Array.from(this.mailSyncTasks).map(task => task.catch(() => {}))); }
     await this.pictureCache?.whenIdle();
     if (!this.db) { return; }

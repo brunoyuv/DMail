@@ -108,7 +108,7 @@ public final class BrowserOAuthSessions: @unchecked Sendable {
         var request = try URLRequest.token(session.request, code: code, pkce: session.pkce)
         // Remove the upstream empty placeholder. The bridge adds a configured
         // Google Desktop secret only to matching Google token requests.
-        request.httpBody = Self.withoutEmptySecret(request.httpBody!)
+        request.httpBody = Self.tokenBody(request.httpBody!, registration: session.request)
         return request
     }
 
@@ -121,12 +121,28 @@ public final class BrowserOAuthSessions: @unchecked Sendable {
         try validate(registration)
         guard OAuthTokenSet.validToken(token) else { throw BrowserOAuthError.invalidTokenResponse }
         var request = try URLRequest.refreshToken(registration, refreshToken: token)
-        request.httpBody = withoutEmptySecret(request.httpBody!)
+        request.httpBody = tokenBody(request.httpBody!, registration: registration)
         return request
     }
 
-    private static func withoutEmptySecret(_ body: Data) -> Data {
-        Data(String(decoding: body, as: UTF8.self).split(separator: "&").filter { $0 != "client_secret=" }.joined(separator: "&").utf8)
+    private static func tokenBody(_ body: Data, registration: OAuth2.Request) -> Data {
+        var fields = String(decoding: body, as: UTF8.self).split(separator: "&").filter { $0 != "client_secret=" }.map(String.init)
+        let outlookScopes = ["https://outlook.office.com/IMAP.AccessAsUser.All",
+                             "https://outlook.office.com/SMTP.Send", "offline_access"]
+        // Microsoft permits omission, but its mail guidance asks for explicit
+        // Outlook resource scopes in both authorization and token requests.
+        // Bind redemption/refresh to the same registered grant. This is a
+        // compatibility improvement, not evidence of a provider rejection's cause.
+        // Other providers and arbitrary registrations keep the upstream form.
+        if ["https://login.microsoftonline.com/consumers/oauth2/v2.0/token",
+            "https://login.microsoftonline.com/common/oauth2/v2.0/token"].contains(registration.tokenURI),
+           registration.scope.count == outlookScopes.count,
+           Set(registration.scope) == Set(outlookScopes) {
+            var scope = URLComponents()
+            scope.queryItems = [URLQueryItem(name: "scope", value: registration.scope.joined(separator: " "))]
+            fields.append(scope.percentEncodedQuery!)
+        }
+        return Data(fields.joined(separator: "&").utf8)
     }
 
     private static func equalState(_ lhs: String, _ rhs: String) -> Bool {

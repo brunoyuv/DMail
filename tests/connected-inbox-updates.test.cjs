@@ -13,7 +13,7 @@ function method(name) {
 }
 const options = { target: ts.ScriptTarget.ES2021, module: ts.ModuleKind.CommonJS };
 const compiled = ts.transpileModule(`export class InboxHost {
-${['showError', 'showSavedCopy', 'inboxBlocked', 'inboxChanged', 'refreshInboxQuiet', 'loadPage',
+${['showError', 'showSavedCopy', 'refreshedPage', 'inboxBlocked', 'inboxChanged', 'refreshInboxQuiet', 'loadPage',
   'retireInboxInteraction', 'inboxVisibilityChanged', 'readerVisibilityChanged',
   'loadConversationIndex', 'refreshConversationFolder', 'visibleEmails', 'read', 'applyReaderMetadata', 'refreshMailbox', 'rowAllows', 'updateSearchPosition'].map(method).join('\n')}
 }`, { compilerOptions: options }).outputText;
@@ -109,8 +109,8 @@ test('A manual response from before A → B → A cannot overwrite the newer qui
   assert.equal(await ui.refreshInboxQuiet(ui.client, account, 'inbox', 2, ui.inboxLoadRevision), true);
   old.resolve(page([mail('obsolete', false)])); await manual;
   assert.equal(state.writes.length, 1, 'Superseded manual list must not write the shared cache');
-  assert.deepEqual(state.view.emails.map(value => value.id), ['current']);
-  assert.deepEqual(ui.emails.map(value => value.id), ['current']);
+  assert.deepEqual(state.view.emails.map(value => value.id), ['current', 'old', 'tail']);
+  assert.deepEqual(ui.emails.map(value => value.id), ['current', 'old', 'tail']);
   assert.equal(state.loaderCalls.length, 0, 'Header responses cannot start reader work');
   assert.equal(state.bodyCalls.length, 0);
   assert.equal(ui.busy, false);
@@ -151,7 +151,7 @@ test('An arrival stays pending through composing, backgrounding and busy state, 
   assert.equal(state.calls.length, 0); assert.equal(ui.inboxAcknowledged.size, 0);
   state.paths = []; ui.inboxChanged(); await fire();
   assert.equal(state.calls.length, 1); assert.equal(ui.inboxAcknowledged.get('account-a:inbox'), 1);
-  assert.deepEqual(ui.emails.map(value => value.id), ['new']);
+  assert.deepEqual(ui.emails.map(value => value.id), ['new', 'old', 'tail']);
 });
 
 test('A manual refresh joins an in-flight automatic head request without another download', async () => {
@@ -165,7 +165,7 @@ test('A manual refresh joins an in-flight automatic head request without another
   response.resolve(page([mail('new', false), mail('old', false)]));
   await Promise.all([automatic, manual]);
   assert.equal(state.calls.length, 1); assert.equal(state.writes.length, 1);
-  assert.deepEqual(ui.emails.map(value => value.id), ['new', 'old']);
+  assert.deepEqual(ui.emails.map(value => value.id), ['new', 'old', 'tail']);
   assert.equal(ui.inboxRequests.size, 0); assert.equal(timers.size, 0); assert.equal(ui.busy, false);
 });
 
@@ -196,7 +196,7 @@ test('Muted accounts still update cached inbox rows but emit no foreground banne
   state.alertsEnabled = false;
   state.nextPage = async () => page([{ ...mail('arrived', false), keywords: [] }, mail('old')]);
   assert.equal(await ui.refreshInboxQuiet(ui.client, account, 'inbox', 1, ui.inboxLoadRevision), true);
-  assert.deepEqual(ui.emails.map(value => value.id), ['arrived', 'old']);
+  assert.deepEqual(ui.emails.map(value => value.id), ['arrived', 'old', 'tail']);
   assert.equal(state.writes.length, 1); assert.equal(state.banners.length, 0);
   assert.equal(state.calls.length, 1, 'Alert filtering must not add server requests');
 });
@@ -211,7 +211,7 @@ test('Disabling alerts or removing the account while inbox headers are pending s
     response.resolve(page([{ ...mail('arrived', false), keywords: [] }, mail('old')]));
     await pending;
     assert.equal(state.banners.length, 0); assert.equal(state.writes.length, 1);
-    assert.deepEqual(ui.emails.map(value => value.id), ['arrived', 'old']);
+    assert.deepEqual(ui.emails.map(value => value.id), ['arrived', 'old', 'tail']);
   }
 });
 
@@ -220,7 +220,7 @@ test('Unread inbox rows remain usable when the local alert preference cannot be 
   ui.accountStore.notificationSettings = async () => { throw new Error('Synthetic local read failure'); };
   state.nextPage = async () => page([{ ...mail('arrived', false), keywords: [] }, mail('old')]);
   assert.equal(await ui.refreshInboxQuiet(ui.client, account, 'inbox', 1, ui.inboxLoadRevision), true);
-  assert.deepEqual(ui.emails.map(value => value.id), ['arrived', 'old']);
+  assert.deepEqual(ui.emails.map(value => value.id), ['arrived', 'old', 'tail']);
   assert.equal(state.banners.length, 0); assert.equal(ui.inboxRetries, 0);
 });
 
@@ -253,9 +253,13 @@ test('Companion-folder refresh forwards cached preview identities and stops befo
 // Use the actual native row's enabled expression, rather than calling read()
 // through a disabled control and accidentally hiding the original regression.
 function rowEnabled(ui) {
-  const binding = source.match(/\.id\(`remote-mail-\$\{mail\.id\}`\)\.enabled\(([^\n]+)\)/);
-  assert.ok(binding, 'The native row has an explicit enabled binding');
-  return new Function(`return (${binding[1]});`).call(ui);
+  const component = fs.readFileSync('harmony/entry/src/main/ets/pages/MailListItem.ets', 'utf8');
+  const binding = component.match(/\.id\(`remote-mail-\$\{this\.mail\.id\}`\)\.enabled\(([^\n]+)\)/);
+  const input = source.match(/connected: ([^,\n]+), readAllowed:/);
+  assert.ok(binding && input, 'The native row receives an explicit reactive enabled binding');
+  assert.match(component, /@Prop connected: boolean/);
+  const connected = new Function(`return (${input[1]});`).call(ui);
+  return new Function(`return (${binding[1]});`).call({ connected });
 }
 const flush = async () => { for (let i = 0; i < 12; ++i) await Promise.resolve(); };
 
@@ -348,7 +352,7 @@ test('An earlier refresh finalizer cannot end a subsequent refresh after reader 
   assert.equal(ui.busy, true);
   currentHeaders.resolve(page([mail('old', false), mail('current', false)])); await currentRefresh;
   assert.equal(ui.refreshing, false); assert.equal(ui.mailboxRefreshActive, false); assert.equal(ui.busy, false);
-  assert.deepEqual(ui.emails.map(value => value.id), ['old', 'current']);
+  assert.deepEqual(ui.emails.map(value => value.id), ['old', 'current', 'tail']);
   assert.equal(state.writes.length, 1);
 });
 
@@ -382,7 +386,7 @@ test('A cached reader opens during automatic headers and remains selected when t
   await ui.read(ui.emails[0]);
   assert.equal(ui.bodyLoaded, true); assert.equal(ui.selectedId, 'old'); assert.equal(state.calls.length, 1);
   headers.resolve(page([mail('new', false), mail('old', false)])); await automatic;
-  assert.deepEqual(ui.emails.map(value => value.id), ['new', 'old']);
+  assert.deepEqual(ui.emails.map(value => value.id), ['new', 'old', 'tail']);
   assert.equal(ui.selectedId, 'old'); assert.equal(ui.selected.textBody, 'Cached body old');
   assert.equal(ui.bodyLoaded, true); assert.equal(ui.busy, false); assert.equal(state.writes.length, 1);
 });
@@ -425,7 +429,7 @@ test('Inbox refresh completes before a held conversation-index read and optional
     await new Promise(setImmediate);
     assert.equal(finished, true, 'Visible Inbox completion must not await the account-wide index');
     assert.equal(ui.busy, false); assert.equal(ui.mailboxRefreshActive, false); assert.equal(ui.refreshing, false);
-    assert.deepEqual(ui.emails.map(value => value.id), ['new']);
+    assert.deepEqual(ui.emails.map(value => value.id), ['new', 'old', 'tail']);
     index.resolve(); await flush();
     assert.equal(state.calls.filter(call => call[1] === 'sent').length, 1);
     assert.equal(sentWrites, 0, 'The optional server response is still held');
@@ -585,4 +589,86 @@ test('Only opening prepares HTML and publishes it without waiting for optional p
     assert.deepEqual(ui.readerDocument, document); assert.equal(w.state.reads.length, 1);
     assert.equal(w.state.scans, 1); assert.equal(w.state.batches.length, 0);
   } finally { body.resolve(); w.loader.cancel(); await w.loader.whenIdle(); }
+});
+
+test('Shipping Inbox prefetch wiring follows foreground visibility, interaction and active mailbox ownership', () => {
+  const f = fixture(); const updates = [], permission = [];
+  const constructor = source.match(/this\.inboxPrefetch = new InboxPrefetch\([\s\S]*?;/)[0];
+  class Worker {
+    constructor(store, allowed) { assert.equal(store, f.ui.accountStore); this.allowed = allowed; }
+    update(...args) { updates.push(args); permission.push(this.allowed()); }
+    clear() { permission.push('cleared'); }
+  }
+  new Function('InboxPrefetch', 'MailInboxUpdates', constructor).call(f.ui, Worker, { isForeground: () => f.state.foreground });
+  f.state.alertsEnabled = false; f.ui.inboxChanged(); assert.equal(permission.at(-1), true);
+  assert.equal(updates[0][0], f.ui.client); assert.equal(updates[0][1], f.ui.account);
+  assert.equal(updates[0][2], 'inbox'); assert.equal(updates[0][3], f.ui.emails);
+  assert.equal(updates[0][4], 50); assert.equal(updates[0][5], 'cached-head');
+  f.ui.inboxVisible = false; f.ui.readerVisible = true; f.ui.inboxChanged(); assert.equal(permission.at(-1), true);
+  f.state.foreground = false; f.ui.inboxChanged(); assert.equal(permission.at(-1), false);
+  f.state.foreground = true; f.state.paths = ['compose']; f.ui.inboxChanged(); assert.equal(permission.at(-1), false);
+  f.state.paths = []; f.ui.busy = true; f.ui.inboxChanged(); assert.equal(permission.at(-1), false);
+  f.ui.busy = false; f.ui.readerScrollActive = true; f.ui.inboxChanged(); assert.equal(permission.at(-1), false);
+  f.ui.readerScrollActive = false; f.ui.readerVisible = false; f.ui.inboxChanged(); assert.equal(permission.at(-1), false);
+  f.ui.mailboxId = 'sent'; f.ui.inboxChanged(); assert.equal(permission.at(-1), 'cleared');
+});
+
+test('Manual refresh retains loaded older pages, the open reader and the unchanged paging cursor', async () => {
+  const { ui, state } = fixture();
+  const loaded = Array.from({ length: 150 }, (_, i) => mail(`loaded-${i}`));
+  state.view = { ...state.view, emails: loaded, nextPosition: 150, queryState: 'stable' };
+  ui.emails = clone(loaded); ui.nextPosition = 150; ui.queryState = 'stable';
+  const selected = loaded[100], document = { html: '<p>Keep this reader</p>' };
+  Object.assign(ui, { selected, selectedId: selected.id, bodyLoaded: true, readerDocument: document });
+  state.nextPage = async (_account, _box, position) => position === 0 ?
+    page(loaded.slice(0, 50).map(value => ({ ...value, textBody: null })), 50, 'stable') :
+    page([mail('older')], null, 'stable');
+  await ui.loadPage(true);
+  assert.equal(ui.emails.length, 150); assert.equal(state.view.emails.length, 150);
+  assert.equal(ui.nextPosition, 150); assert.equal(state.view.nextPosition, 150);
+  assert.strictEqual(ui.selected, selected); assert.strictEqual(ui.readerDocument, document);
+  assert.equal(ui.bodyLoaded, true); assert.equal(state.bodyCalls.length, 0);
+  await ui.loadPage(false);
+  assert.deepEqual(state.calls.map(call => call[2]), [0, 150]);
+  assert.equal(ui.emails.length, 151); assert.equal(ui.emails.at(-1).id, 'older');
+});
+
+test('Quiet refresh retains the reached end for an unchanged mailbox', async () => {
+  const { ui, state, account } = fixture();
+  state.view.nextPosition = null; ui.nextPosition = null;
+  state.nextPage = async () => page([mail('old', false)], 1, 'cached-head');
+  await ui.refreshInboxQuiet(ui.client, account, 'inbox', 1, ui.inboxLoadRevision);
+  assert.deepEqual(ui.emails.map(value => value.id), ['old', 'tail']);
+  assert.equal(ui.nextPosition, null); assert.equal(state.view.nextPosition, null);
+});
+
+test('A partial refreshed head does not delete loaded rows merely because there is no overlap', async () => {
+  for (const quiet of [false, true]) {
+    const { ui, state, account } = fixture();
+    state.nextPage = async () => page([mail('new-1', false), mail('new-2', false)], 2, 'changed');
+    if (quiet) await ui.refreshInboxQuiet(ui.client, account, 'inbox', 1, ui.inboxLoadRevision);
+    else await ui.loadPage(true);
+    assert.deepEqual(ui.emails.map(value => value.id), ['new-1', 'new-2', 'old', 'tail']);
+    assert.equal(ui.nextPosition, 2, 'A changed snapshot must use its verified cursor');
+  }
+});
+
+test('Even a complete refreshed mailbox retains downloaded rows and body records', async () => {
+  const { ui, state } = fixture();
+  state.nextPage = async () => page([mail('old', false)], null);
+  await ui.loadPage(true);
+  assert.deepEqual(ui.emails.map(value => value.id), ['old', 'tail']);
+  assert.equal(ui.nextPosition, null);
+  assert.equal(state.records.get('tail').mail.textBody, 'Cached body tail');
+});
+
+test('Companion-folder refresh preserves its previously loaded tail and pagination', async () => {
+  const { ui, state, account } = fixture();
+  ui.boxes.push({ id: 'sent', role: 'sent' });
+  state.view.nextPosition = 100;
+  state.nextPage = async () => page([mail('old', false)], 50, 'cached-head');
+  await ui.refreshConversationFolder(ui.client, account, 'inbox', ui.generation);
+  assert.equal(state.writes[0].mailbox, 'sent');
+  assert.deepEqual(state.view.emails.map(value => value.id), ['old', 'tail']);
+  assert.equal(state.view.nextPosition, 100);
 });

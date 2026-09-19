@@ -80,3 +80,11 @@ shutil.copy2(root/'port/swift-imap/ArchiveMoveTests.swift',package/'Tests/IMAPTe
 subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/archive-creation.patch').read_text(), text=True, check=True)
 shutil.copy2(root/'port/swift-imap/ArchiveCreation.swift',package/'Sources/IMAP/ArchiveCreation.swift')
 shutil.copy2(root/'port/swift-imap/ArchiveCreationTests.swift',package/'Tests/IMAPTests/ArchiveCreationTests.swift')
+
+# Capture safe command/response/literal categories before generic error mapping.
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/download-diagnostics.patch').read_text(), text=True, check=True)
+
+# The original client must consume a bounded OK greeting before any command.
+subprocess.run(['patch','--forward','--force','-p1','-d',str(package)], input=(root/'port/swift-imap/initial-greeting.patch').read_text(), text=True, check=True)
+shutil.copy2(root/'port/swift-imap/InitialGreeting.swift',package/'Sources/IMAP/InitialGreeting.swift')
+shutil.copy2(root/'port/swift-imap/InitialGreetingTests.swift',package/'Tests/IMAPTests/InitialGreetingTests.swift')
